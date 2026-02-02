@@ -2,13 +2,13 @@
 
 ### to co-work on these project
 1. clone it first
-  1. git clone <repository-url>
-  2. cd <to the folder you would like to work on>
+    1. git clone <repository-url>
+    2. cd <to the folder you would like to work on>
 2. when you are going to push
-  1. Create and switch to new branch:   git checkout -b <branch name>
-  2. Add all files: git add .
-  3. Commit: git commit -m "Add smart coaster dashboard with mock sensor data"
-  4. Push to remote: git push -u origin <branch name>
+    1. Create and switch to new branch:   git checkout -b <branch name>
+    2. Add all files: git add .
+    3. Commit: git commit -m "Add smart coaster dashboard with mock sensor data"
+    4. Push to remote: git push -u origin <branch name>
 
 ## About API 
 *confidential and sensitive*, NEVER be exposed in frontend code
