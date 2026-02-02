@@ -2,26 +2,27 @@
 
 ### to co-work on these project
 1. clone it first
-git clone <repository-url>
-cd <to the folder you would like to work on>
+  1. git clone <repository-url>
+  2. cd <to the folder you would like to work on>
 2. when you are going to push
-- Create and switch to new branch:   git checkout -b <branch name>
-- Add all files: git add .
-- Commit: git commit -m "Add smart coaster dashboard with mock sensor data"
-- Push to remote: git push -u origin <branch name>
+  1. Create and switch to new branch:   git checkout -b <branch name>
+  2. Add all files: git add .
+  3. Commit: git commit -m "Add smart coaster dashboard with mock sensor data"
+  4. Push to remote: git push -u origin <branch name>
 
 ## About API 
 *confidential and sensitive*, NEVER be exposed in frontend code
 
 ## To test the project on expo go, web 
-cd front
-npm install
-npx expo start
+* cd front
+* npm install
+* npx expo start
 
 -> 若需更新 npx expo install expo@latest
 
-  ## Project Structure                                                                                    
-  smart-coaster/                                                                                       
+## Project Structure 
+  ```                                                                           
+  smart-coaster/ 
   ├── front/                  # React Native + Expo frontend
   │   ├── App.js              # Entry point - renders main screen
   │   ├── app.json            # Expo config (app name, icons, SDK)
@@ -47,8 +48,9 @@ npx expo start
   └── .gitignore
   │
   └── README.md
+  ```
 
-    ## Where to Modify (Frontend)
+  ## Where to Modify (Frontend)
 
   | Task | File(s) |
   |------|---------|
