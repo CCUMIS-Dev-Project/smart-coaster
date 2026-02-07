@@ -20,10 +20,36 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.leolin4ni.coasterapp"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [
+            "peripheral",
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "Allow App to connect to the Smart Coaster"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "26c2b43a-429f-4b2b-b9d2-f7dbe8a4a5cd"
+      }
     }
   }
 }
