@@ -10,6 +10,30 @@
     3. Commit: git commit -m "Add smart coaster dashboard with mock sensor data"
     4. Push to remote: git push -u origin <branch name>
 
+1. 環境準備
+安裝套件：
+
+```
+npx expo install react-native-ble-plx expo-dev-client base-64
+```
+手機設定：開啟 藍牙 與 GPS 定位 (Android 11 掃描藍牙必須開啟定位)。
+
+2. 雲端編譯 (EAS Build)
+若修改了 app.json 的權限，需重新編譯 APK：
+
+```
+eas build --profile development --platform android
+```
+安裝產出的 .apk 到手機後，開啟該 App。
+
+3. 啟動開發伺服器
+在電腦端執行：
+
+```
+npx expo start --dev-client
+```
+使用手機 App 掃描 QR Code 進入開發畫面。
+
 ## About API 
 *confidential and sensitive*, NEVER be exposed in frontend code
 
@@ -39,6 +63,8 @@
   │       │   └── mockSensorData.js   # Mock data (replace with real API)
   │       ├── config/
   │       │   └── config.js           # API URLs, endpoints
+  │       ├── hooks/
+  │       │   └── useBLE.js   # 藍牙連線、權限請求與監聽邏輯
   │       └── assets/         # Images, fonts
   │
   └── back/                   # Flask backend
