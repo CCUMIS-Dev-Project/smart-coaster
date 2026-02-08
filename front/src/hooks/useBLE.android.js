@@ -30,7 +30,16 @@ if (!global.atob) {
 export default function useBLE() {
   const bleManager = useMemo(() => new BleManager(), []);
   const [connectedDevice, setConnectedDevice] = useState(null);
-  const [drinkData, setDrinkData] = useState(0);
+//   const [drinkData, setDrinkData] = useState(0);
+
+  // 定義一個結構化的狀態來存放所有感測器數據
+  const [bleData, setBleData] = useState({
+    systemActive: false,
+    lastStableWeight: 0,
+    isOnCoaster: false,
+    drinkAmount: 0,
+    reminderMs: 0,
+  });
 
   // 核心 UUID (需與 Pico W 端完全一致)
   const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'; 
@@ -112,9 +121,21 @@ export default function useBLE() {
             return;
           }
           if (characteristic?.value) {
-            const rawData = atob(characteristic.value); 
-            console.log('💧 收到數據:', rawData);
-            setDrinkData(parseFloat(rawData));
+            // 1. 解碼 Base64
+            const rawString = atob(characteristic.value); 
+            console.log('收到原始字串:', rawString);
+
+            // 2. 解析 CSV (格式: active,weight,on_coaster,drink,reminder)
+            const parts = rawString.split(',');
+            if (parts.length === 5) {
+              setBleData({
+                systemActive: parts[0] === '1',
+                lastStableWeight: parseFloat(parts[1]),
+                isOnCoaster: parts[2] === '1',
+                drinkAmount: parseFloat(parts[3]),
+                reminderMs: parseInt(parts[4]),
+              });
+            }
           }
         }
       );
@@ -123,5 +144,5 @@ export default function useBLE() {
     }
   };
 
-  return { scanAndConnect, connectedDevice, drinkData };
+  return { scanAndConnect, connectedDevice, bleData };
 }

@@ -1,31 +1,37 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const VolumeDisplay = ({ currentVolume, change }) => {
-  const getChangeColor = () => {
-    if (change < 0) return '#e74c3c'; // Red for consumption
-    if (change > 0) return '#27ae60'; // Green for refill
-    return '#95a5a6'; // Gray for no change
-  };
+const VolumeDisplay = ({ currentVolume, drinkAmount, reminderMs }) => {
+  // const getChangeColor = () => {
+  //   if (change < 0) return '#e74c3c'; // Red for consumption
+  //   if (change > 0) return '#27ae60'; // Green for refill
+  //   return '#95a5a6'; // Gray for no change
+  // };
 
   const getChangeText = () => {
-    if (change === 0) return 'No change';
-    if (change > 0) return `+${change} ml (refilled)`;
-    return `${change} ml (consumed)`;
+    if (drinkAmount > 0) return `-${drinkAmount} ml (Consumed)`;
+    return 'No recent intake';
   };
+
+  const reminderMinutes = Math.floor(reminderMs / 60000);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Current Volume</Text>
+      <Text style={styles.label}>Current Consume</Text>
       <View style={styles.volumeContainer}>
         <Text style={styles.volumeValue}>{currentVolume}</Text>
         <Text style={styles.volumeUnit}>ml</Text>
       </View>
-      <View style={[styles.changeContainer, { backgroundColor: getChangeColor() + '20' }]}>
-        <Text style={[styles.changeText, { color: getChangeColor() }]}>
+
+      {/* 顯示喝水變化 */}
+      <View style={[styles.changeContainer, { backgroundColor: drinkAmount > 0 ? '#e74c3c20' : '#f5f6fa' }]}>
+        <Text style={[styles.changeText, { color: drinkAmount > 0 ? '#e74c3c' : '#7f8c8d' }]}>
           {getChangeText()}
         </Text>
       </View>
+
+      {/* 顯示提醒設定 */}
+      <Text style={styles.reminderText}>Reminder set to: {reminderMinutes} mins</Text>
     </View>
   );
 };

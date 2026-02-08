@@ -19,11 +19,11 @@ const HistoryItem = ({ item }) => {
         <Text style={styles.timeText}>{formatTime(item.timestamp)}</Text>
       </View>
       <View style={styles.volumeInfo}>
-        <Text style={styles.volumeText}>{item.volume} ml</Text>
-        {item.change !== 0 && (
-          <Text style={[styles.changeText, { color: getChangeColor() }]}>
-            {item.change > 0 ? '+' : ''}{item.change} ml
-          </Text>
+        {/* 顯示當下剩餘水量 */}
+        <Text style={styles.volumeText}>Left: {item.lastStableWeight} ml</Text>
+        {/* 如果有喝水，顯示消耗量 */}
+        {item.drinkAmount > 0 && (
+          <Text style={styles.consumedText}>-{item.drinkAmount} ml</Text>
         )}
       </View>
     </View>
@@ -36,7 +36,7 @@ const VolumeHistory = ({ history }) => {
       <Text style={styles.title}>Recent Readings</Text>
       <FlatList
         data={history}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id || Math.random().toString()}
         renderItem={({ item }) => <HistoryItem item={item} />}
         scrollEnabled={false}
         ListEmptyComponent={

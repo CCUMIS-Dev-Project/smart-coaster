@@ -50,7 +50,21 @@ const apiService = {
    * Generic GET request
    * @param {string} endpoint - API endpoint
    * @returns {Promise} Response data
+   * 上傳感測器數據到後端資料庫
+   * @param {object} sensorData - { systemActive, weight, isOnCoaster, ... }
    */
+
+  uploadSensorData: async (sensorData) => {
+    try {
+      // 假設後端有一個 /api/sensor/log 的路由
+      const response = await apiClient.post('/api/sensor/log', sensorData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Upload sensor data failed:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
   get: async (endpoint) => {
     try {
       const response = await apiClient.get(endpoint);

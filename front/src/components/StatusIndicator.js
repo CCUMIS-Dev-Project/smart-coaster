@@ -1,15 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const StatusIndicator = ({ status }) => {
-  const isOccupied = status === 'occupied';
+const StatusIndicator = ({ systemActive, isOnCoaster }) => {
+  // 決定狀態顏色與文字
+  let statusColor = '#95a5a6'; // Gray
+  let statusText = 'Unknown';
+
+  if (!systemActive) {
+    statusColor = '#e74c3c'; // Red
+    statusText = 'System Off';
+  } else if (isOnCoaster) {
+    statusColor = '#27ae60'; // Green
+    statusText = 'Cup Placed';
+  } else {
+    statusColor = '#f39c12'; // Orange
+    statusText = 'Coaster Empty';
+  }
 
   return (
     <View style={styles.container}>
-      <View style={[styles.indicator, isOccupied ? styles.occupied : styles.empty]} />
-      <Text style={styles.statusText}>
-        {isOccupied ? 'Cup Placed' : 'Coaster Empty'}
-      </Text>
+      <View style={[styles.indicator, { backgroundColor: statusColor }]} />
+      <Text style={styles.statusText}>{statusText}</Text>
     </View>
   );
 };
