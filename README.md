@@ -16,13 +16,15 @@
 * 建立(-b)並切換分支： `git checkout -b <branch-name>` 
 * 加入檔案： `git add .`
 * 提交紀錄： `git commit -m "描述你的更新內容"`
-* 推送至雲端： `git push -u origin <branch-name>`
+* 推送至雲端(初始推送)： `git push -u origin <branch-name>`
 
 3. **非第一次載專案到本地IDE**
 * 查看你現在在哪個 branch: `git branch`
 * 切換到你要的 branch: `git checkout <branch-name>`
 * update更動: `git pull`
 
+4. **非推送到新分支**
+* 推送至雲端(同一branch)：`git push`
 
 
 ## 📂 專案結構 (Project Structure)
