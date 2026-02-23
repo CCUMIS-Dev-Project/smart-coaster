@@ -7,16 +7,21 @@
 
 ## 👥 團隊協作 (Git Workflow)
 
-1. **複製專案**
-* `git clone <repository-url>`
+1. **複製專案(第一次載下專案時)**
+* `git clone <repository-url>` 
 * `cd smart-coaster`
 
 
 2. **提交與推送更新**
-* 建立並切換分支： `git checkout -b <branch-name>`
+* 建立(-b)並切換分支： `git checkout -b <branch-name>` 
 * 加入檔案： `git add .`
 * 提交紀錄： `git commit -m "描述你的更新內容"`
 * 推送至雲端： `git push -u origin <branch-name>`
+
+3. **非第一次載專案到本地IDE**
+* 查看你現在在哪個 branch: `git branch`
+* 切換到你要的 branch: `git checkout <branch-name>`
+* update更動: `git pull`
 
 
 
@@ -46,9 +51,30 @@ smart-coaster/
 
 ```
 
----
+
+## 📝 開發導覽 (Where to Modify)
+
+| 任務 | 檔案路徑 |
+| --- | --- |
+| 修改杯墊重量偵測邏輯 | `pico/main.py` |
+| 修改藍牙連線/權限請求 | `front/src/hooks/useBLE.js` |
+| 調整 App 介面 UI | `front/src/screens/DashboardScreen.js` |
+| 串接新的後端 API | `front/src/services/api.js` |
+| 處理 AI 聊天或資料庫邏輯 | `back/app.py` |
+
 
 ## 🛠️ 測試流程
+
+! 後端測試或操作都須在虛擬環境(venv)中執行，避免全域安裝後在其他的專案上遇到python版本相容性問題 !
+
+### venv設定方式 (terminal)
+1. 第一次建立（在 back/ 資料夾裡）: `python -m venv venv`
+2. 啟動 venv: `source venv/bin/activate  # Mac/Linux` <br>
+             `venv\Scripts\activate  # Windows` 
+
+* 做完離開: `deactivate`
+* **venv不要push到github**，確認 `.gitignore` 裡有這行： `venv/`
+
 
 ### 1. 硬體端設定 (Pico W)
 
@@ -135,12 +161,3 @@ npx expo start --dev-client
 
 
 
-## 📝 開發導覽 (Where to Modify)
-
-| 任務 | 檔案路徑 |
-| --- | --- |
-| 修改杯墊重量偵測邏輯 | `pico/main.py` |
-| 修改藍牙連線/權限請求 | `front/src/hooks/useBLE.js` |
-| 調整 App 介面 UI | `front/src/screens/DashboardScreen.js` |
-| 串接新的後端 API | `front/src/services/api.js` |
-| 處理 AI 聊天或資料庫邏輯 | `back/app.py` |
