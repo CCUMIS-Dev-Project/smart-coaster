@@ -142,11 +142,18 @@ class BLEPeripheral:
             resp_data=self._resp_payload
         )
 
-    def send_water_data(self, amount):
-        # 將數字轉為字串發送 (例如 "120.5")
-        data = "{:.1f}".format(amount)
+    def send_full_status(self, active, weight, on_coaster, drink, reminder):
+        # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder
+        # 範例: "1,250.5,1,10.0,1800000"
+        data = "{},{},{},{},{}".format(
+            1 if active else 0,
+            "{:.1f}".format(weight),
+            1 if on_coaster else 0,
+            "{:.1f}".format(drink),
+            reminder
+        )
+        print(f"BLE發送: {data}")
         for conn_handle in self._connections:
-            # 發送 Notify
             self._ble.gatts_notify(conn_handle, self._handle, data)
 
 ble = BLEPeripheral()
@@ -197,6 +204,9 @@ while True:
             time_passed = utime.ticks_diff(utime.ticks_ms(), last_interaction_time)
             is_overdue = time_passed > REMINDER_MS
             
+            # 狀態改變或喝水時發送數據
+            data_changed = False
+            
             # 邏輯 A：水壺放下 (熄燈)
             if current_weight > threshold:
                 if not is_on_coaster: #剛放回
@@ -209,13 +219,12 @@ while True:
                         drink_amount = diff
                         last_interaction_time = utime.ticks_ms() # 【核心】喝水了，重設計時器
                         is_overdue = False
-                        # 透過藍芽發送數據到 APP
-                        print(f"傳送數據: {drink_amount}g")
-                        ble.send_water_data(drink_amount)
+                        data_changed = True
                         
                     elif diff < -5:
                         drink_amount = 0
                         last_interaction_time = utime.ticks_ms() # 補水也算互動，重設計時器
+                        data_changed = True
                     
                     last_stable_weight = new_weight 
                     is_on_coaster = True
@@ -246,6 +255,19 @@ while True:
                     oled.fill(0)
                     oled.text("Drinking...", 30, 30)
                     oled.show()
+                    data_changed = True
+                    
+            # 統一發送邏輯
+            # 您可以選擇在 data_changed 為 True 時發送，或是設定一個計時器每秒發送一次
+            if data_changed:
+                ble.send_full_status(
+                    system_active, 
+                    last_stable_weight, 
+                    is_on_coaster, 
+                    drink_amount, 
+                    REMINDER_MS
+                )
+                drink_amount = 0 # 發送後歸零單次喝水量，避免重複計算
                     
                 
         except OSError:
