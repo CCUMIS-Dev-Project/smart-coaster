@@ -5,7 +5,7 @@ const API_CONFIG = {
   // For local development
   // Use your computer's IP address when testing on physical device
   // Use 'localhost' when testing on web or emulator on same machine
-  BASE_URL: 'http://localhost:5000',
+  BASE_URL: 'http://localhost:5001',
 
   // Endpoints
   ENDPOINTS: {
