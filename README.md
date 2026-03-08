@@ -113,6 +113,39 @@ npm install
 npx expo start
 ```
 
+* 重新產生原生檔案 (Prebuild)
+如果你是在開發環境中使用 Expo Go 測試，通常改完 app.json 後重啟即可。但如果你有使用到藍牙（BLE）等需要原生權限的功能，或是想在模擬器/實機上跑「開發版本（Development Build）」，你需要執行：
+
+```bash
+cd front
+npx expo prebuild --clean
+```
+注意： --clean 會清除舊的原生快取，確保新的 Icon 被正確放入 Android/iOS 的資源資料夾中。
+
+### 重新建置並安裝到手機
+根據你的測試方式選擇對應指令：
+
+A. 如果你是要在手機上直接執行（開發階段）
+如果你之前有產出過原生殼（Development Client），請重新安裝：
+
+Android: npx expo run:android
+
+iOS: npx expo run:ios (需要 Mac)
+
+B. 如果你要產出安裝檔 (APK/AAB) 供組員測試
+你們專案中有 eas.json，代表可以使用 Expo 的雲端建置服務（EAS Build）。這是最推薦的方式，因為它可以直接產出載點。
+
+登入 Expo 帳號：
+
+```bash
+eas login
+開始建置 APK (以 Android 為例)：
+```
+```Bash
+eas build --platform android --profile preview
+註：preview 設定通常在 eas.json 裡會設定產出 apk 格式，方便直接傳給同學安裝。
+```
+
 * 若要測試藍牙功能需要執行以下指令：
 ```
 # 安裝 BLE 與開發客戶端相關套件
