@@ -10,12 +10,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
+import {Alert} from 'react-native';
+
+
 
 const MainScreen = () => {
   // 延用 DashboardScreen 的 BLE 邏輯
   const { scanAndConnect, connectedDevice, bleData } = useBLE();
   const [totalIntake, setTotalIntake] = useState(0);
   const dailyTarget = 2000; // 假設目標為 2000ml
+  const [drinkType, setDrinkType] = useState('水');
 
   // 監聽 BLE 數據更新水量
   useEffect(() => {
@@ -27,6 +31,20 @@ const MainScreen = () => {
   // 計算百分比
   const progress = Math.min((totalIntake / dailyTarget) * 100, 100).toFixed(0);
 
+  // 處理切換飲品的邏輯
+  const handleChangeDrink = () => {
+    Alert.alert(
+      "更換飲品",
+      "請選擇您目前飲用的液體：",
+      [
+        { text: "水", onPress: () => setDrinkType("水") },
+        { text: "咖啡", onPress: () => setDrinkType("咖啡") },
+        { text: "茶", onPress: () => setDrinkType("茶") },
+        { text: "取消", style: "cancel" }
+      ]
+    );
+  };
+
   return (
     <ImageBackground 
       source={require('../assets/background.png')} // 你的設計背景圖
@@ -35,10 +53,15 @@ const MainScreen = () => {
       <SafeAreaView style={styles.container}>
         {/* 頂部狀態與標題 */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>哈囉！</Text>
-            <Text style={styles.subText}>今天也要記得喝水喔</Text>
-          </View>
+          <TouchableOpacity style={styles.drinkPickerButton} onPress={handleChangeDrink}>
+            <View>
+                <Text style={styles.drinkLabel}>目前飲用</Text>
+                <View style={styles.drinkRow}>
+                <Text style={styles.drinkName}>{drinkType}</Text>
+                <Ionicons name="chevron-down" size={18} color="#3498db" style={{ marginLeft: 5 }} />
+                </View>
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity onPress={scanAndConnect}>
             <Ionicons 
               name="bluetooth" 
@@ -181,7 +204,35 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 12,
     color: '#BBB',
-  }
+  },
+  drinkPickerButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#E1E8EE',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  drinkLabel: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+  },
+  drinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  drinkName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
 });
 
 export default MainScreen;
