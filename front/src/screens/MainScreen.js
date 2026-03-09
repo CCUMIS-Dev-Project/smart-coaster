@@ -41,14 +41,14 @@ const MainScreen = () => {
         { text: "咖啡", onPress: () => setDrinkType("咖啡") },
         { text: "茶", onPress: () => setDrinkType("茶") },
         // { text: "神奇水水", onPress: () => setDrinkType("神奇水水") },
-        { text: "取消", style: "cancel" } // 這邊顯示不出取消按鈕
+        { text: "取消", style: "cancel" } // 這邊bug顯示不出取消按鈕
       ]
     );
   };
 
   return (
     <ImageBackground 
-      source={require('../assets/background.png')} // 你的設計背景圖
+      source={require('../assets/background.png')} 
       style={styles.background}
     >
       <SafeAreaView style={styles.container}>
