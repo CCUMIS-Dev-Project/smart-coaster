@@ -1,198 +1,111 @@
 
 ---
 
-# smart-coaster (智慧杯墊專案)
+# 🥤 smart-coaster (智慧杯墊專案)
 
-本專案結合 Raspberry Pi Pico W、重量感測器與 Expo App，達成飲水數據即時追蹤與提醒功能。
+本專案為**資管系畢業專題**，結合 Raspberry Pi Pico W、重量感測器與 Expo App，達成飲水數據即時追蹤、LED 提醒與 AI 數據分析功能。
+
+---
 
 ## 👥 團隊協作 (Git Workflow)
 
-1. **複製專案(第一次載下專案時)**
-* `git clone <repository-url>` 
-* `cd smart-coaster`
+1. **複製專案**：`git clone <repository-url>`
+2. **建立分支**：`git checkout -b <branch-name>`
+3. **提交更新**：`git add .` -> `git commit -m "描述內容"`
+4. **同步雲端**：`git pull` (下載最新) -> `git push` (上傳更新)
 
-
-2. **提交與推送更新**
-* 建立(-b)並切換分支： `git checkout -b <branch-name>` 
-* 加入檔案： `git add .`
-* 提交紀錄： `git commit -m "描述你的更新內容"`
-* 推送至雲端(初始推送)： `git push -u origin <branch-name>`
-
-3. **非第一次載專案到本地IDE**
-* 查看你現在在哪個 branch: `git branch`
-* 切換到你要的 branch: `git checkout <branch-name>`
-* update更動: `git pull`
-
-4. **非推送到新分支**
-* 推送至雲端(同一branch)：`git push`
-
+---
 
 ## 📂 專案結構 (Project Structure)
 
 ```text
 smart-coaster/ 
 ├── pico/                   # Raspberry Pi Pico W (MicroPython)
-│   ├── main.py             # 主程式邏輯 (BLE 廣播、重量偵測、燈效)
-│   ├── ble_advertising.py  # 藍牙廣播輔助庫
-│   ├── hx711_pio.py        # 重量感測器驅動 (PIO 版本)
-│   └── ssd1306.py          # OLED 螢幕驅動
+│   ├── main.py             # 主程式邏輯 (BLE、重量偵測、燈效)
+│   └── ...                 # 各種感測器驅動程式
 ├── front/                  # React Native + Expo 手機 App
 │   ├── App.js              # 入口程式
-│   ├── app.json            # Expo 設定 (包含 Android 藍牙權限)
-│   └── src/
-│       ├── hooks/
-│       │   └── useBLE.js   # 藍牙連線與數據監聽邏輯
-│       ├── screens/
-│       │   └── DashboardScreen.js # 主監控畫面
-│       └── services/
-│           └── api.js      # 與 Flask 後端通訊介面
+│   ├── app.json            # 權限配置 (BLE 關鍵設定)
+│   └── src/                # 前端源碼 (hooks, screens, services)
 └── back/                   # Flask Backend 伺服器
-    ├── app.py              # 伺服器主程式 (Port 5000)
-    ├── requirements.txt    # 後端依賴套件
-    └── .env                # 機密金鑰 (如 GROQ_API_KEY)
+    └── app.py              # 資料處理與 AI 邏輯
 
 ```
 
+---
 
-## 📝 開發導覽 (Where to Modify)
+## 🛠️ 測試流程 (重要！)
 
-| 任務 | 檔案路徑 |
-| --- | --- |
-| 修改杯墊重量偵測邏輯 | `pico/main.py` |
-| 修改藍牙連線/權限請求 | `front/src/hooks/useBLE.js` |
-| 調整 App 介面 UI | `front/src/screens/DashboardScreen.js` |
-| 串接新的後端 API | `front/src/services/api.js` |
-| 處理 AI 聊天或資料庫邏輯 | `back/app.py` |
+> **⚠️ 注意**：由於本專案使用藍牙 (BLE) 功能，**不支援 Expo Go**。請務必使用「開發版客戶端 (Development Build)」。
 
+### 1. 硬體端 (Pico W)
 
-## 🛠️ 測試流程
-
-! 後端測試或操作都須在虛擬環境(venv)中執行，避免全域安裝後在其他的專案上遇到python版本相容性問題 !
-
-### venv設定方式 (terminal)
-1. 第一次建立（在 back/ 資料夾裡）: `python -m venv venv`
-2. 啟動 venv: `source venv/bin/activate  # Mac/Linux` <br>
-             `venv\Scripts\activate  # Windows` 
-
-* 做完離開: `deactivate`
-* **venv不要push到github**，確認 `.gitignore` 裡有這行： `venv/`
-
-
-### 1. 硬體端設定 (Pico W)
-
-* **環境**：使用 Thonny IDE，並確保 Pico W 已燒錄 MicroPython 韌體。
-* **操作**：
-1. 將 `pico/` 資料夾內所有檔案上傳至 Pico W。
-2. 確保 `main.py` 中的 `gap_name` 設定為 `"SmartCoaster"`。
-3. 執行 `main.py`，OLED 螢幕應顯示「Press to Start」。
-
-
+* 使用 Thonny 將 `pico/` 內檔案上傳。
+* 執行 `main.py`，確認 OLED 顯示「Press to Start」。
 
 ### 2. 後端伺服器 (Flask)
 
-* **環境**：Python 3.x
-* **操作**：
-1. `cd back`
-2. 安裝套件：`pip install -r requirements.txt`
-3. 啟動伺服器：`python app.py`
-
-
-* *註：伺服器預設於 `http://0.0.0.0:5000` 運行。*
-
-
+1. 進入 `back/` 並啟動虛擬環境：`venv\Scripts\activate` (Windows)。
+2. 安裝套件：`pip install -r requirements.txt`。
+3. 啟動：`python app.py`。
 
 ### 3. 前端 App (Expo)
 
-* **環境準備**：安裝必要的原生通訊套件
+#### **A. 初始環境設定 (僅需執行一次)**
+
 ```bash
 cd front
 npm install
-```
-* 若只要測試前端介面，執行：
-```
-npx expo start
-```
-
-* 重新產生原生檔案 (Prebuild)
-如果你是在開發環境中使用 Expo Go 測試，通常改完 app.json 後重啟即可。但如果你有使用到藍牙（BLE）等需要原生權限的功能，或是想在模擬器/實機上跑「開發版本（Development Build）」，你需要執行：
-
-```bash
-cd front
-npx expo prebuild --clean
-```
-注意： --clean 會清除舊的原生快取，確保新的 Icon 被正確放入 Android/iOS 的資源資料夾中。
-
-### 重新建置並安裝到手機
-根據你的測試方式選擇對應指令：
-
-A. 如果你是要在手機上直接執行（開發階段）
-如果你之前有產出過原生殼（Development Client），請重新安裝：
-
-Android: npx expo run:android
-
-iOS: npx expo run:ios (需要 Mac)
-
-B. 如果你要產出安裝檔 (APK/AAB) 供組員測試
-你們專案中有 eas.json，代表可以使用 Expo 的雲端建置服務（EAS Build）。這是最推薦的方式，因為它可以直接產出載點。
-
-登入 Expo 帳號：
-
-```bash
-eas login
-開始建置 APK (以 Android 為例)：
-```
-```Bash
-eas build --platform android --profile preview
-註：preview 設定通常在 eas.json 裡會設定產出 apk 格式，方便直接傳給同學安裝。
-```
-
-* 若要測試藍牙功能需要執行以下指令：
-```
-# 安裝 BLE 與開發客戶端相關套件
-npx expo install react-native-ble-plx expo-dev-client base-64
+eas login  # 登入你的 Expo 帳號
 
 ```
 
+#### **B. 建立原生殼 (當權限或套件變動時執行)**
 
-* **手機權限 (Android 11 重要)**：
-* 務必開啟手機的 **藍牙 (Bluetooth)** 與 **定位 (GPS)**。
-* 進入手機設定，手動確認該 App 已獲取「位置」權限。
+**這是解決 `createClient of null` 的關鍵步驟：**
 
-
-* **建立開發版 (EAS Build)**：
-若修改了 `app.json` 權限，需重新編譯：
+1. 執行雲端打包：
 ```bash
 eas build --profile development --platform android
 
 ```
 
 
-* **啟動開發伺服器**：
+2. 下載並安裝：掃描產出的 QR Code 下載 `.apk` 並安裝至**實體手機**。
+
+#### **C. 日常前端開發 (改 UI 專用)**
+
+**只要原生殼裝好了，平常改介面不需要重新 Build：**
+
+1. 啟動伺服器：
 ```bash
 npx expo start --dev-client
 
 ```
 
 
-* 使用手機 App 內的 QR 掃描器掃描電腦畫面。
-
-
+2. 手機操作：打開安裝好的專屬 App，掃描電腦上的 QR Code 即可連線。
+3. **熱更新**：修改 `src/` 下的任何代碼並存檔，手機畫面會即時更新。
 
 ---
 
 ## 🔍 連線偵錯指引 (Debug)
 
-1. **找不到杯墊？**
-* 確保 **nRF Connect** 等其他藍牙 App 已斷開連線，藍牙具備獨佔性。
-* 檢查 Pico W 終端機是否報錯。
+| 問題 | 解決方案 |
+| --- | --- |
+| **createClient of null** | 誤用了 Expo Go。請改用 `eas build` 產出的專屬 App。 |
+| **找不到杯墊藍牙** | 1. 確認手機藍牙與 **GPS 定位** 已開啟。 <br>
 
+<br> 2. 檢查 `app.json` 是否有 `BLUETOOTH_SCAN` 權限。 |
+| **API 無法連線** | 檢查 `api.js`，將 `localhost` 改為電腦的 **區域網路 IP**。 |
+| **藍牙連線不穩定** | 確保沒有其他 App (如 nRF Connect) 正連接著 Pico W。 |
 
-2. **收到數據但沒顯示？**
-* 檢查 `useBLE.js` 中的 `SERVICE_UUID` 是否與 Pico W 端的 UUID (小寫) 完全匹配。
+---
 
+## 📝 開發分配 (Where to Modify)
 
-3. **API 無法連線？**
-* 前端呼叫後端時，請勿使用 `localhost`，請改用電腦的區域網路 IP (如 `192.168.x.x`)。
+* **修改 UI 介面**：`front/src/screens/DashboardScreen.js`
+* **調整藍牙邏輯**：`front/src/hooks/useBLE.js`
+* **後端 API/AI 邏輯**：`back/app.py`
 
-
-
+---

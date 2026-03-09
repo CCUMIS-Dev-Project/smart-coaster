@@ -40,7 +40,8 @@ const MainScreen = () => {
         { text: "水", onPress: () => setDrinkType("水") },
         { text: "咖啡", onPress: () => setDrinkType("咖啡") },
         { text: "茶", onPress: () => setDrinkType("茶") },
-        { text: "取消", style: "cancel" }
+        // { text: "神奇水水", onPress: () => setDrinkType("神奇水水") },
+        { text: "取消", style: "cancel" } // 這邊顯示不出取消按鈕
       ]
     );
   };
@@ -53,7 +54,7 @@ const MainScreen = () => {
       <SafeAreaView style={styles.container}>
         {/* 頂部狀態與標題 */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.drinkPickerButton} onPress={handleChangeDrink}>
+          <TouchableOpacity style={styles.PickerButton} onPress={handleChangeDrink}>
             <View>
                 <Text style={styles.drinkLabel}>目前飲用</Text>
                 <View style={styles.drinkRow}>
@@ -62,13 +63,13 @@ const MainScreen = () => {
                 </View>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={scanAndConnect}>
-            <Ionicons 
-              name="bluetooth" 
-              size={28} 
-              color={connectedDevice ? "#4CD964" : "#FF3B30"} 
-            />
+
+          <TouchableOpacity style={styles.PickerButton} onPress={scanAndConnect}>
+            <View>
+                <Text style={styles.drinkLabel}>連接杯墊</Text>
+            </View>
           </TouchableOpacity>
+          
         </View>
 
         {/* 中央杯子進度區 (對應 main_cup.jpg) */}
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#BBB',
   },
-  drinkPickerButton: {
+  PickerButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingVertical: 10,
     paddingHorizontal: 15,
