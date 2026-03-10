@@ -11,8 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import {Alert} from 'react-native';
-
-
+import SettingScreen from '../screens/SettingScreen.js';
+import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
 
 const MainScreen = () => {
   // 延用 DashboardScreen 的 BLE 邏輯
@@ -20,6 +20,8 @@ const MainScreen = () => {
   const [totalIntake, setTotalIntake] = useState(0);
   const dailyTarget = 2000; // 假設目標為 2000ml
   const [drinkType, setDrinkType] = useState('水');
+  const [isSettingVisible, setSettingVisible] = useState(false);
+  const [isReminderVisible, setReminderVisible] = useState(false);
 
   // 監聽 BLE 數據更新水量
   useEffect(() => {
@@ -104,6 +106,19 @@ const MainScreen = () => {
           </Text>
         </View>
       </SafeAreaView>
+
+      {/* 設定選單 Modal */}
+    <SettingScreen 
+      visible={isSettingVisible} 
+      onClose={() => setSettingVisible(false)}
+      onOpenReminder={() => setReminderVisible(true)} 
+    />
+
+    {/* 提醒時長設定 Modal */}
+    <ReminderSettingScreen 
+      visible={isReminderVisible} 
+      onClose={() => setReminderVisible(false)} 
+    />
     </ImageBackground>
   );
 };
