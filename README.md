@@ -19,12 +19,17 @@
 * 推送至雲端(初始推送)： `git push -u origin <branch-name>`
 
 3. **非第一次載專案到本地IDE**
+* 查看repo有哪些branch: `git fetch`
 * 查看你現在在哪個 branch: `git branch`
 * 切換到你要的 branch: `git checkout <branch-name>`
 * update更動: `git pull`
 
 4. **非推送到新分支**
 * 推送至雲端(同一branch)：`git push`
+
+5. **注意不要推到github的檔案，加到gitignore**
+* .env
+* __ pycache __ －＞　自動生成的文件不用推
 
 
 ## 📂 專案結構 (Project Structure)

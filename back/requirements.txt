@@ -1,6 +1,12 @@
-# 版本要求的檔案
-Flask==3.0.0
-flask-cors==4.0.0
+# Web Framework
+# Flask==3.0.0
+# flask-cors==4.0.0
 python-dotenv==1.0.0
 groq==0.4.2
 requests==2.31.0
+fastapi
+uvicorn
+
+# Database
+supabase
+httpx==0.27.2

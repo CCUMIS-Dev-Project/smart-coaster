@@ -17,6 +17,10 @@
 /back/*.egg-info/
 /back/dist/
 /back/build/
+# Python 暫存檔
+__pycache__/
+*.py[cod]
+*$py.class
 
 # React Native
 /front/node_modules/
