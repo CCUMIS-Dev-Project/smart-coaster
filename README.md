@@ -100,19 +100,18 @@ smart-coaster/
 1. `cd back`
 2. 啟動虛擬環境 (如果還沒)：`source venv/bin/activate` (Mac/Linux) 或 `venv\Scripts\activate` (Windows)
 3. 安裝套件 (第一次)：`pip install -r requirements.txt`
+4. 把該放到.env的key放好 (不要push到git，可能會tocken破產)
 4. 啟動伺服器：`uvicorn main:app --port 5001 --reload`
 
 * *註：伺服器預設於 `http://127.0.0.1:5001` 運行。*
 * *開發者可以直接開啟 `http://localhost:5001/docs` 查看自動生成的 API 文件 (Swagger UI)。*
 
 **🤖 測試 AI 聊天與週報產生：**
-在伺服器運行的同時，開啟**另一個新的終端機視窗**，並依序執行：
+在伺服器運行的同時，可直接用Swagger UI來測試，或開啟**另一個新的終端機視窗**，並依序執行：
 1. `cd back`
 2. `source venv/bin/activate`
 3. 測試聊天打字機：`python3 terminal_chat.py`
 4. 測試生成上週週報：`python3 test_weekly_report.py` (若想要看其他user的週報可再去調整test_weekly_report.py裡的user_id)
-
-
 
 ### 3. 前端 App (Expo)
 
