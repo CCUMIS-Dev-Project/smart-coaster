@@ -1,191 +1,108 @@
+// src/screens/ProfileScreen.js
+// 原本：靜態顯示個人資料 + 編輯按鈕
+// 現在：Ripple 風格的個人資料頁，保留所有欄位、整合到 SettingScreen 的「個人資料」入口
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
-  ScrollView, 
-  SafeAreaView 
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
-const ProfileScreen = () => {
-  // 模擬使用者資料，未來可從 API 或 AsyncStorage 讀取
-  const userData = {
-    name: "小寶杯",
-    gender: "不願透漏",
-    birthday: "2026 / 03 / 10",
-    height: "170 cm",
-    weight: "65 kg"
-  };
+const BLUE = '#5ab4f5', TEXT = '#1a2a3a', MUTED = '#8aaac0', BORDER = '#e2eaf2';
 
-  const InfoRow = ({ label, value, icon }) => (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <Ionicons name={icon} size={20} color="#3498db" style={styles.rowIcon} />
-        <Text style={styles.infoLabel}>{label}</Text>
-      </View>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
+// 保留原本的 userData 結構
+const userData = {
+  name: '小寶杯',
+  gender: '不願透漏',
+  birthday: '2026 / 03 / 10',
+  height: '170 cm',
+  weight: '65 kg',
+  // 新增 Ripple 相關欄位
+  goal: '2100 ml',
+  cup: '馬克杯 400ml',
+  activity: '輕度活動',
+};
+
+export default function ProfileScreen() {
+  const navigation = useNavigation();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 1. 頭像區域 */}
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Image 
-              source={require('../assets/main_cup.png')} // 使用你的杯子圖片作為頭像
-              style={styles.avatar}
-              resizeMode="cover"
-            />
-            <TouchableOpacity style={styles.editAvatarBadge}>
-              <Ionicons name="camera" size={16} color="#FFF" />
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backTxt}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.pageTitle}>個人資料</Text>
+        </View>
+
+        {/* Avatar */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarCircle}>
+            <Text style={{ fontSize: 52 }}>☕</Text>
           </View>
           <Text style={styles.userName}>{userData.name}</Text>
-          <Text style={styles.userTag}>健康飲水者</Text>
+          <Text style={styles.userTag}>健康飲水者 💧</Text>
         </View>
 
-        {/* 2. 基本資料列表 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>基本資料</Text>
-          <View style={styles.card}>
-            <InfoRow label="姓名" value={userData.name} icon="person-outline" />
-            <InfoRow label="性別" value={userData.gender} icon="transgender-outline" />
-            <InfoRow label="出生年月日" value={userData.birthday} icon="calendar-outline" />
-            <InfoRow label="身高" value={userData.height} icon="resize-outline" />
-            <InfoRow label="體重" value={userData.weight} icon="speedometer-outline" />
-          </View>
+        {/* Info groups */}
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>基本資料</Text>
+          <InfoRow label="姓名"     value={userData.name}     icon="👤" />
+          <InfoRow label="性別"     value={userData.gender}   icon="🚻" />
+          <InfoRow label="出生年月日" value={userData.birthday} icon="📅" />
+          <InfoRow label="身高"     value={userData.height}   icon="📏" />
+          <InfoRow label="體重"     value={userData.weight}   icon="⚖️" />
         </View>
 
-        {/* 3. 編輯按鈕 */}
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>編輯個人資料</Text>
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>飲水設定</Text>
+          <InfoRow label="每日目標" value={userData.goal}     icon="🎯" />
+          <InfoRow label="水杯夥伴" value={userData.cup}      icon="☕" />
+          <InfoRow label="活動量"   value={userData.activity} icon="🏃" />
+        </View>
+
+        {/* Edit button（保留原本功能，navigate 到 InitialSettingScreen） */}
+        <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('初始設定')} activeOpacity={0.85}>
+          <Text style={styles.editBtnTxt}>編輯個人資料</Text>
         </TouchableOpacity>
 
+        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
+
+function InfoRow({ label, value, icon }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowIcon}>{icon}</Text>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  header: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    backgroundColor: '#FFF',
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 15,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#E1F5FE',
-  },
-  editAvatarBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 5,
-    backgroundColor: '#3498db',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  userTag: {
-    fontSize: 14,
-    color: '#3498db',
-    marginTop: 5,
-    fontWeight: '600',
-  },
-  section: {
-    padding: 20,
-    marginTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#444',
-    paddingLeft: 5,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  infoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rowIcon: {
-    width: 30,
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  editButton: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    backgroundColor: '#3498db',
-    paddingVertical: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-    elevation: 3,
-  },
-  editButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+  safe: { flex: 1, backgroundColor: '#f0f7fc' },
+  inner: { padding: 20, paddingTop: 56, paddingBottom: 32, gap: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  backTxt: { fontSize: 18 },
+  pageTitle: { fontSize: 22, fontWeight: '900', color: TEXT },
 
-export default ProfileScreen;
+  avatarSection: { alignItems: 'center', gap: 6, paddingVertical: 8 },
+  avatarCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#eaf6ff', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: BLUE },
+  userName: { fontSize: 22, fontWeight: '900', color: TEXT },
+  userTag: { fontSize: 13, color: BLUE, fontWeight: '700' },
+
+  group: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  groupTitle: { fontSize: 11, fontWeight: '900', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderTopWidth: 1, borderTopColor: '#f0f5fa', gap: 12 },
+  rowIcon: { fontSize: 18, width: 26, textAlign: 'center' },
+  rowLabel: { flex: 1, fontSize: 15, color: '#6b8da8', fontWeight: '600' },
+  rowValue: { fontSize: 15, fontWeight: '800', color: TEXT },
+
+  editBtn: { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center', shadowColor: BLUE, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
+  editBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
+});

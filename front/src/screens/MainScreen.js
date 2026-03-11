@@ -1,254 +1,209 @@
+// src/screens/MainScreen.js
+// 原本：ImageBackground + BLE connect + 簡單 progress circle
+// 現在：Ripple Dashboard UI，保留全部 BLE 邏輯 (useBLE, scanAndConnect, bleData)
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ImageBackground, 
-  Image, 
-  TouchableOpacity, 
-  SafeAreaView 
+import {
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, SafeAreaView, Alert
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import useBLE from '../hooks/useBLE';
-import {Alert} from 'react-native';
-import SettingScreen from '../screens/SettingScreen.js';
-import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
 
-const MainScreen = () => {
-  // 延用 DashboardScreen 的 BLE 邏輯
+const CIRCUMFERENCE = 2 * Math.PI * 80;
+const BLUE = '#5ab4f5', TEXT = '#1a2a3a', MUTED = '#8aaac0', BORDER = '#e2eaf2';
+
+const DRINK_TYPES = ['💧 白開水', '🍵 茶', '☕ 咖啡', '🥤 果汁', '🧋 手搖'];
+
+export default function MainScreen({ navigation }) {
+  // ── 保留原有 BLE 邏輯 ─────────────────────────────────
   const { scanAndConnect, connectedDevice, bleData } = useBLE();
   const [totalIntake, setTotalIntake] = useState(0);
-  const dailyTarget = 2000; // 假設目標為 2000ml
-  const [drinkType, setDrinkType] = useState('水');
-  const [isSettingVisible, setSettingVisible] = useState(false);
-  const [isReminderVisible, setReminderVisible] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [timerMin, setTimerMin] = useState(48);
 
-  // 監聽 BLE 數據更新水量
+  // 固定目標（未來可從 UserContext 讀取）
+  const dailyTarget = 2100;
+
+  // 監聽 BLE 數據更新水量（原有邏輯完整保留）
   useEffect(() => {
     if (bleData.drinkAmount > 0) {
-      setTotalIntake((prev) => prev + bleData.drinkAmount);
+      setTotalIntake(prev => prev + bleData.drinkAmount);
+      const now = new Date();
+      const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+      setLogs(prev => [{ id: Date.now().toString(), time, amount: bleData.drinkAmount, type: '白開水' }, ...prev.slice(0,9)]);
     }
   }, [bleData.drinkAmount]);
 
-  // 計算百分比
-  const progress = Math.min((totalIntake / dailyTarget) * 100, 100).toFixed(0);
+  // ── UI 計算 ───────────────────────────────────────────
+  const pct = Math.min(1, totalIntake / dailyTarget);
+  const strokeOffset = CIRCUMFERENCE * (1 - pct);
 
-  // 處理切換飲品的邏輯
-  const handleChangeDrink = () => {
-    Alert.alert(
-      "更換飲品",
-      "請選擇您目前飲用的液體：",
-      [
-        { text: "水", onPress: () => setDrinkType("水") },
-        { text: "咖啡", onPress: () => setDrinkType("咖啡") },
-        { text: "茶", onPress: () => setDrinkType("茶") },
-        // { text: "神奇水水", onPress: () => setDrinkType("神奇水水") },
-        { text: "取消", style: "cancel" } // 這邊bug顯示不出取消按鈕
-      ]
-    );
-  };
+  const now = new Date();
+  const DAYS = ['週日','週一','週二','週三','週四','週五','週六'];
+  const dateStr = `${DAYS[now.getDay()]} · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  // 快速記錄（手動補水）
+  function quickLog(ml, type = '白開水') {
+    setTotalIntake(prev => prev + ml);
+    const t = new Date();
+    const time = `${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}`;
+    setLogs(prev => [{ id: Date.now().toString(), time, amount: ml, type }, ...prev.slice(0,9)]);
+    setTimerMin(Math.max(5, Math.round(dailyTarget / Math.max(1, logs.length + 1) / 60)));
+  }
+
+  // 切換飲品（保留原有 Alert 邏輯）
+  function handleChangeDrink() {
+    Alert.alert('記錄飲水', '請選擇飲品類型：', [
+      ...DRINK_TYPES.map(label => ({
+        text: label,
+        onPress: () => quickLog(250, label.replace(/^. /, ''))
+      })),
+      { text: '取消', style: 'cancel' }
+    ]);
+  }
+
+  const logColors = ['#5ab4f5','#4ade80','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
 
   return (
-    <ImageBackground 
-      source={require('../assets/background.png')} 
-      style={styles.background}
-    >
-      <SafeAreaView style={styles.container}>
-        {/* 頂部狀態與標題 */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.PickerButton} onPress={handleChangeDrink}>
-            <View>
-                <Text style={styles.drinkLabel}>目前飲用</Text>
-                <View style={styles.drinkRow}>
-                <Text style={styles.drinkName}>{drinkType}</Text>
-                <Ionicons name="chevron-down" size={18} color="#3498db" style={{ marginLeft: 5 }} />
-                </View>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.PickerButton} onPress={scanAndConnect}>
-            <View>
-                <Text style={styles.drinkLabel}>連接杯墊</Text>
-            </View>
-          </TouchableOpacity>
-          
+    <SafeAreaView style={styles.safe}>
+      {/* Top bar */}
+      <View style={styles.topbar}>
+        <View>
+          <Text style={styles.greeting}>嗨，Alex 👋</Text>
+          <Text style={styles.date}>{dateStr}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.bleBtn}
+          onPress={scanAndConnect}
+        >
+          <Text style={styles.bleDot}>{connectedDevice ? '🟢' : '🔴'}</Text>
+          <Text style={styles.bleTxt}>{connectedDevice ? '已連線' : '連接杯墊'}</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* 中央杯子進度區 (對應 main_cup.jpg) */}
-        <View style={styles.progressContainer}>
-          <View style={styles.circleOutline}>
-            <Image 
-              source={require('../assets/main_cup.png')} // 杯子圖示
-              style={styles.cupImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.progressText}>{progress}%</Text>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Ring progress */}
+        <View style={styles.ringSection}>
+          <View style={styles.ringWrap}>
+            <Svg width={180} height={180} viewBox="0 0 180 180">
+              <Circle cx="90" cy="90" r="80" stroke={BORDER} strokeWidth="12" fill="none" />
+              <Circle
+                cx="90" cy="90" r="80"
+                stroke={BLUE} strokeWidth="12" fill="none"
+                strokeDasharray={CIRCUMFERENCE}
+                strokeDashoffset={strokeOffset}
+                strokeLinecap="round"
+                rotation="-90" origin="90, 90"
+              />
+            </Svg>
+            <View style={styles.ringCenter}>
+              <Text style={styles.ringCup}>☕</Text>
+              <Text style={styles.ringPct}>{Math.round(pct * 100)}%</Text>
+              <Text style={styles.ringLbl}>{totalIntake} / {dailyTarget} ml</Text>
+            </View>
+          </View>
+          {/* Timer pill */}
+          <View style={styles.timerPill}>
+            <View style={styles.timerDot} />
+            <Text style={styles.timerTxt}>下次補水</Text>
+            <Text style={styles.timerVal}>{timerMin} 分後</Text>
           </View>
         </View>
 
-        {/* 下方數據卡片 */}
-        <View style={styles.infoCard}>
-          <View style={styles.dataRow}>
-            <View style={styles.dataItem}>
-              <Text style={styles.dataLabel}>已飲用</Text>
-              <Text style={styles.dataValue}>{totalIntake} <Text style={styles.unit}>ml</Text></Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.dataItem}>
-              <Text style={styles.dataLabel}>今日目標</Text>
-              <Text style={styles.dataValue}>{dailyTarget} <Text style={styles.unit}>ml</Text></Text>
-            </View>
+        {/* Progress bar */}
+        <View style={styles.progSection}>
+          <View style={styles.progHeader}>
+            <Text style={styles.progLbl}>今日進度</Text>
+            <Text style={styles.progVal}>{totalIntake}ml / {dailyTarget}ml</Text>
           </View>
-          
-          {/* 連接狀態提示 */}
-          <Text style={styles.statusText}>
-            裝置狀態：{connectedDevice ? '已連線' : '未連線'}
-          </Text>
+          <View style={styles.progTrack}>
+            <View style={[styles.progFill, { width: `${pct * 100}%` }]} />
+          </View>
         </View>
-      </SafeAreaView>
 
-      {/* 設定選單 Modal */}
-    <SettingScreen 
-      visible={isSettingVisible} 
-      onClose={() => setSettingVisible(false)}
-      onOpenReminder={() => setReminderVisible(true)} 
-    />
+        {/* Quick log */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>快速記錄</Text>
+          <View style={styles.quickGrid}>
+            {[150, 250, 350].map(ml => (
+              <TouchableOpacity key={ml} style={styles.qBtn} onPress={() => quickLog(ml)} activeOpacity={0.75}>
+                <Text style={styles.qBtnTxt}>+{ml}ml</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[styles.qBtn, styles.qBtnBlue]} onPress={handleChangeDrink} activeOpacity={0.75}>
+              <Text style={styles.qBtnTxt}>+ 飲品 ▾</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-    {/* 提醒時長設定 Modal */}
-    <ReminderSettingScreen 
-      visible={isReminderVisible} 
-      onClose={() => setReminderVisible(false)} 
-    />
-    </ImageBackground>
+        {/* Log list */}
+        <View style={styles.section}>
+          <View style={styles.logHead}>
+            <Text style={styles.sectionTitle}>今日記錄</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('手動記錄')}>
+              <Text style={styles.logAdd}>＋ 手動新增</Text>
+            </TouchableOpacity>
+          </View>
+          {logs.length === 0 && (
+            <Text style={styles.emptyTxt}>還沒有記錄，喝水吧！💧</Text>
+          )}
+          {logs.map((log, i) => (
+            <View key={log.id} style={styles.logItem}>
+              <View style={[styles.logDot, { backgroundColor: logColors[i % logColors.length] }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.logAmt}>{log.amount} ml</Text>
+                <Text style={styles.logMeta}>{log.time} · {log.type}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    width: '100%',
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 25,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  progressContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  circleOutline: {
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 8,
-    borderColor: '#AEE2FF', // 淺藍色邊框
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  cupImage: {
-    width: 140,
-    height: 140,
-    marginBottom: 10,
-  },
-  progressText: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#3498db',
-  },
-  infoCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 30,
-    padding: 25,
-    marginBottom: 40,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  dataRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  dataItem: {
-    alignItems: 'center',
-  },
-  dataLabel: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 5,
-  },
-  dataValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  unit: {
-    fontSize: 14,
-    color: '#666',
-  },
-  divider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#EEE',
-  },
-  statusText: {
-    textAlign: 'center',
-    marginTop: 15,
-    fontSize: 12,
-    color: '#BBB',
-  },
-  PickerButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#E1E8EE',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  drinkLabel: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '600',
-  },
-  drinkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  drinkName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-});
+  safe: { flex: 1, backgroundColor: '#f0f7fc' },
+  topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  greeting: { fontSize: 20, fontWeight: '900', color: TEXT },
+  date: { fontSize: 13, color: MUTED, marginTop: 2 },
+  bleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: BORDER },
+  bleDot: { fontSize: 12 },
+  bleTxt: { fontSize: 12, fontWeight: '800', color: TEXT },
+  scroll: { flex: 1 },
 
-export default MainScreen;
+  ringSection: { alignItems: 'center', paddingVertical: 8 },
+  ringWrap: { width: 180, height: 180, alignItems: 'center', justifyContent: 'center' },
+  ringCenter: { position: 'absolute', alignItems: 'center' },
+  ringCup: { fontSize: 32 },
+  ringPct: { fontSize: 26, fontWeight: '900', color: TEXT },
+  ringLbl: { fontSize: 11, color: MUTED },
+  timerPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16, marginTop: 8, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  timerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80' },
+  timerTxt: { fontSize: 13, color: MUTED },
+  timerVal: { fontSize: 13, fontWeight: '900', color: TEXT },
+
+  progSection: { paddingHorizontal: 20, gap: 8, marginBottom: 4 },
+  progHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  progLbl: { fontSize: 13, fontWeight: '800', color: TEXT },
+  progVal: { fontSize: 13, color: MUTED },
+  progTrack: { height: 10, backgroundColor: BORDER, borderRadius: 8, overflow: 'hidden' },
+  progFill: { height: '100%', backgroundColor: BLUE, borderRadius: 8 },
+
+  section: { paddingHorizontal: 20, paddingTop: 14 },
+  sectionTitle: { fontSize: 14, fontWeight: '900', color: TEXT, marginBottom: 10 },
+  quickGrid: { flexDirection: 'row', gap: 8 },
+  qBtn: { flex: 1, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1.5, borderColor: BORDER },
+  qBtnBlue: { borderColor: BLUE, backgroundColor: '#eaf6ff' },
+  qBtnTxt: { fontSize: 12, fontWeight: '900', color: BLUE },
+
+  logHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logAdd: { fontSize: 13, fontWeight: '800', color: BLUE },
+  emptyTxt: { fontSize: 13, color: MUTED, textAlign: 'center', paddingVertical: 20 },
+  logItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f5fa' },
+  logDot: { width: 10, height: 10, borderRadius: 5 },
+  logAmt: { fontSize: 15, fontWeight: '900', color: TEXT },
+  logMeta: { fontSize: 12, color: MUTED },
+});
