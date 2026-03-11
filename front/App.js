@@ -2,7 +2,6 @@ import React from 'react';
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
-import MainTabNavigator from './src/navigation/TabNavigator';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import InitialSettingScreen from './src/screens/InitialSettingScreen';

@@ -74,7 +74,7 @@ const InitialSettingScreen = () => {
           <View style={styles.avatarSection}>
             <View style={styles.avatarWrapper}>
               <Image 
-                source={require('../assets/main_cup.jpg')} // 使用指定的杯子圖片
+                source={require('../assets/main_cup.png')} // 使用指定的杯子圖片
                 style={styles.avatar}
               />
               <View style={styles.cameraIcon}>
