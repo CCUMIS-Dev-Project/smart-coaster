@@ -3,13 +3,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons'; // Expo 內建的圖示庫
 
 
-// import DashboardScreen from '../screens/DashboardScreen';
 import ReportScreen from '../screens/ReportScreen'; 
 import ProfileScreen from '../screens/ProfileScreen';
 import MainScreen from '../screens/MainScreen.js';
 import SettingScreen from '../screens/SettingScreen.js';
 import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
-import GardenScreen from '../screens/GardenScreen.js';
 
 const Tab = createBottomTabNavigator();
 

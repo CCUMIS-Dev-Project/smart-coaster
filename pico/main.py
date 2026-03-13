@@ -143,7 +143,7 @@ class BLEPeripheral:
         )
 
     def send_full_status(self, active, weight, on_coaster, drink, reminder):
-        # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder
+        # 格式: active(0/1),volume,on_coaster(0/1),drink,reminder
         # 範例: "1,250.5,1,10.0,1800000"
         data = "{},{},{},{},{}".format(
             1 if active else 0,
