@@ -80,21 +80,21 @@ smart-coaster/
 cd front
 npm install
 eas login  # 登入你的 Expo 帳號
+npm install -g eas-cli # 下載 EAS
+```
+#### 安裝 expo-dev-client：
+這個套件能讓你的 App 具備「開發伺服器連線」的能力，取代原本的 Expo Go。
 
+```Bash
+npx expo install expo-dev-client
 ```
 
-#### **B. 建立原生殼 (當權限或套件變動時執行)**
-
-**這是解決 `createClient of null` 的關鍵步驟：**
-
-1. 執行雲端打包：
+#### 執行雲端打包：
 ```bash
 eas build --profile development --platform android
 
 ```
-
-
-2. 下載並安裝：掃描產出的 QR Code 下載 `.apk` 並安裝至**實體手機**。
+下載並安裝：掃描產出的 QR Code 下載 `.apk` 並安裝至**實體手機**。
 
 #### **C. 日常前端開發 (改 UI 專用)**
 
@@ -105,8 +105,6 @@ eas build --profile development --platform android
 npx expo start --dev-client
 
 ```
-
-
 2. 手機操作：打開安裝好的專屬 App，掃描電腦上的 QR Code 即可連線。
 3. **熱更新**：修改 `src/` 下的任何代碼並存檔，手機畫面會即時更新。
 
