@@ -27,7 +27,7 @@ export default function SettingScreen() {
         {/* 我的水杯 */}
         <SettingsGroup title="我的水杯">
           <SettingsRow icon="☕" name="馬克杯" sub="400ml・點此更換水杯"
-            onPress={() => navigation.navigate('初始設定')} arrow />
+            onPress={() => navigation.navigate('Initial')} arrow />
         </SettingsGroup>
 
         {/* 每日目標 */}
@@ -69,7 +69,7 @@ export default function SettingScreen() {
         {/* 個人資料（保留原本的 handleGoToProfile 導覽） */}
         <SettingsGroup title="個人資料">
           <SettingsRow icon="👤" name="重新設定個資" sub="性別・體重・活動量・年齡"
-            onPress={() => navigation.navigate('初始設定')} arrow />
+            onPress={() => navigation.navigate('Initial')} arrow />
           <SettingsRow icon="📍" name="位置與氣溫" sub="自動更新">
             <Switch value={locOn} onValueChange={setLocOn} trackColor={{ true: BLUE }} />
           </SettingsRow>

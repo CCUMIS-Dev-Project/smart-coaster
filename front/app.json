@@ -15,7 +15,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.leolin4ni.coasterapp"
     },
     "android": {
       "adaptiveIcon": {

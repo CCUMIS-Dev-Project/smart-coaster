@@ -7,7 +7,9 @@ import {
   TextInput, KeyboardAvoidingView, Platform, SafeAreaView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import useBLE from '../hooks/useBLE';
+//import useBLE from '../../hooks/useBLE';
+
+const bleData = { reminderMs: null }; // BLE placeholder
 
 const BLUE = '#5ab4f5', TEXT = '#1a2a3a', MUTED = '#8aaac0';
 
@@ -15,7 +17,7 @@ const PRESETS = [30, 45, 60, 90];
 
 export default function ReminderSettingScreen() {
   const navigation = useNavigation();
-  const { bleData } = useBLE(); // 保留原有 BLE 邏輯
+const { bleData } ={ reminderMs: null };  
 
   // 原本的邏輯保留：預設值從 BLE 讀取
   const currentMinutes = bleData.reminderMs ? Math.floor(bleData.reminderMs / 60000) : 60;

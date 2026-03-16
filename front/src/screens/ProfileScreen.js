@@ -63,7 +63,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Edit button（保留原本功能，navigate 到 InitialSettingScreen） */}
-        <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('初始設定')} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('Initial')} activeOpacity={0.85}>
           <Text style={styles.editBtnTxt}>編輯個人資料</Text>
         </TouchableOpacity>
 
