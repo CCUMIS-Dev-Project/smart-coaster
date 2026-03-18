@@ -10,3 +10,7 @@ uvicorn
 # Database
 supabase
 httpx==0.27.2
+
+#auth
+passlib[bcrypt]
+python-jose[cryptography]
