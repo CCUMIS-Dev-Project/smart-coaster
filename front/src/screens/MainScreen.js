@@ -2,60 +2,164 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Modal, TextInput, Alert, FlatList
+  SafeAreaView, Modal, TextInput, Alert, Animated
 } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
 import { useApp } from '../context/AppContext';
 import { colors, DRINK_TYPES } from '../constants/theme';
 
 const { blue: BLUE, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
-const CIRC = 2 * Math.PI * 76;
 
+const CUP_HEIGHT = 260;
+const CUP_WIDTH  = 200;
+
+const DRINK_COLORS = {
+  '白開水': '#a8d8f0',
+  '茶':     '#c8e6a0',
+  '咖啡':   '#c8a878',
+  '果汁':   '#f8d070',
+  '手搖':   '#f0a8c8',
+  '其他':   '#c8c0e8',
+};
+
+// ── 大水杯元件 ────────────────────────────────────────────
+function WaterCup({ logs, goalMl, totalMl }) {
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  const pct = Math.min(1, totalMl / Math.max(goalMl, 1));
+
+  useEffect(() => {
+    Animated.timing(fillAnim, {
+      toValue: pct,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [pct]);
+
+  const totalFillHeight = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, CUP_HEIGHT],
+  });
+
+  const progressWidth = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  const segments = logs.map(log => ({
+    ...log,
+    segHeight: Math.max(Math.round((log.ml / Math.max(goalMl, 1)) * CUP_HEIGHT), 30),
+    color: DRINK_COLORS[log.type] || '#c8c0e8',
+  }));
+
+  return (
+    <View style={cup.wrap}>
+      <View style={cup.cupOuter}>
+        <View style={cup.rim} />
+        <View style={cup.cupBody}>
+          <Animated.View style={[cup.fillWrap, { height: totalFillHeight }]}>
+            {[...segments].reverse().map((seg, i) => (
+              <View key={seg.id} style={[cup.segment, {
+                height: seg.segHeight,
+                backgroundColor: seg.color,
+                borderTopWidth: i > 0 ? 1.5 : 0,
+                borderTopColor: 'rgba(255,255,255,0.5)',
+              }]}>
+                <Text style={cup.segName}>{seg.type}</Text>
+                <Text style={cup.segMl}>{seg.ml}ml</Text>
+              </View>
+            ))}
+          </Animated.View>
+          {logs.length > 0 && (
+            <Animated.View style={[cup.waterLine, { bottom: totalFillHeight }]} />
+          )}
+          {logs.length === 0 && (
+            <View style={cup.emptyWrap}>
+              <Text style={cup.emptyTxt}>還沒有記錄</Text>
+              <Text style={cup.emptySubTxt}>喝水吧</Text>
+            </View>
+          )}
+        </View>
+        <View style={cup.handle} />
+      </View>
+
+      {/* 進度條 */}
+      <View style={cup.progressWrap}>
+        <View style={cup.progressHeader}>
+          <Text style={cup.progressPct}>{Math.round(pct * 100)}%</Text>
+          <Text style={cup.progressMl}>{totalMl} / {goalMl} ml</Text>
+        </View>
+        <View style={cup.progressTrack}>
+          <Animated.View style={[cup.progressFill, { width: progressWidth }]} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ── 主畫面 ────────────────────────────────────────────────
 export default function MainScreen() {
-  const { profile, goalMl, totalMl, logs, addLog, updateLog, deleteLog, deleteLogs, isRecording, setIsRecording, sensorData } = useApp();
+  const {
+    profile, goalMl, totalMl, logs,
+    addLog, updateLog, deleteLog, deleteLogs,
+    sensorData
+  } = useApp();
 
-  const [showAddModal,  setShowAddModal]  = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingLog,    setEditingLog]    = useState(null);
-  const [selMode,       setSelMode]       = useState(false);
-  const [selected,      setSelected]      = useState([]);
-
-  // Add modal state
-  const [addMl,   setAddMl]   = useState('250');
-  const [addType, setAddType] = useState(DRINK_TYPES[0]);
-
-  // Edit modal state
-  const [editMl,   setEditMl]   = useState('');
-  const [editType, setEditType] = useState(DRINK_TYPES[0]);
-
-  const pct = Math.min(1, totalMl / goalMl);
-  const strokeOffset = CIRC * (1 - pct);
+  const [showAddModal,     setShowAddModal]     = useState(false);
+  const [showEditModal,    setShowEditModal]    = useState(false);
+  const [editingLog,       setEditingLog]       = useState(null);
+  const [selMode,          setSelMode]          = useState(false);
+  const [selected,         setSelected]         = useState([]);
+  const [addMl,            setAddMl]            = useState('250');
+  const [addType,          setAddType]          = useState(DRINK_TYPES[0]);
+  const [customDrinkName,  setCustomDrinkName]  = useState('');
+  const [editMl,           setEditMl]           = useState('');
+  const [editType,         setEditType]         = useState(DRINK_TYPES[0]);
+  const [editCustomName,   setEditCustomName]   = useState('');
 
   const now = new Date();
   const DAYS = ['週日','週一','週二','週三','週四','週五','週六'];
   const dateStr = `${DAYS[now.getDay()]} · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
 
+  const hasCoaster  = profile.hasCoaster;
+  const isConnected = sensorData.connected;
+
+  function quickLog(ml) { addLog(ml, '白開水', ''); }
+
   function handleAdd() {
     const ml = parseInt(addMl);
     if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
-    addLog(ml, addType.label, addType.emoji);
+    const typeName = addType.label === '其他' && customDrinkName.trim()
+      ? customDrinkName.trim()
+      : addType.label;
+    addLog(ml, typeName, '');
     setShowAddModal(false);
     setAddMl('250');
     setAddType(DRINK_TYPES[0]);
+    setCustomDrinkName('');
   }
 
   function handleEdit() {
     const ml = parseInt(editMl);
     if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
-    updateLog(editingLog.id, { ml, type: editType.label, emoji: editType.emoji });
+    const typeName = editType.label === '其他' && editCustomName.trim()
+      ? editCustomName.trim()
+      : editType.label;
+    updateLog(editingLog.id, { ml, type: typeName, emoji: '' });
     setShowEditModal(false);
     setEditingLog(null);
+    setEditCustomName('');
   }
 
   function openEdit(log) {
     setEditingLog(log);
     setEditMl(String(log.ml));
-    setEditType(DRINK_TYPES.find(d => d.label === log.type) || DRINK_TYPES[0]);
+    const found = DRINK_TYPES.find(d => d.label === log.type);
+    if (found) {
+      setEditType(found);
+      setEditCustomName('');
+    } else {
+      setEditType(DRINK_TYPES[DRINK_TYPES.length - 1]); // 其他
+      setEditCustomName(log.type);
+    }
     setShowEditModal(true);
   }
 
@@ -67,9 +171,7 @@ export default function MainScreen() {
     Alert.alert('刪除紀錄', `確定刪除 ${selected.length} 筆紀錄？`, [
       { text: '取消', style: 'cancel' },
       { text: '刪除', style: 'destructive', onPress: () => {
-        deleteLogs(selected);
-        setSelected([]);
-        setSelMode(false);
+        deleteLogs(selected); setSelected([]); setSelMode(false);
       }},
     ]);
   }
@@ -81,84 +183,94 @@ export default function MainScreen() {
     ]);
   }
 
-  const logColors = ['#5ab4f5','#4ade80','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
+  function renderRecordArea() {
+    if (hasCoaster && isConnected) {
+      return (
+        <View style={s.autoRecordBanner}>
+          <View style={s.autoRecordDot} />
+          <Text style={s.autoRecordTxt}>自動記錄中</Text>
+          <Text style={s.autoRecordSub}>杯墊已連線，喝水會自動偵測</Text>
+        </View>
+      );
+    }
+    if (hasCoaster && !isConnected) {
+      return (
+        <View style={s.recordRow}>
+          <TouchableOpacity style={[s.recordBtn, s.recordConnect]}
+            onPress={() => Alert.alert('連接杯墊', '正在掃描附近的智慧杯墊...')} activeOpacity={0.85}>
+            <Text style={s.recordBtnTxt}>連接杯墊</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.recordBtn, s.recordManual]}
+            onPress={() => setShowAddModal(true)} activeOpacity={0.85}>
+            <Text style={s.recordManualTxt}>手動新增</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return (
+      <View style={s.recordRow}>
+        <TouchableOpacity style={[s.recordBtn, s.recordStart]}
+          onPress={() => setShowAddModal(true)} activeOpacity={0.85}>
+          <Text style={s.recordBtnTxt}>記錄飲水</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe}>
-      {/* Top bar */}
       <View style={s.topbar}>
         <View>
-          <Text style={s.greeting}>嗨，{profile.name || 'Alex'} 👋</Text>
+          <Text style={s.greeting}>嗨，{profile.name || 'Alex'}</Text>
           <Text style={s.date}>{dateStr}</Text>
         </View>
-        {/* 溫濕度 */}
-        <View style={s.sensorPill}>
-          <Text style={s.sensorTxt}>{sensorData.temperature}°C</Text>
-          <View style={s.sensorDivider} />
-          <Text style={s.sensorTxt}>{sensorData.humidity}%</Text>
+      </View>
+
+      <View style={s.sensorCard}>
+        <View style={s.sensorItem}>
+          <Text style={s.sensorLabel}>氣溫</Text>
+          <Text style={s.sensorValue}>{sensorData.temperature}°C</Text>
+        </View>
+        <View style={s.sensorDividerV} />
+        <View style={s.sensorItem}>
+          <Text style={s.sensorLabel}>濕度</Text>
+          <Text style={s.sensorValue}>{sensorData.humidity}%</Text>
+        </View>
+        <View style={s.sensorDividerV} />
+        <View style={s.sensorItem}>
+          <Text style={s.sensorLabel}>杯墊</Text>
+          <Text style={[s.sensorValue, { color: isConnected ? '#4ade80' : '#f87171' }]}>
+            {isConnected ? '已連線' : '未連線'}
+          </Text>
         </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* Ring */}
-        <View style={s.ringSection}>
-          <View style={s.ringWrap}>
-            <Svg width={170} height={170} viewBox="0 0 170 170">
-              <Circle cx="85" cy="85" r="76" stroke={BORDER} strokeWidth="12" fill="none" />
-              <Circle cx="85" cy="85" r="76" stroke={BLUE} strokeWidth="12" fill="none"
-                strokeDasharray={CIRC} strokeDashoffset={strokeOffset}
-                strokeLinecap="round" rotation="-90" origin="85,85" />
-            </Svg>
-            <View style={s.ringCenter}>
-              <Text style={s.ringPct}>{Math.round(pct * 100)}%</Text>
-              <Text style={s.ringLbl}>{totalMl} / {goalMl} ml</Text>
-            </View>
-          </View>
+        <WaterCup logs={logs} goalMl={goalMl} totalMl={totalMl} />
 
-          {/* 手動/自動記錄按鈕 */}
-          <View style={s.recordRow}>
-            {!isRecording ? (
-              <TouchableOpacity
-                style={[s.recordBtn, s.recordStart]}
-                onPress={() => setIsRecording(true)}
-                activeOpacity={0.85}
-              >
-                <Text style={s.recordBtnTxt}>開始記錄</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[s.recordBtn, s.recordStop]}
-                onPress={() => setIsRecording(false)}
-                activeOpacity={0.85}
-              >
-                <Text style={s.recordBtnTxt}>結束記錄</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[s.recordBtn, s.recordAuto, !profile.hasCoaster && s.recordDisabled]}
-              disabled={!profile.hasCoaster}
-              activeOpacity={0.85}
-            >
-              <Text style={[s.recordBtnTxt, !profile.hasCoaster && { color: MUTED }]}>
-                自動記錄
-              </Text>
-              {!profile.hasCoaster && <Text style={s.needCoaster}>需要杯墊</Text>}
+        <View style={s.recordSection}>{renderRecordArea()}</View>
+
+        {/* 快捷喝水 */}
+        <View style={s.quickSection}>
+          <Text style={s.sectionTitle}>快速記錄</Text>
+          <View style={s.quickGrid}>
+            <TouchableOpacity style={s.qBtn} onPress={() => quickLog(30)} activeOpacity={0.75}>
+              <Text style={s.qBtnName}>一口水</Text>
+              <Text style={s.qBtnMl}>30ml</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.qBtn} onPress={() => quickLog(60)} activeOpacity={0.75}>
+              <Text style={s.qBtnName}>一大口水</Text>
+              <Text style={s.qBtnMl}>60ml</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.qBtn, s.qBtnBlue]}
+              onPress={() => setShowAddModal(true)} activeOpacity={0.75}>
+              <Text style={[s.qBtnName, { color: BLUE }]}>其他飲品</Text>
+              <Text style={s.qBtnMl}>自訂</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Progress bar */}
-        <View style={s.progSection}>
-          <View style={s.progHeader}>
-            <Text style={s.progLbl}>今日進度</Text>
-            <Text style={s.progVal}>{totalMl}ml / {goalMl}ml</Text>
-          </View>
-          <View style={s.progTrack}>
-            <View style={[s.progFill, { width: `${pct * 100}%` }]} />
-          </View>
-        </View>
-
-        {/* Today's logs */}
+        {/* 今日紀錄 */}
         <View style={s.logSection}>
           <View style={s.logHead}>
             <Text style={s.sectionTitle}>今日紀錄</Text>
@@ -180,14 +292,12 @@ export default function MainScreen() {
                 <Text style={s.logAction}>{selMode ? '取消' : '編輯'}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setShowAddModal(true)}>
-                <Text style={s.logAction}>＋ 新增</Text>
+                <Text style={s.logAction}>新增</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {logs.length === 0 && (
-            <Text style={s.emptyTxt}>還沒有記錄，喝水吧！</Text>
-          )}
+          {logs.length === 0 && <Text style={s.emptyTxt}>還沒有記錄，喝水吧！</Text>}
 
           {logs.map((log, i) => (
             <TouchableOpacity
@@ -202,9 +312,9 @@ export default function MainScreen() {
                   {selected.includes(log.id) && <Text style={{ color: '#fff', fontSize: 12 }}>✓</Text>}
                 </View>
               )}
-              <View style={[s.logDot, { backgroundColor: logColors[i % logColors.length] }]} />
+              <View style={[s.logDot, { backgroundColor: DRINK_COLORS[log.type] || '#5ab4f5' }]} />
               <View style={{ flex: 1 }}>
-                <Text style={s.logAmt}>{log.emoji} {log.ml} ml</Text>
+                <Text style={s.logAmt}>{log.ml} ml</Text>
                 <Text style={s.logMeta}>{log.time} · {log.type}</Text>
               </View>
               {!selMode && (
@@ -219,32 +329,38 @@ export default function MainScreen() {
         <View style={{ height: 30 }} />
       </ScrollView>
 
-      {/* Add Modal */}
+      {/* 新增 Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>新增飲水紀錄</Text>
-
             <Text style={s.lbl}>毫升數</Text>
             <TextInput style={s.inp} keyboardType="numeric" value={addMl} onChangeText={setAddMl} />
-
             <Text style={s.lbl}>飲品類型</Text>
             <View style={s.drinkGrid}>
               {DRINK_TYPES.map(d => (
-                <TouchableOpacity
-                  key={d.label}
+                <TouchableOpacity key={d.label}
                   style={[s.drinkChip, addType.label === d.label && s.drinkChipSel]}
-                  onPress={() => setAddType(d)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={s.drinkEmoji}>{d.emoji}</Text>
+                  onPress={() => setAddType(d)} activeOpacity={0.75}>
                   <Text style={[s.drinkLabel, addType.label === d.label && { color: colors.blueDark }]}>{d.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-
+            {/* 選「其他」時顯示自訂名稱輸入 */}
+            {addType.label === '其他' && (
+              <View style={{ marginBottom: 14 }}>
+                <Text style={s.lbl}>飲品名稱</Text>
+                <TextInput
+                  style={s.inp}
+                  value={customDrinkName}
+                  onChangeText={setCustomDrinkName}
+                  placeholder="請輸入飲品名稱"
+                  placeholderTextColor={MUTED}
+                />
+              </View>
+            )}
             <View style={s.modalBtns}>
-              <TouchableOpacity style={s.modalCancel} onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity style={s.modalCancel} onPress={() => { setShowAddModal(false); setCustomDrinkName(''); }}>
                 <Text style={s.modalCancelTxt}>取消</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.modalConfirm} onPress={handleAdd}>
@@ -255,32 +371,38 @@ export default function MainScreen() {
         </View>
       </Modal>
 
-      {/* Edit Modal */}
+      {/* 編輯 Modal */}
       <Modal visible={showEditModal} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>編輯飲水紀錄</Text>
-
             <Text style={s.lbl}>毫升數</Text>
             <TextInput style={s.inp} keyboardType="numeric" value={editMl} onChangeText={setEditMl} />
-
             <Text style={s.lbl}>飲品類型</Text>
             <View style={s.drinkGrid}>
               {DRINK_TYPES.map(d => (
-                <TouchableOpacity
-                  key={d.label}
+                <TouchableOpacity key={d.label}
                   style={[s.drinkChip, editType.label === d.label && s.drinkChipSel]}
-                  onPress={() => setEditType(d)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={s.drinkEmoji}>{d.emoji}</Text>
+                  onPress={() => setEditType(d)} activeOpacity={0.75}>
                   <Text style={[s.drinkLabel, editType.label === d.label && { color: colors.blueDark }]}>{d.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-
+            {/* 選「其他」時顯示自訂名稱輸入 */}
+            {editType.label === '其他' && (
+              <View style={{ marginBottom: 14 }}>
+                <Text style={s.lbl}>飲品名稱</Text>
+                <TextInput
+                  style={s.inp}
+                  value={editCustomName}
+                  onChangeText={setEditCustomName}
+                  placeholder="請輸入飲品名稱"
+                  placeholderTextColor={MUTED}
+                />
+              </View>
+            )}
             <View style={s.modalBtns}>
-              <TouchableOpacity style={s.modalCancel} onPress={() => setShowEditModal(false)}>
+              <TouchableOpacity style={s.modalCancel} onPress={() => { setShowEditModal(false); setEditCustomName(''); }}>
                 <Text style={s.modalCancelTxt}>取消</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.modalConfirm} onPress={handleEdit}>
@@ -294,64 +416,114 @@ export default function MainScreen() {
   );
 }
 
+const cup = StyleSheet.create({
+  wrap:     { alignItems: 'center', paddingVertical: 12 },
+  cupOuter: { width: CUP_WIDTH, position: 'relative' },
+  rim: {
+    width: CUP_WIDTH, height: 16,
+    backgroundColor: '#d0e8f8', borderRadius: 8,
+    borderWidth: 3, borderColor: '#a8cce8', zIndex: 2,
+  },
+  cupBody: {
+    width: CUP_WIDTH - 8, height: CUP_HEIGHT,
+    marginHorizontal: 4,
+    backgroundColor: 'rgba(220,240,255,0.3)',
+    borderWidth: 3, borderTopWidth: 0, borderColor: '#a8cce8',
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+    overflow: 'hidden', justifyContent: 'flex-end',
+  },
+  fillWrap: {
+    width: '100%', position: 'absolute', bottom: 0,
+    overflow: 'hidden',
+    borderBottomLeftRadius: 21, borderBottomRightRadius: 21,
+    justifyContent: 'flex-end', zIndex: 1,
+  },
+  segment: {
+    width: '100%', flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8,
+  },
+  segName:  { fontSize: 11, fontWeight: '800', color: 'rgba(0,0,0,0.6)' },
+  segMl:    { fontSize: 11, fontWeight: '900', color: 'rgba(0,0,0,0.7)' },
+  waterLine: {
+    position: 'absolute', left: 0, right: 0, height: 2,
+    backgroundColor: 'rgba(255,255,255,0.6)', zIndex: 2,
+  },
+  emptyWrap:   { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  emptyTxt:    { fontSize: 14, color: '#8aaac0', fontWeight: '800' },
+  emptySubTxt: { fontSize: 12, color: '#aac0d4' },
+  handle: {
+    position: 'absolute', right: -20, top: 40,
+    width: 22, height: 60,
+    borderWidth: 3, borderColor: '#a8cce8', borderLeftWidth: 0,
+    borderTopRightRadius: 14, borderBottomRightRadius: 14,
+    backgroundColor: 'transparent',
+  },
+  progressWrap:   { width: CUP_WIDTH, marginTop: 14, gap: 6 },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  progressPct:    { fontSize: 20, fontWeight: '900', color: '#3a90d4' },
+  progressMl:     { fontSize: 12, fontWeight: '700', color: MUTED },
+  progressTrack:  { height: 10, backgroundColor: '#d0e8f8', borderRadius: 8, overflow: 'hidden' },
+  progressFill:   { height: '100%', backgroundColor: '#5ab4f5', borderRadius: 8 },
+});
+
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BG },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   greeting: { fontSize: 20, fontWeight: '900', color: TEXT },
   date: { fontSize: 13, color: MUTED, marginTop: 2 },
-  sensorPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: BORDER },
-  sensorTxt: { fontSize: 13, fontWeight: '800', color: TEXT },
-  sensorDivider: { width: 1, height: 14, backgroundColor: BORDER, marginHorizontal: 8 },
 
-  ringSection: { alignItems: 'center', paddingVertical: 8 },
-  ringWrap: { width: 170, height: 170, alignItems: 'center', justifyContent: 'center' },
-  ringCenter: { position: 'absolute', alignItems: 'center' },
-  ringPct: { fontSize: 28, fontWeight: '900', color: TEXT },
-  ringLbl: { fontSize: 11, color: MUTED },
+  sensorCard:    { flexDirection: 'row', backgroundColor: CARD, borderRadius: 16, marginHorizontal: 20, marginBottom: 4, paddingVertical: 12, borderWidth: 1, borderColor: BORDER },
+  sensorItem:    { flex: 1, alignItems: 'center', gap: 3 },
+  sensorLabel:   { fontSize: 10, color: MUTED, fontWeight: '800' },
+  sensorValue:   { fontSize: 15, fontWeight: '900', color: TEXT },
+  sensorDividerV:{ width: 1, backgroundColor: BORDER },
 
-  recordRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  recordBtn: { flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center', borderWidth: 2 },
-  recordStart: { backgroundColor: BLUE, borderColor: BLUE },
-  recordStop: { backgroundColor: '#f87171', borderColor: '#f87171' },
-  recordAuto: { backgroundColor: CARD, borderColor: BORDER },
-  recordDisabled: { opacity: 0.45 },
-  recordBtnTxt: { fontSize: 14, fontWeight: '900', color: '#fff' },
-  needCoaster: { fontSize: 10, color: MUTED, marginTop: 2 },
+  recordSection:   { paddingHorizontal: 20, marginTop: 4 },
+  recordRow:       { flexDirection: 'row', gap: 10 },
+  recordBtn:       { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 2 },
+  recordStart:     { backgroundColor: BLUE, borderColor: BLUE },
+  recordConnect:   { backgroundColor: '#4ade80', borderColor: '#4ade80' },
+  recordManual:    { backgroundColor: CARD, borderColor: BORDER },
+  recordBtnTxt:    { fontSize: 14, fontWeight: '900', color: '#fff' },
+  recordManualTxt: { fontSize: 14, fontWeight: '900', color: TEXT },
+  autoRecordBanner:{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f0fff4', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#86efac' },
+  autoRecordDot:   { width: 10, height: 10, borderRadius: 5, backgroundColor: '#4ade80' },
+  autoRecordTxt:   { fontSize: 15, fontWeight: '900', color: '#16a34a' },
+  autoRecordSub:   { fontSize: 12, color: '#4ade80', flex: 1 },
 
-  progSection: { paddingHorizontal: 20, gap: 8, marginBottom: 4 },
-  progHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  progLbl: { fontSize: 13, fontWeight: '800', color: TEXT },
-  progVal: { fontSize: 13, color: MUTED },
-  progTrack: { height: 10, backgroundColor: BORDER, borderRadius: 8, overflow: 'hidden' },
-  progFill: { height: '100%', backgroundColor: BLUE, borderRadius: 8 },
+  quickSection: { paddingHorizontal: 20, paddingTop: 14, gap: 10 },
+  sectionTitle: { fontSize: 15, fontWeight: '900', color: TEXT },
+  quickGrid:    { flexDirection: 'row', gap: 10 },
+  qBtn:         { flex: 1, backgroundColor: CARD, borderRadius: 16, paddingVertical: 14, alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: BORDER },
+  qBtnBlue:     { borderColor: BLUE, backgroundColor: colors.blueLight },
+  qBtnName:     { fontSize: 13, fontWeight: '900', color: TEXT },
+  qBtnMl:       { fontSize: 11, fontWeight: '700', color: MUTED },
 
   logSection: { paddingHorizontal: 20, paddingTop: 14 },
-  sectionTitle: { fontSize: 15, fontWeight: '900', color: TEXT },
-  logHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  logAction: { fontSize: 13, fontWeight: '800', color: BLUE },
-  emptyTxt: { fontSize: 13, color: MUTED, textAlign: 'center', paddingVertical: 20 },
-  logItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, marginBottom: 8, backgroundColor: CARD },
+  logHead:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  logAction:  { fontSize: 13, fontWeight: '800', color: BLUE },
+  emptyTxt:   { fontSize: 13, color: MUTED, textAlign: 'center', paddingVertical: 20 },
+  logItem:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, marginBottom: 8, backgroundColor: CARD },
   logItemSel: { backgroundColor: colors.blueLight, borderWidth: 1.5, borderColor: BLUE },
-  logDot: { width: 10, height: 10, borderRadius: 5 },
-  logAmt: { fontSize: 15, fontWeight: '900', color: TEXT },
-  logMeta: { fontSize: 12, color: MUTED },
-  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
+  logDot:     { width: 10, height: 10, borderRadius: 5 },
+  logAmt:     { fontSize: 15, fontWeight: '900', color: TEXT },
+  logMeta:    { fontSize: 12, color: MUTED },
+  checkbox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
   checkboxSel: { backgroundColor: BLUE, borderColor: BLUE },
 
   lbl: { fontSize: 11, fontWeight: '800', color: '#5a7a96', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 6 },
   inp: { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 2, borderColor: BORDER, fontSize: 16, fontWeight: '700', color: TEXT, backgroundColor: '#f6fafd', marginBottom: 14 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: TEXT, marginBottom: 20 },
-  drinkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  drinkChip: { width: '30%', paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: BORDER, alignItems: 'center', backgroundColor: '#f6fafd' },
-  drinkChipSel: { borderColor: BLUE, backgroundColor: colors.blueLight },
-  drinkEmoji: { fontSize: 22 },
-  drinkLabel: { fontSize: 12, fontWeight: '800', color: MUTED, marginTop: 3 },
-  modalBtns: { flexDirection: 'row', gap: 10 },
-  modalCancel: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 2, borderColor: BORDER },
-  modalCancelTxt: { fontSize: 15, fontWeight: '800', color: MUTED },
-  modalConfirm: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', backgroundColor: BLUE },
+  modalOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard:       { backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle:      { fontSize: 20, fontWeight: '900', color: TEXT, marginBottom: 20 },
+  drinkGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  drinkChip:       { width: '30%', paddingVertical: 12, borderRadius: 12, borderWidth: 2, borderColor: BORDER, alignItems: 'center', backgroundColor: '#f6fafd' },
+  drinkChipSel:    { borderColor: BLUE, backgroundColor: colors.blueLight },
+  drinkLabel:      { fontSize: 13, fontWeight: '800', color: MUTED },
+  modalBtns:       { flexDirection: 'row', gap: 10 },
+  modalCancel:     { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 2, borderColor: BORDER },
+  modalCancelTxt:  { fontSize: 15, fontWeight: '800', color: MUTED },
+  modalConfirm:    { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', backgroundColor: BLUE },
   modalConfirmTxt: { fontSize: 15, fontWeight: '900', color: '#fff' },
 });

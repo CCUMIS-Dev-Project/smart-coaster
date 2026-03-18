@@ -3,7 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Image, Animated } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
+
 const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
+
+const URINE_COLORS = ['#fff7c0','#ffe980','#f5c842','#d4a017','#a87000','#6b4500'];
+const URINE_LABELS = ['淺黃 → 補水充足','淡黃 → 正常','黃色 → 建議多喝','深黃 → 補水不足','琥珀 → 嚴重缺水','深褐 → 請就醫'];
 
 function Seg({ label, sel, onPress }) {
   return (
@@ -13,7 +17,7 @@ function Seg({ label, sel, onPress }) {
   );
 }
 
-function InfoRow({ label, value, icon }) {
+function InfoRow({ label, value }) {
   return (
     <View style={s.infoRow}>
       <Text style={s.infoLabel}>{label}</Text>
@@ -42,19 +46,22 @@ export default function ProfileScreen() {
   const { profile, updateProfile, goalMl } = useApp();
   const [editing, setEditing] = useState(false);
 
+  // 尿液顏色 state（放在元件裡面）
+  const [urineIdx, setUrineIdx] = useState(0);
+
   // Edit state
-  const [name,     setName]     = useState(profile.name);
-  const [gender,   setGender]   = useState(profile.gender);
-  const [weight,   setWeight]   = useState(String(profile.weight));
-  const [age,      setAge]      = useState(String(profile.age));
-  const [activity, setActivity] = useState(profile.activity);
-  const [customGoal, setCustomGoal] = useState(profile.customGoal);
-  const [customGoalMl, setCustomGoalMl] = useState(String(profile.goalMl));
+  const [name,             setName]             = useState(profile.name);
+  const [gender,           setGender]           = useState(profile.gender);
+  const [weight,           setWeight]           = useState(String(profile.weight));
+  const [age,              setAge]              = useState(String(profile.age));
+  const [activity,         setActivity]         = useState(profile.activity);
+  const [customGoal,       setCustomGoal]       = useState(profile.customGoal);
+  const [customGoalMl,     setCustomGoalMl]     = useState(String(profile.goalMl));
   const [reminderInterval, setReminderInterval] = useState(String(profile.reminderInterval));
-  const [autoMode, setAutoMode] = useState(profile.autoMode);
-  const [autoStart, setAutoStart] = useState(profile.autoStart);
-  const [autoEnd,   setAutoEnd]   = useState(profile.autoEnd);
-  const [hasCoaster, setHasCoaster] = useState(profile.hasCoaster);
+  const [autoMode,         setAutoMode]         = useState(profile.autoMode);
+  const [autoStart,        setAutoStart]        = useState(profile.autoStart);
+  const [autoEnd,          setAutoEnd]          = useState(profile.autoEnd);
+  const [hasCoaster,       setHasCoaster]       = useState(profile.hasCoaster);
 
   const suggestedGoal = calcWaterGoal({ gender, weight: parseFloat(weight)||65, age: parseFloat(age)||28, activity });
 
@@ -67,20 +74,18 @@ export default function ProfileScreen() {
       goalMl: customGoal ? (parseInt(customGoalMl)||suggestedGoal) : suggestedGoal,
       customGoal,
       reminderInterval: parseInt(reminderInterval)||60,
-      autoMode,
-      autoStart,
-      autoEnd,
-      hasCoaster,
+      autoMode, autoStart, autoEnd, hasCoaster,
     });
     setEditing(false);
     Alert.alert('儲存成功', '個人資料已更新');
   }
 
+  // ── 檢視模式 ─────────────────────────────────────────
   if (!editing) return (
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
-       
-      {/* Header */}
+
+        {/* Header 漣漪 + 水杯圖片 */}
         <View style={s.header}>
           <View style={s.rippleWrap}>
             <RippleRing delay={0} />
@@ -99,22 +104,39 @@ export default function ProfileScreen() {
         {/* 基本資料 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>基本資料</Text>
-          <InfoRow label="性別"   value={profile.gender === 'male' ? '生理男' : '生理女'} icon="👤" />
-          <InfoRow label="體重"   value={`${profile.weight} kg`} icon="⚖️" />
-          <InfoRow label="年齡"   value={`${profile.age} 歲`}    icon="🎂" />
-          <InfoRow label="活動量" value={ACTIVITY_LEVELS.find(a => a.key === profile.activity)?.label || '-'} icon="🏃" />
+          <InfoRow label="性別"   value={profile.gender === 'male' ? '生理男' : '生理女'} />
+          <InfoRow label="體重"   value={`${profile.weight} kg`} />
+          <InfoRow label="年齡"   value={`${profile.age} 歲`} />
+          <InfoRow label="活動量" value={ACTIVITY_LEVELS.find(a => a.key === profile.activity)?.label || '-'} />
         </View>
 
         {/* 飲水設定 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>飲水設定</Text>
-          <InfoRow label="每日目標"   value={`${goalMl} ml`}              icon="🎯" />
-          <InfoRow label="提醒間距"   value={`${profile.reminderInterval} 分鐘`} icon="⏰" />
-          <InfoRow label="記錄模式"   value={profile.autoMode ? '自動' : '手動'} icon="📱" />
+          <InfoRow label="每日目標" value={`${goalMl} ml`} />
+          <InfoRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`} />
+          <InfoRow label="記錄模式" value={profile.autoMode ? '自動' : '手動'} />
           {profile.autoMode && (
-            <InfoRow label="記錄時段" value={`${profile.autoStart} – ${profile.autoEnd}`} icon="🕐" />
+            <InfoRow label="記錄時段" value={`${profile.autoStart} – ${profile.autoEnd}`} />
           )}
-          <InfoRow label="智慧杯墊"   value={profile.hasCoaster ? '已連接' : '未連接'} icon="☕" />
+          <InfoRow label="智慧杯墊" value={profile.hasCoaster ? '已連接' : '未連接'} />
+        </View>
+
+        {/* 尿液顏色卡（在檢視模式顯示）*/}
+        <View style={s.urineCard}>
+          <Text style={s.urineTitle}>今日尿液顏色</Text>
+          <Text style={s.urineSub}>幫助系統微調明日補水目標（可選填）</Text>
+          <View style={s.urineScale}>
+            {URINE_COLORS.map((c, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[s.urineSwatch, { backgroundColor: c }, urineIdx === i && s.urineSwatchSel]}
+                onPress={() => setUrineIdx(i)}
+                activeOpacity={0.75}
+              />
+            ))}
+          </View>
+          <Text style={s.urineLabel}>{URINE_LABELS[urineIdx]}</Text>
         </View>
 
         <TouchableOpacity style={s.editBtn} onPress={() => setEditing(true)} activeOpacity={0.85}>
@@ -126,7 +148,7 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 
-  // ── 編輯模式 ──────────────────────────────────────────
+  // ── 編輯模式 ─────────────────────────────────────────
   return (
     <SafeAreaView style={s.safe}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={s.inner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -242,22 +264,29 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  rippleWrap: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  rippleRing: { position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#5ab4f5' },
   safe:  { flex: 1, backgroundColor: BG },
   inner: { padding: 20, paddingTop: 56, paddingBottom: 32, gap: 14 },
 
-  header:      { alignItems: 'center', gap: 6, paddingVertical: 8 },
-  avatarCircle:{ width: 90, height: 90, borderRadius: 45, backgroundColor: BLUE_LIGHT, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: BLUE },
-  userName:    { fontSize: 22, fontWeight: '900', color: TEXT },
-  userTag:     { fontSize: 13, color: BLUE, fontWeight: '700' },
+  rippleWrap: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  rippleRing: { position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#5ab4f5' },
+
+  header:   { alignItems: 'center', gap: 6, paddingVertical: 8 },
+  userName: { fontSize: 22, fontWeight: '900', color: TEXT },
+  userTag:  { fontSize: 13, color: BLUE, fontWeight: '700' },
 
   group:      { backgroundColor: CARD, borderRadius: 20, overflow: 'hidden' },
-  groupTitle: { fontSize: 11, fontWeight: '900', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6 },
+  groupTitle: { fontSize: 14, fontWeight: '900', color: TEXT, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6 },
   infoRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 13, borderTopWidth: 1, borderTopColor: '#f0f5fa', gap: 12 },
-  infoIcon:   { fontSize: 18, width: 26, textAlign: 'center' },
   infoLabel:  { flex: 1, fontSize: 15, color: '#6b8da8', fontWeight: '600' },
   infoValue:  { fontSize: 15, fontWeight: '800', color: TEXT },
+
+  urineCard:     { backgroundColor: CARD, borderRadius: 20, padding: 16, gap: 8 },
+  urineTitle:    { fontSize: 14, fontWeight: '900', color: TEXT },
+  urineSub:      { fontSize: 12, color: MUTED },
+  urineScale:    { flexDirection: 'row', gap: 5 },
+  urineSwatch:   { flex: 1, height: 28, borderRadius: 7, borderWidth: 3, borderColor: 'transparent' },
+  urineSwatchSel:{ borderColor: '#1a2a3a' },
+  urineLabel:    { fontSize: 12, fontWeight: '800', color: MUTED, textAlign: 'center' },
 
   editBtn:    { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center' },
   editBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
