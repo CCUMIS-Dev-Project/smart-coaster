@@ -1,12 +1,8 @@
 // src/screens/ProfileScreen.js
-import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, TextInput, Switch, Alert
-} from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Image, Animated } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
-
 const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
 
 function Seg({ label, sel, onPress }) {
@@ -20,11 +16,26 @@ function Seg({ label, sel, onPress }) {
 function InfoRow({ label, value, icon }) {
   return (
     <View style={s.infoRow}>
-      <Text style={s.infoIcon}>{icon}</Text>
       <Text style={s.infoLabel}>{label}</Text>
       <Text style={s.infoValue}>{value}</Text>
     </View>
   );
+}
+
+function RippleRing({ delay }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(anim, { toValue: 1, duration: 2600, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  const scale   = anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.3] });
+  const opacity = anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.5, 0] });
+  return <Animated.View style={[s.rippleRing, { transform: [{ scale }], opacity }]} />;
 }
 
 export default function ProfileScreen() {
@@ -68,10 +79,18 @@ export default function ProfileScreen() {
   if (!editing) return (
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+       
+      {/* Header */}
         <View style={s.header}>
-          <View style={s.avatarCircle}>
-            <Text style={{ fontSize: 40 }}>☕</Text>
+          <View style={s.rippleWrap}>
+            <RippleRing delay={0} />
+            <RippleRing delay={800} />
+            <RippleRing delay={1600} />
+            <Image
+              source={profile.selectedCup?.image}
+              style={{ width: 80, height: 80 }}
+              resizeMode="contain"
+            />
           </View>
           <Text style={s.userName}>{profile.name || '使用者'}</Text>
           <Text style={s.userTag}>健康飲水者</Text>
@@ -223,6 +242,8 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
+  rippleWrap: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  rippleRing: { position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#5ab4f5' },
   safe:  { flex: 1, backgroundColor: BG },
   inner: { padding: 20, paddingTop: 56, paddingBottom: 32, gap: 14 },
 

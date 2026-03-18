@@ -1,9 +1,6 @@
 // src/screens/InitialSettingScreen.js
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, SafeAreaView, Platform, Animated, Switch, Image
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
@@ -12,11 +9,11 @@ const BLUE = colors.blue, BLUE_DARK = colors.blueDark, BLUE_LIGHT = colors.blueL
 const TEXT = colors.text, MUTED = colors.muted, BORDER = colors.border;
 
 const CUPS = [
-  { name: '洋芋片罐', emoji: '🥫', ml: 320, desc: '低調但可靠的老實派' },
-  { name: '水杯',     emoji: '🥤', ml: 350, desc: '平凡中帶點小確幸' },
-  { name: '茶杯',     emoji: '🍵', ml: 200, desc: '慢慢來，人生不急' },
-  { name: '馬克杯',   emoji: '☕', ml: 400, desc: '早晨救星，戒不掉' },
-  { name: '玻璃杯',   emoji: '🍋', ml: 300, desc: '清新系，夏天的靈魂' },
+  { name: '洋芋片罐', image: require('../assets/cup_can.png'),   ml: 320, desc: '我才不要喝水，快給我吃餅乾！' },
+  { name: '水杯',     image: require('../assets/cup_main.png'),  ml: 350, desc: '平凡中帶點小確幸' },
+  { name: '茶杯',     image: require('../assets/cup_tea.png'),   ml: 200, desc: '慢慢來，人生不急' },
+  { name: '馬克杯',   image: require('../assets/cup_mug.png'),   ml: 400, desc: '早晨救星，戒不掉' },
+  { name: '玻璃杯',   image: require('../assets/cup_lemon.png'), ml: 300, desc: '清新系，夏天的靈魂' },
 ];
 
 function RippleRing({ delay }) {
@@ -111,7 +108,7 @@ export default function InitialSettingScreen() {
         <RippleRing delay={800} />
         <RippleRing delay={1600} />
         <Animated.Image
-          source={require('../assets/main_cup.png')}
+          source={require('../assets/cup_main.png')}
           style={[s.cupImg, { transform: [{ translateY: bobAnim }] }]}
           resizeMode="contain"
         />
@@ -208,8 +205,13 @@ export default function InitialSettingScreen() {
 
         {/* 已選横幅 */}
         <View style={s.banner}>
-          <Text style={{ fontSize: 28 }}>{activeCup.emoji}</Text>
-          <View>
+        <Image
+          source={activeCup.image}
+          style={{ width: 60, height: 60 }}
+          resizeMode="contain"
+        />    
+              
+        <View>
             <Text style={s.bannerSub}>你選擇了</Text>
             <Text style={s.bannerName}>{activeCup.name}</Text>
           </View>
@@ -218,17 +220,17 @@ export default function InitialSettingScreen() {
         {/* 水杯格 */}
         <View style={s.cupGrid}>
           {CUPS.map(c => (
-            <TouchableOpacity
-              key={c.name}
-              style={[s.cupCard, activeCup.name === c.name && s.cupCardSel]}
-              onPress={() => { setActiveCup(c); setCustomMl(String(c.ml)); }}
-              activeOpacity={0.8}
-            >
-              <Text style={{ fontSize: 36 }}>{c.emoji}</Text>
-              <Text style={s.cupName}>{c.name}</Text>
-              <Text style={s.cupDesc}>{c.desc}</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            key={c.name}
+            style={[s.cupCard, activeCup.name === c.name && s.cupCardSel]}
+            onPress={() => setActiveCup(c)}
+            activeOpacity={0.8}
+    >
+      <Image source={c.image} style={{ width: 60, height: 60 }} resizeMode="contain" />
+      <Text style={s.cupName}>{c.name}</Text>
+      <Text style={s.cupDesc}>{c.desc}</Text>
+    </TouchableOpacity>
+))}
         </View>
 
 
