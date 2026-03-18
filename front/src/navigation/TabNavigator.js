@@ -1,49 +1,64 @@
+// src/navigation/TabNavigator.js
 import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons'; // Expo 內建的圖示庫
-
-
-// import DashboardScreen from '../screens/DashboardScreen';
-import ReportScreen from '../screens/ReportScreen'; 
+import GardenScreen  from '../screens/GardenScreen';
+import MainScreen    from '../screens/MainScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import MainScreen from '../screens/MainScreen.js';
-import SettingScreen from '../screens/SettingScreen.js';
-import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
+import { colors } from '../constants/theme';
 
 const Tab = createBottomTabNavigator();
+const BLUE = colors.blue, MUTED = colors.muted, BORDER = colors.border;
 
-const MainTabNavigator = () => {
-    return(
-        <Tab.Navigator
-            screenOptions={({route}) => ({
-                // 根據頁面名稱自動切換圖示
-                tabBarIcon: ({ focused, color, size }) => {
-                let iconName;
-                if (route.name === '主頁') {
-                    iconName = focused ? 'home' : 'home-outline';
-                } else if (route.name === '週報') {
-                    iconName = focused ? 'calendar' : 'calendar-outline';
-                } else if (route.name === '個人') {
-                    iconName = focused ? 'person' : 'person-outline';
-                } else if (route.name === '設定') {
-                    iconName = focused ? 'settings-sharp' : 'settings-outline';
-                } else if (route.name === '提醒設定') {
-                    iconName = focused ? 'time' : 'time-outline';
-                }
-                return <Ionicons name={iconName} size={size} color={color} />;
-                },
-                tabBarActiveTintColor: '#3498db', // 設計圖中的主色調
-                tabBarInactiveTintColor: 'gray',
-                headerShown: false, // 隱藏頂部標題列，如果你想用自己設計的 Header
-            })}
-        >
-            <Tab.Screen name="主頁" component={MainScreen}/> 
-            <Tab.Screen name="週報" component={ReportScreen} />
-            <Tab.Screen name="提醒設定" component={ReminderSettingScreen} />
-            <Tab.Screen name="設定" component={SettingScreen} />
-            <Tab.Screen name="個人" component={ProfileScreen} /> 
-        </Tab.Navigator>
-    );
-};
+function TabBar({ state, descriptors, navigation }) {
+  const tabs = [
+    { name: '花園', icon: '🌸' },
+    { name: '主頁', icon: '🏠' },
+    { name: '個人', icon: '👤' },
+  ];
 
-export default MainTabNavigator;
+  return (
+    <View style={s.tabBar}>
+      {state.routes.map((route, index) => {
+        const focused = state.index === index;
+        const tab = tabs[index];
+        return (
+          <TouchableOpacity
+            key={route.key}
+            style={s.tabItem}
+            onPress={() => navigation.navigate(route.name)}
+            activeOpacity={0.75}
+          >
+            <Text style={[s.tabIcon, focused && s.tabIconActive]}>{tab.icon}</Text>
+            <Text style={[s.tabLabel, focused && s.tabLabelActive]}>{tab.name}</Text>
+            {focused && <View style={s.tabDot} />}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+export default function MainTabNavigator() {
+  return (
+    <Tab.Navigator
+      initialRouteName="主頁"
+      tabBar={props => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="花園" component={GardenScreen} />
+      <Tab.Screen name="主頁" component={MainScreen} />
+      <Tab.Screen name="個人" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+const s = StyleSheet.create({
+  tabBar:   { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: BORDER, paddingBottom: 24, paddingTop: 10 },
+  tabItem:  { flex: 1, alignItems: 'center', gap: 3, position: 'relative' },
+  tabIcon:  { fontSize: 22, opacity: 0.4 },
+  tabIconActive: { opacity: 1 },
+  tabLabel: { fontSize: 11, fontWeight: '800', color: MUTED },
+  tabLabelActive: { color: BLUE },
+  tabDot:   { width: 5, height: 5, borderRadius: 3, backgroundColor: BLUE, position: 'absolute', bottom: -6 },
+});
