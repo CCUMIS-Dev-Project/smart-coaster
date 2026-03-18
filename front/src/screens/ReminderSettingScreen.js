@@ -17,7 +17,6 @@ const PRESETS = [30, 45, 60, 90];
 
 export default function ReminderSettingScreen() {
   const navigation = useNavigation();
-const { bleData } ={ reminderMs: null };  
 
   // 原本的邏輯保留：預設值從 BLE 讀取
   const currentMinutes = bleData.reminderMs ? Math.floor(bleData.reminderMs / 60000) : 60;
