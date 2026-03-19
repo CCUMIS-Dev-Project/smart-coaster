@@ -1,23 +1,22 @@
-// API Configuration
-// Update this URL based on your backend setup
+import Constants from 'expo-constants';
+
+const debuggerHost = Constants.expoConfig?.hostUri?.split(':').shift();
+const API_URL = debuggerHost ? `http://${debuggerHost}:5001` : 'http://localhost:5001';
 
 const API_CONFIG = {
-  // For local development
-  // Use your computer's IP address when testing on physical device
-  // Use 'localhost' when testing on web or emulator on same machine
-  BASE_URL: 'http://localhost:5000',
+  // 讀取環境變數，若沒設定則回退到 localhost
+  BASE_URL: API_URL,
 
-  // Endpoints
   ENDPOINTS: {
     HEALTH: '/health',
     CHAT: '/api/chat',
+    SENSOR_LOG: '/api/sensor/log', // 新增感測器紀錄路徑
+    REPORT_WEEKLY: '/api/report/weekly', // 新增週報路徑
   },
 
-  // Timeout settings (milliseconds)
   TIMEOUT: 10000,
 };
 
-// Helper to get full API URL
 export const getApiUrl = (endpoint) => {
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 };

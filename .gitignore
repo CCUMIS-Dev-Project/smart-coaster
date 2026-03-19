@@ -1,51 +1,50 @@
 # Environment Variables
-/back/.env
 .env
 
 # Python
-/back/__pycache__/
-/back/*.pyc
-/back/*.pyo
-/back/*.pyd
-/back/.Python
-/back/env/
-/back/venv/
-/back/.venv
-/back/pip-log.txt
-/back/pip-delete-this-directory.txt
-/back/.pytest_cache/
-/back/*.egg-info/
-/back/dist/
-/back/build/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+dist/
+build/
 
 # React Native
-/front/node_modules/
-/front/.expo/
-/front/.expo-shared/
-/front/npm-debug.log*
-/front/yarn-debug.log*
-/front/yarn-error.log*
-/front/.DS_Store
-/front/*.jks
-/front/*.p8
-/front/*.p12
-/front/*.key
-/front/*.mobileprovision
-/front/*.orig.*
-/front/web-build/
+node_modules/
+.expo/
+.expo-shared/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
 
 # React Native - iOS
-/front/ios/Pods/
-/front/ios/build/
-/front/ios/.xcode.env.local
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
 
 # React Native - Android
-/front/android/build/
-/front/android/.gradle/
-/front/android/app/build/
-/front/android/local.properties
-/front/android/*.keystore
-/front/android/*.jks
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+android/*.keystore
+android/*.jks
 
 # IDEs
 .vscode/
