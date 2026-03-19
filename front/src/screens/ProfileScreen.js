@@ -1,6 +1,6 @@
 // src/screens/ProfileScreen.js
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Image, Animated, Modal } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
 
@@ -8,6 +8,13 @@ const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, mute
 
 const URINE_COLORS = ['#fff7c0','#ffe980','#f5c842','#d4a017','#a87000','#6b4500'];
 const URINE_LABELS = ['淺黃 → 補水充足','淡黃 → 正常','黃色 → 建議多喝','深黃 → 補水不足','琥珀 → 嚴重缺水','深褐 → 請就醫'];
+
+const ACTIVITY_INFO = [
+  { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
+  { label: '輕度', desc: '每週 1–2 次輕鬆散步或瑜珈' },
+  { label: '中度', desc: '每週 3–4 次 30 分鐘有氧或健走' },
+  { label: '高度', desc: '每週 5 次以上激烈運動或勞動工作' },
+];
 
 function Seg({ label, sel, onPress }) {
   return (
@@ -45,11 +52,9 @@ function RippleRing({ delay }) {
 export default function ProfileScreen() {
   const { profile, updateProfile, goalMl } = useApp();
   const [editing, setEditing] = useState(false);
-
-  // 尿液顏色 state（放在元件裡面）
   const [urineIdx, setUrineIdx] = useState(0);
+  const [showActivityInfo, setShowActivityInfo] = useState(false);
 
-  // Edit state
   const [name,             setName]             = useState(profile.name);
   const [gender,           setGender]           = useState(profile.gender);
   const [weight,           setWeight]           = useState(String(profile.weight));
@@ -80,28 +85,41 @@ export default function ProfileScreen() {
     Alert.alert('儲存成功', '個人資料已更新');
   }
 
+  const ActivityInfoModal = (
+    <Modal visible={showActivityInfo} transparent animationType="fade">
+      <TouchableOpacity style={s.actOverlay} activeOpacity={1} onPress={() => setShowActivityInfo(false)}>
+        <View style={s.actModal}>
+          <Text style={s.actTitle}>活動量標準</Text>
+          {ACTIVITY_INFO.map(a => (
+            <View key={a.label} style={s.actRow}>
+              <Text style={s.actLabel}>{a.label}</Text>
+              <Text style={s.actDesc}>{a.desc}</Text>
+            </View>
+          ))}
+          <TouchableOpacity style={s.actClose} onPress={() => setShowActivityInfo(false)}>
+            <Text style={s.actCloseTxt}>了解了</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   // ── 檢視模式 ─────────────────────────────────────────
   if (!editing) return (
     <SafeAreaView style={s.safe}>
+      {ActivityInfoModal}
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
-
-        {/* Header 漣漪 + 水杯圖片 */}
         <View style={s.header}>
           <View style={s.rippleWrap}>
             <RippleRing delay={0} />
             <RippleRing delay={800} />
             <RippleRing delay={1600} />
-            <Image
-              source={profile.selectedCup?.image}
-              style={{ width: 80, height: 80 }}
-              resizeMode="contain"
-            />
+            <Image source={profile.selectedCup?.image} style={{ width: 80, height: 80 }} resizeMode="contain" />
           </View>
           <Text style={s.userName}>{profile.name || '使用者'}</Text>
           <Text style={s.userTag}>健康飲水者</Text>
         </View>
 
-        {/* 基本資料 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>基本資料</Text>
           <InfoRow label="性別"   value={profile.gender === 'male' ? '生理男' : '生理女'} />
@@ -110,7 +128,6 @@ export default function ProfileScreen() {
           <InfoRow label="活動量" value={ACTIVITY_LEVELS.find(a => a.key === profile.activity)?.label || '-'} />
         </View>
 
-        {/* 飲水設定 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>飲水設定</Text>
           <InfoRow label="每日目標" value={`${goalMl} ml`} />
@@ -122,18 +139,14 @@ export default function ProfileScreen() {
           <InfoRow label="智慧杯墊" value={profile.hasCoaster ? '已連接' : '未連接'} />
         </View>
 
-        {/* 尿液顏色卡（在檢視模式顯示）*/}
         <View style={s.urineCard}>
           <Text style={s.urineTitle}>今日尿液顏色</Text>
           <Text style={s.urineSub}>幫助系統微調明日補水目標（可選填）</Text>
           <View style={s.urineScale}>
             {URINE_COLORS.map((c, i) => (
-              <TouchableOpacity
-                key={i}
+              <TouchableOpacity key={i}
                 style={[s.urineSwatch, { backgroundColor: c }, urineIdx === i && s.urineSwatchSel]}
-                onPress={() => setUrineIdx(i)}
-                activeOpacity={0.75}
-              />
+                onPress={() => setUrineIdx(i)} activeOpacity={0.75} />
             ))}
           </View>
           <Text style={s.urineLabel}>{URINE_LABELS[urineIdx]}</Text>
@@ -142,7 +155,6 @@ export default function ProfileScreen() {
         <TouchableOpacity style={s.editBtn} onPress={() => setEditing(true)} activeOpacity={0.85}>
           <Text style={s.editBtnTxt}>編輯個人資料</Text>
         </TouchableOpacity>
-
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
@@ -151,7 +163,9 @@ export default function ProfileScreen() {
   // ── 編輯模式 ─────────────────────────────────────────
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.inner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      {ActivityInfoModal}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.inner}
+        showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={s.editHeader}>
           <TouchableOpacity onPress={() => setEditing(false)}>
             <Text style={s.cancelTxt}>取消</Text>
@@ -182,16 +196,25 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Text style={s.lbl}>活動量</Text>
+        {/* 活動量 + 問號 */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={s.lbl}>活動量</Text>
+          <TouchableOpacity onPress={() => setShowActivityInfo(true)} activeOpacity={0.75}>
+            <View style={s.infoBtn}>
+              <Text style={s.infoBtnTxt}>?</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
         <View style={s.segGrid}>
           {ACTIVITY_LEVELS.map(a => (
-            <TouchableOpacity key={a.key} style={[s.seg, activity===a.key && s.segSel, s.segHalf]} onPress={() => setActivity(a.key)} activeOpacity={0.75}>
+            <TouchableOpacity key={a.key}
+              style={[s.seg, activity===a.key && s.segSel, s.segHalf]}
+              onPress={() => setActivity(a.key)} activeOpacity={0.75}>
               <Text style={[s.segTxt, activity===a.key && s.segTxtSel]}>{a.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* 飲水目標 */}
         <View style={s.goalBox}>
           <View style={s.goalHeader}>
             <View>
@@ -205,7 +228,8 @@ export default function ProfileScreen() {
           </View>
           {customGoal ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric" value={customGoalMl} onChangeText={setCustomGoalMl} />
+              <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
+                value={customGoalMl} onChangeText={setCustomGoalMl} />
               <Text style={{ color: MUTED, fontWeight: '800' }}>ml</Text>
             </View>
           ) : (
@@ -213,17 +237,17 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* 提醒間距 */}
         <Text style={s.lbl}>提醒時間間距（分鐘）</Text>
         <View style={s.segRow}>
           {['30','45','60','90'].map(v => (
-            <TouchableOpacity key={v} style={[s.seg, reminderInterval===v && s.segSel]} onPress={() => setReminderInterval(v)} activeOpacity={0.75}>
+            <TouchableOpacity key={v}
+              style={[s.seg, reminderInterval===v && s.segSel]}
+              onPress={() => setReminderInterval(v)} activeOpacity={0.75}>
               <Text style={[s.segTxt, reminderInterval===v && s.segTxtSel]}>{v}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* 杯墊 */}
         <View style={s.switchRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.switchTitle}>我有智慧杯墊</Text>
@@ -231,15 +255,14 @@ export default function ProfileScreen() {
           <Switch value={hasCoaster} onValueChange={setHasCoaster} trackColor={{ true: BLUE }} />
         </View>
 
-        {/* 記錄模式 */}
         <View style={[s.switchRow, !hasCoaster && { opacity: 0.5 }]}>
           <View style={{ flex: 1 }}>
             <Text style={s.switchTitle}>自動記錄模式</Text>
           </View>
-          <Switch value={autoMode && hasCoaster} onValueChange={hasCoaster ? setAutoMode : null} disabled={!hasCoaster} trackColor={{ true: BLUE }} />
+          <Switch value={autoMode && hasCoaster} onValueChange={hasCoaster ? setAutoMode : null}
+            disabled={!hasCoaster} trackColor={{ true: BLUE }} />
         </View>
 
-        {/* 自動時段 */}
         {autoMode && hasCoaster && (
           <View style={s.timeBox}>
             <Text style={s.lbl}>自動記錄時段</Text>
@@ -269,7 +292,6 @@ const s = StyleSheet.create({
 
   rippleWrap: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   rippleRing: { position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#5ab4f5' },
-
   header:   { alignItems: 'center', gap: 6, paddingVertical: 8 },
   userName: { fontSize: 22, fontWeight: '900', color: TEXT },
   userTag:  { fontSize: 13, color: BLUE, fontWeight: '700' },
@@ -290,7 +312,6 @@ const s = StyleSheet.create({
 
   editBtn:    { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center' },
   editBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
-
   editHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   editTitle:  { fontSize: 18, fontWeight: '900', color: TEXT },
   cancelTxt:  { fontSize: 16, color: MUTED, fontWeight: '700' },
@@ -323,4 +344,15 @@ const s = StyleSheet.create({
   timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800' },
   timeInp:  { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 18, fontWeight: '900', color: TEXT, textAlign: 'center', backgroundColor: '#fff' },
   timeSep:  { fontSize: 20, color: MUTED, fontWeight: '900' },
+
+  infoBtn:     { width: 18, height: 18, borderRadius: 9, backgroundColor: '#d0e8f8', alignItems: 'center', justifyContent: 'center' },
+  infoBtnTxt:  { fontSize: 11, fontWeight: '900', color: '#3a90d4' },
+  actOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  actModal:    { backgroundColor: '#fff', borderRadius: 22, padding: 22, width: '100%', gap: 12 },
+  actTitle:    { fontSize: 17, fontWeight: '900', color: '#1a2a3a', marginBottom: 4 },
+  actRow:      { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#f0f5fa' },
+  actLabel:    { fontSize: 13, fontWeight: '900', color: '#3a90d4', width: 36 },
+  actDesc:     { fontSize: 13, color: '#4a6a84', flex: 1, lineHeight: 20 },
+  actClose:    { backgroundColor: '#5ab4f5', paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 4 },
+  actCloseTxt: { color: '#fff', fontSize: 15, fontWeight: '900' },
 });

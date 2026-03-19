@@ -1,6 +1,6 @@
 // src/screens/InitialSettingScreen.js
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
@@ -40,10 +40,17 @@ function Seg({ label, sel, onPress, half }) {
   );
 }
 
+const ACTIVITY_INFO = [
+  { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
+  { label: '輕度', desc: '每週 1–2 次輕鬆散步或瑜珈' },
+  { label: '中度', desc: '每週 3–4 次 30 分鐘有氧或健走' },
+  { label: '高度', desc: '每週 5 次以上激烈運動或勞動工作' },
+];
+
 export default function InitialSettingScreen() {
   const navigation = useNavigation();
   const { completeSetup } = useApp();
-  const [step, setStep] = useState(1); // 1=歡迎 2=個人資料 3=水杯選擇 4=提醒設定
+  const [step, setStep] = useState(1);
 
   // 個人資料
   const [name,     setName]     = useState('');
@@ -51,19 +58,21 @@ export default function InitialSettingScreen() {
   const [weight,   setWeight]   = useState('65');
   const [age,      setAge]      = useState('28');
   const [activity, setActivity] = useState('light');
-  const [customGoal,    setCustomGoal]    = useState(false);
-  const [customGoalMl,  setCustomGoalMl]  = useState('');
+  const [customGoal,   setCustomGoal]   = useState(false);
+  const [customGoalMl, setCustomGoalMl] = useState('');
 
   // 水杯選擇
-  const [activeCup, setActiveCup] = useState(CUPS[3]); // 預設馬克杯
-  const [customMl,  setCustomMl]  = useState('400');
+  const [activeCup, setActiveCup] = useState(CUPS[3]);
 
   // 提醒設定
   const [reminderInterval, setReminderInterval] = useState('60');
-  const [autoMode,    setAutoMode]    = useState(true);
-  const [autoStart,   setAutoStart]   = useState('08:00');
-  const [autoEnd,     setAutoEnd]     = useState('22:00');
-  const [hasCoaster,  setHasCoaster]  = useState(true);
+  const [autoMode,   setAutoMode]   = useState(true);
+  const [autoStart,  setAutoStart]  = useState('08:00');
+  const [autoEnd,    setAutoEnd]    = useState('22:00');
+  const [hasCoaster, setHasCoaster] = useState(true);
+
+  // 活動量說明
+  const [showActivityInfo, setShowActivityInfo] = useState(false);
 
   // 動畫
   const bobAnim = useRef(new Animated.Value(0)).current;
@@ -80,7 +89,6 @@ export default function InitialSettingScreen() {
     gender, weight: parseFloat(weight)||65, age: parseFloat(age)||28, activity,
   });
   const finalGoal = customGoal ? (parseInt(customGoalMl)||suggestedGoal) : suggestedGoal;
-  const finalCupMl = activeCup.ml;
 
   function handleComplete() {
     completeSetup({
@@ -90,14 +98,31 @@ export default function InitialSettingScreen() {
       activity,
       goalMl: finalGoal,
       customGoal,
-      selectedCup: { ...activeCup, ml: finalCupMl },
+      selectedCup: { ...activeCup },
       reminderInterval: parseInt(reminderInterval)||60,
-      autoMode,
-      autoStart,
-      autoEnd,
-      hasCoaster,
+      autoMode, autoStart, autoEnd, hasCoaster,
     });
   }
+
+  // 活動量說明 Modal（共用）
+  const ActivityInfoModal = (
+    <Modal visible={showActivityInfo} transparent animationType="fade">
+      <TouchableOpacity style={s.actOverlay} activeOpacity={1} onPress={() => setShowActivityInfo(false)}>
+        <View style={s.actModal}>
+          <Text style={s.actTitle}>活動量標準</Text>
+          {ACTIVITY_INFO.map(a => (
+            <View key={a.label} style={s.actRow}>
+              <Text style={s.actLabel}>{a.label}</Text>
+              <Text style={s.actDesc}>{a.desc}</Text>
+            </View>
+          ))}
+          <TouchableOpacity style={s.actClose} onPress={() => setShowActivityInfo(false)}>
+            <Text style={s.actCloseTxt}>了解了</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   // ── Step 1: 歡迎 ─────────────────────────────────────
   if (step === 1) return (
@@ -126,6 +151,7 @@ export default function InitialSettingScreen() {
   // ── Step 2: 個人資料 ─────────────────────────────────
   if (step === 2) return (
     <SafeAreaView style={s.safeBg}>
+      {ActivityInfoModal}
       <ScrollView style={s.scrollFull} contentContainerStyle={s.formInner}
         showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={s.pageTitle}>個人資料設定</Text>
@@ -152,7 +178,15 @@ export default function InitialSettingScreen() {
           </View>
         </View>
 
-        <Text style={s.lbl}>活動量</Text>
+        {/* 活動量 + 問號 */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={s.lbl}>活動量</Text>
+          <TouchableOpacity onPress={() => setShowActivityInfo(true)} activeOpacity={0.75}>
+            <View style={s.infoBtn}>
+              <Text style={s.infoBtnTxt}>?</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
         <View style={s.segGrid}>
           {ACTIVITY_LEVELS.map(a => (
             <Seg key={a.key} label={a.label} sel={activity===a.key}
@@ -203,36 +237,25 @@ export default function InitialSettingScreen() {
         <Text style={s.pageTitle}>選擇水杯夥伴</Text>
         <Text style={s.pageSub}>每次喝水，夥伴會慢慢裝滿水！</Text>
 
-        {/* 已選横幅 */}
         <View style={s.banner}>
-        <Image
-          source={activeCup.image}
-          style={{ width: 60, height: 60 }}
-          resizeMode="contain"
-        />    
-              
-        <View>
+          <Image source={activeCup.image} style={{ width: 60, height: 60 }} resizeMode="contain" />
+          <View>
             <Text style={s.bannerSub}>你選擇了</Text>
             <Text style={s.bannerName}>{activeCup.name}</Text>
           </View>
         </View>
 
-        {/* 水杯格 */}
         <View style={s.cupGrid}>
           {CUPS.map(c => (
-          <TouchableOpacity
-            key={c.name}
-            style={[s.cupCard, activeCup.name === c.name && s.cupCardSel]}
-            onPress={() => setActiveCup(c)}
-            activeOpacity={0.8}
-    >
-      <Image source={c.image} style={{ width: 60, height: 60 }} resizeMode="contain" />
-      <Text style={s.cupName}>{c.name}</Text>
-      <Text style={s.cupDesc}>{c.desc}</Text>
-    </TouchableOpacity>
-))}
+            <TouchableOpacity key={c.name}
+              style={[s.cupCard, activeCup.name === c.name && s.cupCardSel]}
+              onPress={() => setActiveCup(c)} activeOpacity={0.8}>
+              <Image source={c.image} style={{ width: 60, height: 60 }} resizeMode="contain" />
+              <Text style={s.cupName}>{c.name}</Text>
+              <Text style={s.cupDesc}>{c.desc}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-
 
         <TouchableOpacity style={s.btn} onPress={() => setStep(4)} activeOpacity={0.85}>
           <Text style={s.btnTxt}>用 {activeCup.name} 開始補水 →</Text>
@@ -348,9 +371,9 @@ const s = StyleSheet.create({
   goalFinal:  { fontSize: 28, fontWeight: '900', color: BLUE, textAlign: 'center' },
   mlUnit:     { fontSize: 14, fontWeight: '800', color: MUTED },
 
-  backBtn:  { width: 40, height: 40, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  backTxt:  { fontSize: 18 },
-  banner:   { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: BLUE_LIGHT, borderRadius: 16, padding: 14 },
+  backBtn:    { width: 40, height: 40, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  backTxt:    { fontSize: 18 },
+  banner:     { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: BLUE_LIGHT, borderRadius: 16, padding: 14 },
   bannerSub:  { fontSize: 12, color: MUTED },
   bannerName: { fontSize: 18, fontWeight: '900', color: TEXT },
 
@@ -358,17 +381,7 @@ const s = StyleSheet.create({
   cupCard:    { width: '47%', backgroundColor: '#fff', borderRadius: 18, padding: 14, alignItems: 'center', gap: 4, borderWidth: 2, borderColor: 'transparent' },
   cupCardSel: { borderColor: BLUE, backgroundColor: BLUE_LIGHT },
   cupName:    { fontSize: 14, fontWeight: '900', color: TEXT },
-  cupMl:      { fontSize: 13, fontWeight: '800', color: BLUE },
   cupDesc:    { fontSize: 11, color: MUTED, textAlign: 'center' },
-
-  customRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  customLbl:  { flex: 1, fontSize: 14, fontWeight: '800', color: '#4a6a84' },
-  customInp:  { width: 70, padding: 10, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 16, fontWeight: '700', color: TEXT, textAlign: 'center', backgroundColor: '#f6fafd' },
-
-  preview:      { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 16, padding: 14 },
-  previewName:  { fontSize: 14, fontWeight: '900', color: TEXT },
-  previewMl:    { fontSize: 22, fontWeight: '900', color: BLUE },
-  previewGoal:  { fontSize: 12, color: MUTED },
 
   switchRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER },
   switchTitle: { fontSize: 15, fontWeight: '800', color: TEXT },
@@ -383,4 +396,15 @@ const s = StyleSheet.create({
 
   btn:    { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center', width: '70%', alignSelf: 'center', shadowColor: BLUE, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
   btnTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
+
+  infoBtn:     { width: 18, height: 18, borderRadius: 9, backgroundColor: '#d0e8f8', alignItems: 'center', justifyContent: 'center' },
+  infoBtnTxt:  { fontSize: 11, fontWeight: '900', color: '#3a90d4' },
+  actOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  actModal:    { backgroundColor: '#fff', borderRadius: 22, padding: 22, width: '100%', gap: 12 },
+  actTitle:    { fontSize: 17, fontWeight: '900', color: '#1a2a3a', marginBottom: 4 },
+  actRow:      { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#f0f5fa' },
+  actLabel:    { fontSize: 13, fontWeight: '900', color: '#3a90d4', width: 36 },
+  actDesc:     { fontSize: 13, color: '#4a6a84', flex: 1, lineHeight: 20 },
+  actClose:    { backgroundColor: '#5ab4f5', paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 4 },
+  actCloseTxt: { color: '#fff', fontSize: 15, fontWeight: '900' },
 });
