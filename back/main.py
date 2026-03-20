@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import chat, report, sensor, drinking_logs, auth
+from app.routes import chat, report, sensor, drinking_logs, auth, goals, users
 
 #宣告並建立 FastAPI 伺服器實體
 app = FastAPI(
@@ -24,6 +24,8 @@ app.include_router(report.router)
 app.include_router(sensor.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(drinking_logs.router, prefix="/logs", tags=["drinking_logs"])
+app.include_router(goals.router, prefix="/goals", tags=["goals"])
+app.include_router(users.router, prefix="/users", tags=["users"])
 
 # 這邊api放到render上後才須注意
 @app.get("/health")

@@ -29,3 +29,19 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserProfileResponse(BaseModel):
+    username: str
+    gender: str
+    weight: float
+    height: float
+    levelid: int
+    level_type: str
+
+
+class UserUpdate(BaseModel):
+    gender: Optional[str] = None
+    weight: Optional[float] = None
+    height: Optional[float] = None
+    levelid: Optional[int] = None
