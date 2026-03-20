@@ -65,16 +65,9 @@
 
 ## 📝 開發導覽 (Where to Modify)
 
-| 任務 | 檔案路徑 |
-| --- | --- |
-| 修改杯墊重量偵測邏輯 | `pico/main.py` |
-| 修改藍牙連線/權限請求 | `front/src/hooks/useBLE.js` |
-| 調整 App 介面 UI | `front/src/screens/DashboardScreen.js` |
-| 串接新的後端 API | `front/src/services/api.js` |
-| 處理 AI 聊天或資料庫邏輯 | `back/app.py` |
 
 
-## 🛠️ 測試流程
+## 🛠️ 後端伺服器 (FastAPI) & AI 功能測試
 
 ! 後端測試或操作都須在虛擬環境(venv)中執行，避免全域安裝後在其他的專案上遇到python版本相容性問題 !
 
@@ -85,20 +78,8 @@
 
 * 做完離開: `deactivate`
 * **venv不要push到github**，確認 `.gitignore` 裡有這行： `venv/`
-
-
-### 1. 硬體端設定 (Pico W)
-
-* **環境**：使用 Thonny IDE，並確保 Pico W 已燒錄 MicroPython 韌體。
-* **操作**：
-1. 將 `pico/` 資料夾內所有檔案上傳至 Pico W。
-2. 確保 `main.py` 中的 `gap_name` 設定為 `"SmartCoaster"`。
-3. 執行 `main.py`，OLED 螢幕應顯示「Press to Start」。
-
-
-
-### 2. 後端伺服器 (FastAPI) & AI 功能測試
-
+--- 
+### uvicorn 與swaggerUI測試
 * **環境**：Python 3.x
 * **操作**：
 1. `cd back`
@@ -109,6 +90,13 @@
 * *註：伺服器預設於 `http://127.0.0.1:5001` 運行。*
 * *開發者可以直接開啟 `http://localhost:5001/docs` 查看自動生成的 API 文件 (Swagger UI)。*
 
+**login 與 authorization** <br>
+
+目前加上jwt了，所以測試同使用者使用時狀況要先登入
+1. login那邊輸入名稱與密碼，把response body下方、"access token": 後面那一長串token複製
+2. 回到最上方找到右上角的Authorize，貼上token在value窗口，按authorize
+3. 就可以去完其他部份了，否則會跟你說 "401 unauthorized"
+
 **🤖 測試 AI 聊天與週報產生：**
 在伺服器運行的同時，開啟**另一個新的終端機視窗**，並依序執行：
 1. `cd back`
@@ -117,66 +105,6 @@
 4. 測試生成上週週報：`python3 test_weekly_report.py` (若想要看其他user的週報可再去調整test_weekly_report.py裡的user_id)
 
 
-
-### 3. 前端 App (Expo)
-
-* **環境準備**：安裝必要的原生通訊套件
-```bash
-cd front
-npm install
-```
-* 若只要測試前端介面，執行：
-```
-npx expo start
-```
-
-* 若要測試藍牙功能需要執行以下指令：
-```
-# 安裝 BLE 與開發客戶端相關套件
-npx expo install react-native-ble-plx expo-dev-client base-64
-
-```
-
-
-* **手機權限 (Android 11 重要)**：
-* 務必開啟手機的 **藍牙 (Bluetooth)** 與 **定位 (GPS)**。
-* 進入手機設定，手動確認該 App 已獲取「位置」權限。
-
-
-* **建立開發版 (EAS Build)**：
-若修改了 `app.json` 權限，需重新編譯：
-```bash
-eas build --profile development --platform android
-
-```
-
-
-* **啟動開發伺服器**：
-```bash
-npx expo start --dev-client
-
-```
-
-
-* 使用手機 App 內的 QR 掃描器掃描電腦畫面。
-
-
-
----
-
-## 🔍 連線偵錯指引 (Debug)
-
-1. **找不到杯墊？**
-* 確保 **nRF Connect** 等其他藍牙 App 已斷開連線，藍牙具備獨佔性。
-* 檢查 Pico W 終端機是否報錯。
-
-
-2. **收到數據但沒顯示？**
-* 檢查 `useBLE.js` 中的 `SERVICE_UUID` 是否與 Pico W 端的 UUID (小寫) 完全匹配。
-
-
-3. **API 無法連線？**
-* 前端呼叫後端時，請勿使用 `localhost`，請改用電腦的區域網路 IP (如 `192.168.x.x`)。
 
 
 
