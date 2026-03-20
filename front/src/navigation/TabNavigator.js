@@ -28,8 +28,6 @@ const MainTabNavigator = () => {
                     iconName = focused ? 'settings-sharp' : 'settings-outline';
                 } else if (route.name === '提醒設定') {
                     iconName = focused ? 'time' : 'time-outline';
-                } else if (route.name === '花園') {
-                    iconName = focused ? 'time' : 'time-outline';
                 }
                 return <Ionicons name={iconName} size={size} color={color} />;
                 },
@@ -43,7 +41,6 @@ const MainTabNavigator = () => {
             <Tab.Screen name="提醒設定" component={ReminderSettingScreen} />
             <Tab.Screen name="設定" component={SettingScreen} />
             <Tab.Screen name="個人" component={ProfileScreen} /> 
-            <Tab.Screen name="花園" component={GardenScreen} /> 
         </Tab.Navigator>
     );
 };

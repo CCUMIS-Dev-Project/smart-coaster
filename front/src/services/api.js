@@ -56,11 +56,20 @@ const apiService = {
 
   uploadSensorData: async (sensorData) => {
     try {
-      // 假設後端有一個 /api/sensor/log 的路由
-      const response = await apiClient.post('/api/sensor/log', sensorData);
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.SENSOR_LOG, sensorData);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Upload sensor data failed:', error);
+      console.error('上傳感測器數據失敗:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // 獲取 AI 週報
+  getWeeklyReport: async (userId) => {
+    try {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.REPORT_WEEKLY, { user_id: userId });
+      return { success: true, data: response.data };
+    } catch (error) {
       return { success: false, error: error.message };
     }
   },

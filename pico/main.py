@@ -1,3 +1,5 @@
+# 0316 更新LED螢幕
+
 from machine import Pin, I2C, SPI
 from hx711_pio import HX711
 from ssd1306 import SSD1306_I2C
@@ -24,13 +26,26 @@ button = Pin(16, Pin.IN, Pin.PULL_UP)
 
 # --- 變數初始化 ---
 system_active = False   # 系統開關狀態
-last_stable_weight = 0 
+last_stable_volume = 0 
 is_on_coaster = False  
 threshold = 30         
-drink_amount = 0
+drink_amount = 0 # 每次開啟杯墊的總喝水量
 last_interaction_time = 0 
 # REMINDER_MS = 30 * 60 * 1000 # 正式版：30分鐘
 REMINDER_MS = 20 * 1000    # 測試版
+daily_target = 2000
+
+drink_density = 1 # 先只用水的密度，之後再根據drink_type_id對映不同飲品密度
+# drink_type_id
+
+# --- 螢幕刷新控制 ---
+last_display_ticks = 0
+DISPLAY_INTERVAL_MS = 500  # 每 500ms 更新一次螢幕，既省資源又夠流暢
+
+# --- 等待穩定變數 ---
+STABLE_DELAY_MS = 3000   # 等待 3 秒
+place_down_ticks = 0     # 記錄放下瞬間的 ticks
+is_waiting_for_stable = False
 
 # --- 藍芽設定 ---
 _IRQ_CENTRAL_CONNECT = 1
@@ -45,51 +60,88 @@ _WATER_DATA_CHAR_UUID = (bluetooth.UUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e'),
 _SMART_COASTER_SERVICE = (_SMART_COASTER_SERVICE_UUID, (_WATER_DATA_CHAR_UUID,),)
 
 # --- 函式定義 ---
-def update_leds_fill(r, g, b, brightness):
-    """全體填充燈效 (用於提醒)"""
-    spi.write(b'\x00\x00\x00\x00')
-    header = 0xE0 | (int(brightness * 31) & 0x1F)
-    for _ in range(NUM_LEDS):
-        spi.write(bytearray([header, b, g, r]))
-    spi.write(b'\xFF\xFF\xFF\xFF')
 
-def update_leds_rotate(r, g, b, base_brightness, pos):
+def update_leds_data(led_data):
     """
-    pos: 當前光點的中心位置 (0 ~ NUM_LEDS-1)
+    傳入一個包含所有 LED 顏色資料的 list，一次性寫入 SPI。
+    led_data 格式: [(r,g,b,bright), (r,g,b,bright), ...]
     """
-    spi.write(b'\x00\x00\x00\x00') # 起始幀
+    # SK9822 協定：起始幀(4 bytes 0) + 數據幀(4 bytes * N) + 結束幀
+    buf = bytearray(4 + (NUM_LEDS * 4) + 4)
+    # 起始幀已經是 0，不需動
     
     for i in range(NUM_LEDS):
-        # 計算每顆燈距離中心點的距離
-        # 為了讓環繞看起來滑順，我們計算最短圓周距離
-        dist = abs(i - pos)
-        if dist > NUM_LEDS / 2:
-            dist = NUM_LEDS - dist
-            
-        # 根據距離決定亮度：距離中心 5 顆以內的燈才會亮，且越遠越暗
-        if dist < 16:
-            # 距離 0 = 100% 亮度, 距離 1 = 66%, 距離 2 = 33%
-            pixel_brightness = base_brightness * (1 - dist / 16)
-        else:
-            pixel_brightness = 0
-            
-        header = 0xE0 | (int(pixel_brightness * 31) & 0x1F)
-        spi.write(bytearray([header, b, g, r]))
+        r, g, b, brightness = led_data[i]
+        header = 0xE0 | (int(brightness * 31) & 0x1F)
+        idx = 4 + (i * 4)
+        buf[idx] = header
+        buf[idx+1] = b
+        buf[idx+2] = g
+        buf[idx+3] = r
+    
+    # 結束幀設為 0xFF
+    for j in range(4):
+        buf[-(j+1)] = 0xFF
         
-    spi.write(b'\xFF\xFF\xFF\xFF') # 結束幀
+    spi.write(buf)
 
-def update_display(current, diff, reminder = False):
+def set_leds_rotate(r, g, b, base_brightness, pos):
+    data = []
+    for i in range(NUM_LEDS):
+        dist = abs(i - pos)
+        if dist > NUM_LEDS / 2: dist = NUM_LEDS - dist
+        
+        pixel_brightness = base_brightness * (1 - dist / 8) if dist < 8 else 0
+        data.append((r, g, b, pixel_brightness))
+    update_leds_data(data)
+
+def set_leds_fill(r, g, b, brightness):
+    data = [(r, g, b, brightness)] * NUM_LEDS
+    update_leds_data(data)
+
+
+def update_display(amount, diff, reminder=False, syncing=False):
     oled.fill(0)
-    oled.text("Smart Coaster", 10, 0)
-    oled.text("Now: {:.1f}g".format(current), 0, 25)
-    if reminder:
-        oled.text("!! DRINK WATER !!", 0, 45)
-    elif diff > 0:
-        oled.text("Drank: -{:.1f}g".format(diff), 0, 45)
+    
+    # 1. 標題
+    oled.text("Day Day", 12, 0)
+    
+    # 2. 顯示喝水數據
+    oled.text("{:.0f}/{:d} ml".format(amount, daily_target), 25, 12)
+    
+    # 3. 進度條設計
+    # 設定進度條的坐標與長寬
+    bar_x = 10
+    bar_y = 28
+    bar_width = 108
+    bar_height = 12
+    
+    # 畫出進度條外框 (x, y, w, h, color)
+    oled.rect(bar_x, bar_y, bar_width, bar_height, 1)
+    
+    # 計算進度比例 (限制最大值為 1.0，避免爆表)
+    progress = min(amount / daily_target, 1.0)
+    # 計算填滿部分的寬度 (內縮 2 像素看起來比較美觀)
+    fill_width = int(progress * (bar_width - 4))
+    
+    # 畫出填滿部分
+    if fill_width > 0:
+        oled.fill_rect(bar_x + 2, bar_y + 2, fill_width, bar_height - 4, 1)
+        
+    # 4. 底部狀態資訊
+    if syncing:
+        oled.text("Syncing...", 35, 50) # 正在等 3 秒時顯示
+    elif reminder:
+        oled.text("!! DRINK WATER !!", 0, 50)
+    elif diff > 5:
+        oled.text("Nice! -{:.1f}ml".format(diff), 5, 50)
     else:
-        oled.text("Waiting...", 0, 45)
+        # 平時顯示百分比
+        percent = int(progress * 100)
+        oled.text("Progress: {:d}%".format(percent), 15, 50)
+        
     oled.show()
-
+    
 def get_average_weight(samples=15):
     total = 0
     valid_count = 0
@@ -143,7 +195,7 @@ class BLEPeripheral:
         )
 
     def send_full_status(self, active, weight, on_coaster, drink, reminder):
-        # 格式: active(0/1),volume,on_coaster(0/1),drink,reminder
+        # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder
         # 範例: "1,250.5,1,10.0,1800000"
         data = "{},{},{},{},{}".format(
             1 if active else 0,
@@ -163,10 +215,12 @@ oled.fill(0)
 oled.text("Power Off", 30, 25)
 oled.text("Press to Start", 10, 40)
 oled.show()
-update_leds_rotate(0, 0, 0,0,0) # 確保初始燈滅
+set_leds_rotate(0, 0, 0,0,0) # 確保初始燈滅
 
 # --- 主迴圈 ---
 while True:
+    current_ticks = utime.ticks_ms()
+
     # 1. 偵測按鈕切換開關
     if button.value() == 0:
         utime.sleep_ms(20)
@@ -178,7 +232,7 @@ while True:
                 oled.text("Booting...", 30, 30)
                 oled.show()
                 hx.tare(15) 
-                last_stable_weight = 0
+                last_stable_volume = 0
                 drink_amount = 0
                 last_interaction_time = utime.ticks_ms() # 重設計時器
                 print("系統已啟動")
@@ -186,7 +240,7 @@ while True:
                 oled.fill(0)
                 oled.text("Power Off", 30, 25)
                 oled.show()
-                update_leds_rotate(0, 0, 0,0,0) # 關機時滅燈
+                set_leds_rotate(0, 0, 0,0,0) # 關機時滅燈
                 utime.sleep(1)
                 oled.fill(0)
                 oled.show()
@@ -210,64 +264,86 @@ while True:
             # 邏輯 A：水壺放下 (熄燈)
             if current_weight > threshold:
                 if not is_on_coaster: #剛放回
-                    update_leds_rotate(0, 0, 0,0,0) # 放下時關燈
-                    utime.sleep(1) 
-                    new_weight = get_average_weight()
-                    diff = last_stable_weight - new_weight
-                    
-                    if diff > 5:
-                        drink_amount = diff
-                        last_interaction_time = utime.ticks_ms() # 【核心】喝水了，重設計時器
-                        is_overdue = False
-                        data_changed = True
+                    if not is_waiting_for_stable:
+                        # 剛放下的那一刻，啟動計時
+                        is_waiting_for_stable = True
+                        place_down_ticks = current_ticks
+                        set_leds_fill(0, 0, 0, 0) # 熄滅拿起時的藍燈
+                        # 立即顯示目前的水量，並帶上 syncing 提示
+                        update_display(drink_amount, 0, syncing=True) 
+                        print("檢測到放下，啟動 3 秒穩定計時")
+
+                    # 檢查是否已經等滿了 3 秒
+                    elif utime.ticks_diff(current_ticks, place_down_ticks) > STABLE_DELAY_MS:
+                        # 時間到！執行計算喝水量邏輯
+                        # 計算目前容量 & 與上一次容量差
+                        current_volume = get_average_weight() / drink_density
+                        diff = last_stable_volume - current_volume
+
+                        set_leds_rotate(0, 0, 0,0,0) # 放下時關燈
+                        utime.sleep(1) 
                         
-                    elif diff < -5:
-                        drink_amount = 0
-                        last_interaction_time = utime.ticks_ms() # 補水也算互動，重設計時器
-                        data_changed = True
+                        if diff > 5:
+                            drink_amount += diff
+                            last_interaction_time = current_ticks # 【核心】喝水了，重設計時器
+                            is_overdue = False
+                            data_changed = True
+                            
+                        elif diff < -5:
+                            last_interaction_time = current_ticks # 補水也算互動，重設計時器
+                            data_changed = True
+                        
+                        last_stable_volume = current_volume 
+                        is_on_coaster = True
+                        is_waiting_for_stable = False
+                        update_display(drink_amount, diff, reminder=is_overdue,syncing=False)
+
                     
-                    last_stable_weight = new_weight 
-                    is_on_coaster = True
-                    update_display(new_weight, drink_amount, reminder=is_overdue)
-                if is_overdue:
+                if is_overdue and is_on_coaster: # 只有確認放穩了且超時才閃橘燈
                     ms = utime.ticks_ms()
                     breath = (math.sin(ms / 250) + 1) / 2 # 呼吸效果
                     # 橘色提醒 RGB(255, 100, 0)
-                    update_leds_fill(255, 100, 0, breath * 0.1)
-                    update_display(new_weight, drink_amount, reminder=is_overdue)
-                else:
-                    update_leds_fill(0, 0, 0, 0) # 沒超時則熄燈
+                    set_leds_fill(255, 100, 0, breath * 0.1)
+
+                    # 判斷是否到了該刷新螢幕的時間
+                    if utime.ticks_diff(current_ticks, last_display_ticks) > DISPLAY_INTERVAL_MS:
+                        # 只有時間到了才執行耗時的 OLED 刷新
+                        update_display(drink_amount, diff if 'diff' in locals() else 0, reminder=is_overdue,syncing=False)
+                        last_display_ticks = current_ticks
+                elif (last_stable_volume < current_volume):
+                    set_leds_fill(0, 0, 0, 0) # 沒超時則熄燈
 
             # 邏輯 B：水壺拿起 (亮水藍色)
             elif current_weight < threshold:
-                # --- 環繞燈邏輯 ---
-                ms = utime.ticks_ms()
-                # 調整 150 這個數字：數字越大轉越慢，數字越小轉越快
-                current_pos = (ms / 150) % NUM_LEDS
-                
-                # 水藍色 RGB(0, 191, 255)，亮度上限設為 0.15
-                update_leds_rotate(0, 191, 255, 0.05, current_pos)
                 
                 last_interaction_time = utime.ticks_ms() # 拿起的每一刻都更新last_interaction_time
-                
+                is_waiting_for_stable = False # 拿起後重置等待
+
                 if is_on_coaster:
                     is_on_coaster = False
                     oled.fill(0)
                     oled.text("Drinking...", 30, 30)
                     oled.show()
+                    last_display_ticks = utime.ticks_ms() # 重設計時器
                     data_changed = True
+
+                # --- 環繞燈邏輯 ---
+                # 調整 150 這個數字：數字越大轉越慢，數字越小轉越快
+                current_pos = (current_ticks / 150) % NUM_LEDS
+                
+                # 水藍色 RGB(0, 191, 255)，亮度上限設為 0.15
+                set_leds_rotate(0, 191, 255, 0.05, current_pos)
                     
             # 統一發送邏輯
             # 您可以選擇在 data_changed 為 True 時發送，或是設定一個計時器每秒發送一次
             if data_changed:
                 ble.send_full_status(
                     system_active, 
-                    last_stable_weight, 
+                    last_stable_volume, 
                     is_on_coaster, 
                     drink_amount, 
                     REMINDER_MS
                 )
-                drink_amount = 0 # 發送後歸零單次喝水量，避免重複計算
                     
                 
         except OSError:

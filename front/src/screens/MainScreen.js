@@ -13,6 +13,7 @@ import useBLE from '../hooks/useBLE';
 import {Alert} from 'react-native';
 import SettingScreen from '../screens/SettingScreen.js';
 import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
+import apiService from '../services/api';
 
 const MainScreen = () => {
   // 延用 DashboardScreen 的 BLE 邏輯
@@ -26,7 +27,26 @@ const MainScreen = () => {
   // 監聽 BLE 數據更新水量
   useEffect(() => {
     if (bleData.drinkAmount > 0) {
+      // 1. 更新前端畫面數字
       setTotalIntake((prev) => prev + bleData.drinkAmount);
+
+      // 2. 將數據上傳到 FastAPI 後端
+      const uploadData = async () => {
+        const payload = {
+          lastStableWeight: bleData.lastStableWeight, 
+          drinkAmount: bleData.drinkAmount,
+          isOnCoaster: bleData.isOnCoaster
+        };
+        
+        const response = await apiService.uploadSensorData(payload);
+        if (response.success) {
+          console.log("💧 喝水數據已成功同步至後端資料庫！");
+        } else {
+          console.error("❌ 同步失敗：", response.error);
+        }
+      };
+      
+      uploadData();
     }
   }, [bleData.drinkAmount]);
 

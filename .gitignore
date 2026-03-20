@@ -17,7 +17,7 @@
 /back/*.egg-info/
 /back/dist/
 /back/build/
- 
+
 __pycache__/
 *.pyc
 *.pyo
@@ -34,6 +34,21 @@ dist/
 build/
 
 # React Native
+node_modules/
+.expo/
+.expo-shared/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
 /front/node_modules/
 /front/.expo/
 /front/.expo-shared/
@@ -50,17 +65,29 @@ build/
 /front/web-build/
 
 # React Native - iOS
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
+
 /front/ios/Pods/
 /front/ios/build/
 /front/ios/.xcode.env.local
 
 # React Native - Android
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+android/*.keystore
+android/*.jks
+
 /front/android/build/
 /front/android/.gradle/
 /front/android/app/build/
 /front/android/local.properties
 /front/android/*.keystore
 /front/android/*.jks
+
 
 # IDEs
 .vscode/
