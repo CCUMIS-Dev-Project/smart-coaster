@@ -17,6 +17,21 @@
 /back/*.egg-info/
 /back/dist/
 /back/build/
+ 
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+dist/
+build/
 
 # React Native
 /front/node_modules/
