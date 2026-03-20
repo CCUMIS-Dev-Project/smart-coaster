@@ -3,6 +3,8 @@
 from machine import Pin, I2C, SPI
 from hx711_pio import HX711
 from ssd1306 import SSD1306_I2C
+from ahtx0 import AHT20
+
 import utime
 import math
 import bluetooth
@@ -24,6 +26,10 @@ spi = SPI(0, baudrate=4000000, sck=Pin(2), mosi=Pin(3))
 # 4. 按鈕設定 (GP16)
 button = Pin(16, Pin.IN, Pin.PULL_UP)
 
+# 5. AHT20 (I2C1, GP6/GP7)
+i2c1 = I2C(1, sda=Pin(6), scl=Pin(7))
+aht_sensor = AHT20(i2c1)
+
 # --- 變數初始化 ---
 system_active = False   # 系統開關狀態
 last_stable_volume = 0 
@@ -37,6 +43,12 @@ daily_target = 2000
 
 drink_density = 1 # 先只用水的密度，之後再根據drink_type_id對映不同飲品密度
 # drink_type_id
+
+# --- 溫溼度感測器 ---
+last_sensor_ticks = 0
+SENSOR_INTERVAL_MS = 3000  # 設定為 3000ms (3秒)
+current_temp = 0.0  # 溫度
+current_hum = 0.0   # 濕度
 
 # --- 螢幕刷新控制 ---
 last_display_ticks = 0
@@ -194,15 +206,17 @@ class BLEPeripheral:
             resp_data=self._resp_payload
         )
 
-    def send_full_status(self, active, weight, on_coaster, drink, reminder):
-        # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder
+    def send_full_status(self, active, weight, on_coaster, drink, reminder, temp, hum):
+        # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder,temp,hum
         # 範例: "1,250.5,1,10.0,1800000"
-        data = "{},{},{},{},{}".format(
+        data = "{},{},{},{},{},{:.1f},{:.1f}".format(
             1 if active else 0,
             "{:.1f}".format(weight),
             1 if on_coaster else 0,
             "{:.1f}".format(drink),
-            reminder
+            reminder,
+            temp,
+            hum
         )
         print(f"BLE發送: {data}")
         for conn_handle in self._connections:
@@ -234,7 +248,7 @@ while True:
                 hx.tare(15) 
                 last_stable_volume = 0
                 drink_amount = 0
-                last_interaction_time = utime.ticks_ms() # 重設計時器
+                last_interaction_time = current_ticks # 重設計時器
                 print("系統已啟動")
             else:
                 oled.fill(0)
@@ -252,14 +266,27 @@ while True:
     # 2. 系統啟動後的邏輯
     if system_active:
         try:
+            # --- 溫溼度感測器讀取 (每 3 秒一次) ---
+            if utime.ticks_diff(current_ticks, last_sensor_ticks) > SENSOR_INTERVAL_MS:
+                current_temp = aht_sensor.temperature     # 讀取溫度
+                current_hum = aht_sensor.relative_humidity # 讀取濕度
+                last_sensor_ticks = current_ticks         # 更新最後感測時間
+                print("Sensor Updated: {:.1f}C".format(current_temp))
+
+
             current_weight = hx.get_units()
             
             # 計算距離上一次喝水過多久
-            time_passed = utime.ticks_diff(utime.ticks_ms(), last_interaction_time)
+            time_passed = utime.ticks_diff(current_ticks, last_interaction_time)
             is_overdue = time_passed > REMINDER_MS
             
             # 狀態改變或喝水時發送數據
             data_changed = False
+
+            # 每隔一段時間讀取一次溫溼度，避免頻繁讀取導致傳感器發熱
+            if utime.ticks_diff(current_ticks, last_display_ticks) > DISPLAY_INTERVAL_MS:
+                current_temp = aht_sensor.temperature     #
+                current_hum = aht_sensor.relative_humidity #
             
             # 邏輯 A：水壺放下 (熄燈)
             if current_weight > threshold:
@@ -300,7 +327,7 @@ while True:
 
                     
                 if is_overdue and is_on_coaster: # 只有確認放穩了且超時才閃橘燈
-                    ms = utime.ticks_ms()
+                    ms = current_ticks
                     breath = (math.sin(ms / 250) + 1) / 2 # 呼吸效果
                     # 橘色提醒 RGB(255, 100, 0)
                     set_leds_fill(255, 100, 0, breath * 0.1)
@@ -316,7 +343,7 @@ while True:
             # 邏輯 B：水壺拿起 (亮水藍色)
             elif current_weight < threshold:
                 
-                last_interaction_time = utime.ticks_ms() # 拿起的每一刻都更新last_interaction_time
+                last_interaction_time = current_ticks # 拿起的每一刻都更新last_interaction_time
                 is_waiting_for_stable = False # 拿起後重置等待
 
                 if is_on_coaster:
@@ -324,7 +351,7 @@ while True:
                     oled.fill(0)
                     oled.text("Drinking...", 30, 30)
                     oled.show()
-                    last_display_ticks = utime.ticks_ms() # 重設計時器
+                    last_display_ticks = current_ticks # 重設計時器
                     data_changed = True
 
                 # --- 環繞燈邏輯 ---
@@ -342,7 +369,9 @@ while True:
                     last_stable_volume, 
                     is_on_coaster, 
                     drink_amount, 
-                    REMINDER_MS
+                    REMINDER_MS,
+                    current_temp,
+                    current_hum
                 )
                     
                 
