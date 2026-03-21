@@ -8,9 +8,9 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 def fetch_user_profile(user_id: int) -> dict:
     """
-    Fetch the user's gender, weight, height and daily goal.
+    Fetch the user's gender, weight and daily goal.
     """
-    user_res = supabase.table("users").select("gender, weight, height").eq("user_id", user_id).execute()
+    user_res = supabase.table("users").select("gender, weight").eq("user_id", user_id).execute()
     user_data = user_res.data[0] if user_res.data else {}
     
     goal_res = supabase.table("goals").select("daily_target").eq("user_id", user_id).execute()
@@ -19,7 +19,6 @@ def fetch_user_profile(user_id: int) -> dict:
     return {
         "gender": user_data.get("gender", "未知"), 
         "weight": user_data.get("weight", 60),
-        "height": user_data.get("height", 160),
         "goal_ml": goal_data.get("daily_target", 2000)
     }
 

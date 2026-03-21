@@ -23,7 +23,6 @@ async def generate_weekly_report_endpoint(request: ReportRequest):
         context_str = f"""
 【使用者基本資料】
 性別：{user_info.get('gender')}
-身高：{user_info.get('height')} 公分
 體重：{user_info.get('weight')} 公斤
 每日目標飲水量：{user_info.get('goal_ml')} ml
 

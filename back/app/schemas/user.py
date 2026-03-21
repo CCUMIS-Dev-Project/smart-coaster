@@ -7,7 +7,6 @@ class UserRegister(BaseModel):
     password: str
     gender: str
     weight: float
-    height: float
     levelid: int
     # goals 表
     daily_target: int  # 前端算好傳來
@@ -35,7 +34,6 @@ class UserProfileResponse(BaseModel):
     username: str
     gender: str
     weight: float
-    height: float
     levelid: int
     level_type: str
 
@@ -43,5 +41,4 @@ class UserProfileResponse(BaseModel):
 class UserUpdate(BaseModel):
     gender: Optional[str] = None
     weight: Optional[float] = None
-    height: Optional[float] = None
     levelid: Optional[int] = None
