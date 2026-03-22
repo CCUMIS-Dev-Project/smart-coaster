@@ -100,7 +100,8 @@
 **🤖 測試 AI 聊天與週報產生：**
 在伺服器運行的同時，開啟**另一個新的終端機視窗**，並依序執行：
 1. `cd back`
-2. `source venv/bin/activate`
+2. `source venv/bin/activate  # Mac/Linux` <br>
+             `venv\Scripts\activate  # Windows` 
 3. 測試聊天打字機：`python3 terminal_chat.py`
 4. 測試生成上週週報：`python3 test_weekly_report.py` (若想要看其他user的週報可再去調整test_weekly_report.py裡的user_id)
 

@@ -1,5 +1,3 @@
-# 0316 更新LED螢幕
-
 from machine import Pin, I2C, SPI
 from hx711_pio import HX711
 from ssd1306 import SSD1306_I2C
@@ -41,16 +39,17 @@ is_on_coaster = False
 threshold = 30         
 drink_amount = 0 # 每次開啟杯墊的總喝水量
 last_interaction_time = 0 
-# REMINDER_MS = 30 * 60 * 1000 # 正式版：30分鐘
-REMINDER_MS = 20 * 1000    # 測試版
+REMINDER_MS = 30 * 60 * 1000 # 正式版：30分鐘
+# REMINDER_MS = 20 * 1000    # 測試版
 daily_target = 2000
+diff = 0.0
 
 drink_density = 1 # 先只用水的密度，之後再根據drink_type_id對映不同飲品密度
 # drink_type_id
 
 # --- 溫溼度感測器 ---
 last_sensor_ticks = 0
-SENSOR_INTERVAL_MS = 3000  # 設定為 3000ms (3秒)
+SENSOR_INTERVAL_MS = 10000  # 設定為 10000ms
 current_temp = 0.0  # 溫度
 current_hum = 0.0   # 濕度
 
@@ -210,21 +209,41 @@ class BLEPeripheral:
             resp_data=self._resp_payload
         )
 
-    def send_full_status(self, active, weight, on_coaster, drink, reminder, temp, hum):
-        # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder,temp,hum
-        # 範例: "1,250.5,1,10.0,1800000"
-        data = "{},{},{},{},{},{:.1f},{:.1f}".format(
-            1 if active else 0,
-            "{:.1f}".format(weight),
-            1 if on_coaster else 0,
-            "{:.1f}".format(drink),
-            reminder,
-            temp,
-            hum
+    # def send_full_status(self, active, on_coaster, drink, reminder, temp, hum):
+    #     # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder,temp,hum
+    #     # 範例: "1,250.5,1,10.0,1800000,25.5,65.0"
+    #     data = "{}|{}|{:.1f}|{}|{:.1f}|{:.1f}".format(
+    #         1 if active else 0, 1 if on_coaster else 0, 
+    #         drink, reminder, temp, hum
+    #     )
+    #     print(f"BLE發送: {data}")
+    #     for conn_handle in self._connections:
+    #         self._ble.gatts_notify(conn_handle, self._handle, data)
+
+    def send_water_status(self, active, on_coaster, drink):
+        """傳送核心狀態與喝水量 (標記: W)"""
+        # 格式範例: "W|1|0|150.5" (約 10-12 bytes)
+        data = "W|{}|{}|{:.1f}".format(
+            1 if active else 0, 
+            1 if on_coaster else 0, 
+            drink
         )
+        self._notify(data)
+
+    def send_env_status(self, temp, hum, reminder_ms):
+        """傳送環境數據與提醒設定 (標記: E)"""
+        # 將提醒時間轉為分鐘，縮短字串長度
+        reminder_min = reminder_ms // 60000
+        # 格式範例: "E|25.5|60.0|30" (約 12-15 bytes)
+        data = "E|{:.1f}|{:.1f}|{}".format(temp, hum, reminder_min)
+        self._notify(data)
+
+    def _notify(self, data):
+        """私有輔助函式，執行實際發送"""
         print(f"BLE發送: {data}")
         for conn_handle in self._connections:
             self._ble.gatts_notify(conn_handle, self._handle, data)
+    
 
 ble = BLEPeripheral()
 
@@ -283,6 +302,7 @@ while True:
                     current_hum = dht_sensor.humidity()    # 讀取濕度
                     last_sensor_ticks = current_ticks
                     print("DHT11 Updated: {:.1f}C, {:.1f}%".format(current_temp, current_hum))
+                    ble.send_env_status(current_temp, current_hum, REMINDER_MS)
                 except OSError as e:
                     print("DHT11 讀取失敗:", e) # DHT11 有時會發生隨機讀取失敗，需捕捉異常
 
@@ -373,7 +393,7 @@ while True:
                     oled.text("Drinking...", 30, 30)
                     oled.show()
                     last_display_ticks = current_ticks # 重設計時器
-                    # data_changed = True
+                    data_changed = True
 
                 # --- 環繞燈邏輯 ---
                 # 調整 150 這個數字：數字越大轉越慢，數字越小轉越快
@@ -384,16 +404,23 @@ while True:
                     
             # 統一發送邏輯
             # 您可以選擇在 data_changed 為 True 時發送，或是設定一個計時器每秒發送一次
-            if data_changed or not is_on_coaster:
-                ble.send_full_status(
+            # 格式: active(0/1),weight,on_coaster(0/1),drink,reminder,temp,hum
+            # 範例: "1,250.5,1,10.0,1800000,25.5,65.0"
+            if data_changed:
+                # ble.send_full_status(
+                #     system_active, 
+                #     is_on_coaster, 
+                #     drink_amount, 
+                #     REMINDER_MS,
+                #     current_temp,
+                #     current_hum
+                # )
+                ble.send_water_status(
                     system_active, 
-                    last_stable_volume, 
                     is_on_coaster, 
-                    drink_amount, 
-                    REMINDER_MS,
-                    current_temp,
-                    current_hum
+                    drink_amount
                 )
+                data_changed = False
                     
                 
         except OSError:
