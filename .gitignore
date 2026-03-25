@@ -1,8 +1,6 @@
 # Environment Variables
 /back/.env
 .env
-env/
-ENV/
 
 # Python
 /back/__pycache__/
@@ -13,8 +11,6 @@ ENV/
 /back/env/
 /back/venv/
 /back/.venv
-venv/
-.venv/
 /back/pip-log.txt
 /back/pip-delete-this-directory.txt
 /back/.pytest_cache/
@@ -23,7 +19,6 @@ venv/
 /back/build/
 # Python 暫存檔
 __pycache__/
-__pycache__
 *.py[cod]
 *$py.class
 
