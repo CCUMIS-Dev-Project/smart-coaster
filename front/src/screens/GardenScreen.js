@@ -13,7 +13,7 @@ const BORDER = colors.border, CARD = colors.card;
 const GREEN = '#5ecb6b';
 const { width: SW, height: SH } = Dimensions.get('window');
 
-const GROQ_API_KEY = 'YOUR_GROQ_API_KEY';
+const GROQ_API_KEY = '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';
 
 // ── 花語資料 ─────────────────────────────────────────────
 const FLOWER_DATA = [
@@ -671,7 +671,7 @@ export default function GardenScreen() {
             <View style={s.daysLeft}>
               {doneCount>=5
                 ? <Text style={s.daysLeftTxt}>開花了！</Text>
-                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後{'\n'}開花</Text></>
+                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
               }
             </View>
             <View style={{flex:1}}>
