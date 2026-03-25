@@ -13,8 +13,7 @@ const BORDER = colors.border, CARD = colors.card;
 const GREEN = '#5ecb6b';
 const { width: SW, height: SH } = Dimensions.get('window');
 
-const GROQ_API_KEY = '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';
-
+const GROQ_API_KEY = 'YOUR_GROQ_API_KEY';
 // ── 花語資料 ─────────────────────────────────────────────
 const FLOWER_DATA = [
   {

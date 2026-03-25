@@ -12,8 +12,7 @@ const OTHER_COLOR    = '#c8a878';
 const CAFFEINE_COLOR = '#3b1f0a';
 const CIRCLE_SIZE    = 260;
 const CAFF_SIZE      = 110;
-const GROQ_API_KEY   = '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';
-
+const GROQ_API_KEY = 'YOUR_GROQ_API_KEY';
 const BASE_CAFFEINE = {
   '水':   0,
   '咖啡': 80,
