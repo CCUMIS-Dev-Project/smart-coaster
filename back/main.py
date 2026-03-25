@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import chat, report, sensor, drinking_logs, auth
+from app.routes import chat, report, sensor
 
 app = FastAPI(
-    title="Smart Coaster Backend",
+    title="Smart Coaster AI Backend",
     description="FastAPI backend connecting Smart Coaster to Supabase and Groq",
     version="1.0.0"
 )
@@ -21,10 +21,7 @@ app.add_middleware(
 app.include_router(chat.router)
 app.include_router(report.router)
 app.include_router(sensor.router)
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(drinking_logs.router, prefix="/logs", tags=["drinking_logs"])
 
-# 這邊api放到render上後才須注意
 @app.get("/health")
 async def health_check():
     """Basic health check endpoint."""
