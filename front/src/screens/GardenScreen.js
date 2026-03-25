@@ -14,7 +14,6 @@ const GREEN = '#5ecb6b';
 const { width: SW, height: SH } = Dimensions.get('window');
 
 const GROQ_API_KEY = 'YOUR_GROQ_API_KEY';
-
 // ── 花語資料 ─────────────────────────────────────────────
 const FLOWER_DATA = [
   {
@@ -631,17 +630,20 @@ export default function GardenScreen() {
       <View style={s.head}>
         <View>
           <Text style={s.title}>我的花園</Text>
-          <Text style={s.subtitle}>連續 5 天達標，綻放一朵花！</Text>
+          <Text style={s.subtitle}>連續5天達成目標飲水量，就可以綻放一朵花！</Text>
         </View>
-        <View style={{flexDirection:'row',gap:8,alignItems:'center'}}>
-          <TouchableOpacity style={s.gardenEntryBtn} onPress={() => setShowGarden(true)} activeOpacity={0.85}>
-            <Text style={s.gardenEntryTxt}>花園</Text>
-          </TouchableOpacity>
-          <View style={s.streakBadge}>
-            <Text style={s.streakNum}>{gardenStreak}</Text>
-            <Text style={s.streakLbl}>連續天</Text>
-          </View>
-        </View>
+        <TouchableOpacity style={s.gardenEntryBtn} onPress={() => setShowGarden(true)} activeOpacity={0.85}>
+  <Svg width={44} height={44} viewBox="0 0 80 80">
+    {[0,60,120,180,240,300].map((a,i)=>(
+      <Ellipse key={i} cx="40" cy="16" rx="7" ry="13"
+        fill={i%2===0?'#ff9ab8':'#ffb4cc'}
+        transform={`rotate(${a} 40 40)`} />
+    ))}
+    <Circle cx="40" cy="40" r="12" fill="#ffe066" />
+    <Circle cx="40" cy="40" r="8" fill="#ffd040" />
+  </Svg>
+  <Text style={s.gardenEntryTxt}>花園</Text>
+</TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
@@ -668,7 +670,7 @@ export default function GardenScreen() {
             <View style={s.daysLeft}>
               {doneCount>=5
                 ? <Text style={s.daysLeftTxt}>開花了！</Text>
-                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後{'\n'}開花</Text></>
+                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
               }
             </View>
             <View style={{flex:1}}>
@@ -685,15 +687,20 @@ export default function GardenScreen() {
 
         {/* 本週每日記錄 */}
         <View style={s.histCard}>
-          <View style={s.histHeader}>
-            <Text style={s.histTitle}>本週每日記錄</Text>
-            <TouchableOpacity style={[s.weekBtn,isUp?s.weekBtnUp:s.weekBtnDown]}
-              onPress={()=>setShowWeekCompare(true)} activeOpacity={0.8}>
-              <Text style={[s.weekBtnTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>
-                {isUp?'↑':'↓'} {Math.abs(diffPct)}% vs 上週
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <View style={s.histHeader}>
+  <Text style={s.histTitle}>本週每日記錄</Text>
+  <View style={{flexDirection:'row', gap:8, alignItems:'center'}}>
+    <View style={s.streakBadge}>
+      <Text style={s.streakLbl}>已連續達標{gardenStreak}天！</Text>
+    </View>
+    <TouchableOpacity style={[s.weekBtn,isUp?s.weekBtnUp:s.weekBtnDown]}
+      onPress={()=>setShowWeekCompare(true)} activeOpacity={0.8}>
+      <Text style={[s.weekBtnTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>
+        {isUp?'↑':'↓'} {Math.abs(diffPct)}% vs 上週
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
           <View style={s.histRow}>
             {weekData.map((d,i)=>{
               const barH=Math.round((d.ml/maxV)*80);
@@ -929,11 +936,11 @@ const s = StyleSheet.create({
   head:     { flexDirection:'row', justifyContent:'space-between', alignItems:'flex-start', paddingHorizontal:20, paddingTop:56, paddingBottom:12 },
   title:    { fontSize:22, fontWeight:'900', color:'#1a2a1e' },
   subtitle: { fontSize:12, color:'#8aaa90', marginTop:3 },
-  gardenEntryBtn:{ backgroundColor:'#4a9e3f', borderRadius:12, paddingVertical:7, paddingHorizontal:14 },
-  gardenEntryTxt:{ fontSize:13, fontWeight:'900', color:'#fff' },
-  streakBadge:{ backgroundColor:'#ff6b35', borderRadius:12, paddingVertical:7, paddingHorizontal:12, alignItems:'center' },
-  streakNum:{ fontSize:20, fontWeight:'900', color:'#fff', lineHeight:22 },
-  streakLbl:{ fontSize:10, fontWeight:'800', color:'rgba(255,255,255,0.85)' },
+  gardenEntryBtn:{ alignItems:'center', gap:2 },
+  gardenEntryTxt:{ fontSize:11, fontWeight:'900', color:'#2d6a27' },
+  streakBadge: { borderRadius:20, paddingVertical:5, paddingHorizontal:12, borderWidth:1.5, backgroundColor:'#fff3e0', borderColor:'#ff9a3c' },
+streakNum:   { fontSize:12, fontWeight:'900', color:'#e65c00' },
+streakLbl:   { fontSize:10, fontWeight:'800', color:'#e65c00' },
   inner:    { padding:16, paddingBottom:32, gap:14 },
   plantCard:    { backgroundColor:CARD, borderRadius:24, padding:18, position:'relative', overflow:'hidden' },
   plantCardBg:  { position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:'#f0fff4', borderRadius:24 },

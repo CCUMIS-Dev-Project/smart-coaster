@@ -76,8 +76,7 @@ export default function ProfileScreen() {
       weight: parseFloat(weight)||65,
       age: parseFloat(age)||28,
       activity,
-      goalMl: customGoal ? (parseInt(customGoalMl)||suggestedGoal) : suggestedGoal,
-      customGoal,
+      goalMl: customGoal ? Math.max(parseInt(customGoalMl)||suggestedGoal, suggestedGoal) : suggestedGoal,
       reminderInterval: parseInt(reminderInterval)||60,
       autoMode, autoStart, autoEnd, hasCoaster,
     });
@@ -108,6 +107,7 @@ export default function ProfileScreen() {
   if (!editing) return (
     <SafeAreaView style={s.safe}>
       {ActivityInfoModal}
+      
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
         <View style={s.header}>
           <View style={s.rippleWrap}>
@@ -116,12 +116,11 @@ export default function ProfileScreen() {
             <RippleRing delay={1600} />
             <Image source={profile.selectedCup?.image} style={{ width: 80, height: 80 }} resizeMode="contain" />
           </View>
-          <Text style={s.userName}>{profile.name || '使用者'}</Text>
-          <Text style={s.userTag}>健康飲水者</Text>
         </View>
 
         <View style={s.group}>
           <Text style={s.groupTitle}>基本資料</Text>
+          <InfoRow label="姓名"   value={profile.name || '沒有填名字的小呆呆'} />
           <InfoRow label="性別"   value={profile.gender === 'male' ? '生理男' : '生理女'} />
           <InfoRow label="體重"   value={`${profile.weight} kg`} />
           <InfoRow label="年齡"   value={`${profile.age} 歲`} />
@@ -151,10 +150,6 @@ export default function ProfileScreen() {
           </View>
           <Text style={s.urineLabel}>{URINE_LABELS[urineIdx]}</Text>
         </View>
-
-        <TouchableOpacity style={s.editBtn} onPress={() => setEditing(true)} activeOpacity={0.85}>
-          <Text style={s.editBtnTxt}>編輯個人資料</Text>
-        </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>

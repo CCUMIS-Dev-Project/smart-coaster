@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
 import GardenScreen  from '../screens/GardenScreen';
-import MainScreen    from '../screens/MainScreen';
+import MainScreen from '../screens/MainScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
