@@ -1,0 +1,12 @@
+# 忽略後端資料夾
+back/
+backend/
+app/
+
+# 忽略 Python 暫存
+**/__pycache__/
+*.pyc
+
+# 忽略其他不需要的資源
+node_modules/
+.git/
