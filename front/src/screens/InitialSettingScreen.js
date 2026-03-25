@@ -10,10 +10,10 @@ const TEXT = colors.text, MUTED = colors.muted, BORDER = colors.border;
 
 const CUPS = [
   { name: '洋芋片罐', image: require('../assets/cup_can.png'),   ml: 320, desc: '我才不要喝水，快給我吃餅乾！' },
-  { name: '水杯',     image: require('../assets/cup_main.png'),  ml: 350, desc: '平凡中帶點小確幸' },
-  { name: '茶杯',     image: require('../assets/cup_tea.png'),   ml: 200, desc: '慢慢來，人生不急' },
-  { name: '馬克杯',   image: require('../assets/cup_mug.png'),   ml: 400, desc: '早晨救星，戒不掉' },
-  { name: '玻璃杯',   image: require('../assets/cup_lemon.png'), ml: 300, desc: '清新系，夏天的靈魂' },
+  { name: '水杯',     image: require('../assets/cup_main.png'),  ml: 350, desc: '就是水杯' },
+  { name: '茶杯',     image: require('../assets/cup_tea.png'),   ml: 200, desc: '不急，喝杯茶再說' },
+  { name: '馬克杯',   image: require('../assets/cup_mug.png'),   ml: 400, desc: '百搭杯杯，裝什麼都時尚' },
+  { name: '玻璃杯',   image: require('../assets/cup_lemon.png'), ml: 300, desc: '你要跟我的小檸檬一起喝水嗎？' },
 ];
 
 function RippleRing({ delay }) {
@@ -42,9 +42,9 @@ function Seg({ label, sel, onPress, half }) {
 
 const ACTIVITY_INFO = [
   { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
-  { label: '輕度', desc: '每週 1–2 次輕鬆散步或瑜珈' },
-  { label: '中度', desc: '每週 3–4 次 30 分鐘有氧或健走' },
-  { label: '高度', desc: '每週 5 次以上激烈運動或勞動工作' },
+  { label: '輕度', desc: '每週1–2次，會進行輕鬆散步或瑜珈' },
+  { label: '中度', desc: '每週3–4次，30分鐘有氧等運動' },
+  { label: '高度', desc: '每週5次以上，激烈運動或勞動工作' },
 ];
 
 export default function InitialSettingScreen() {
@@ -52,7 +52,6 @@ export default function InitialSettingScreen() {
   const { completeSetup } = useApp();
   const [step, setStep] = useState(1);
 
-  // 個人資料
   const [name,     setName]     = useState('');
   const [gender,   setGender]   = useState('male');
   const [weight,   setWeight]   = useState('65');
@@ -60,21 +59,14 @@ export default function InitialSettingScreen() {
   const [activity, setActivity] = useState('light');
   const [customGoal,   setCustomGoal]   = useState(false);
   const [customGoalMl, setCustomGoalMl] = useState('');
-
-  // 水杯選擇
   const [activeCup, setActiveCup] = useState(CUPS[3]);
-
-  // 提醒設定
   const [reminderInterval, setReminderInterval] = useState('60');
   const [autoMode,   setAutoMode]   = useState(true);
   const [autoStart,  setAutoStart]  = useState('08:00');
   const [autoEnd,    setAutoEnd]    = useState('22:00');
   const [hasCoaster, setHasCoaster] = useState(true);
-
-  // 活動量說明
   const [showActivityInfo, setShowActivityInfo] = useState(false);
 
-  // 動畫
   const bobAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
@@ -88,7 +80,9 @@ export default function InitialSettingScreen() {
   const suggestedGoal = calcWaterGoal({
     gender, weight: parseFloat(weight)||65, age: parseFloat(age)||28, activity,
   });
-  const finalGoal = customGoal ? (parseInt(customGoalMl)||suggestedGoal) : suggestedGoal;
+  const finalGoal = customGoal
+    ? Math.max(parseInt(customGoalMl)||suggestedGoal, suggestedGoal)
+    : suggestedGoal;
 
   function handleComplete() {
     completeSetup({
@@ -104,7 +98,6 @@ export default function InitialSettingScreen() {
     });
   }
 
-  // 活動量說明 Modal（共用）
   const ActivityInfoModal = (
     <Modal visible={showActivityInfo} transparent animationType="fade">
       <TouchableOpacity style={s.actOverlay} activeOpacity={1} onPress={() => setShowActivityInfo(false)}>
@@ -117,7 +110,7 @@ export default function InitialSettingScreen() {
             </View>
           ))}
           <TouchableOpacity style={s.actClose} onPress={() => setShowActivityInfo(false)}>
-            <Text style={s.actCloseTxt}>了解了</Text>
+            <Text style={s.actCloseTxt}>了解</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -159,7 +152,7 @@ export default function InitialSettingScreen() {
 
         <Text style={s.lbl}>姓名</Text>
         <TextInput style={s.inp} value={name} onChangeText={setName}
-          placeholder="請輸入姓名" placeholderTextColor={MUTED} />
+          placeholder="輸入姓名/暱稱" placeholderTextColor={MUTED} />
 
         <Text style={s.lbl}>生理性別</Text>
         <View style={s.segRow}>
@@ -178,7 +171,6 @@ export default function InitialSettingScreen() {
           </View>
         </View>
 
-        {/* 活動量 + 問號 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={s.lbl}>活動量</Text>
           <TouchableOpacity onPress={() => setShowActivityInfo(true)} activeOpacity={0.75}>
@@ -194,7 +186,6 @@ export default function InitialSettingScreen() {
           ))}
         </View>
 
-        {/* 飲水目標 */}
         <View style={s.goalBox}>
           <View style={s.goalHeader}>
             <View>
@@ -207,12 +198,19 @@ export default function InitialSettingScreen() {
             </View>
           </View>
           {customGoal ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
-                value={customGoalMl} onChangeText={setCustomGoalMl}
-                placeholder={String(suggestedGoal)} placeholderTextColor={MUTED} />
-              <Text style={s.mlUnit}>ml</Text>
-            </View>
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
+                  value={customGoalMl} onChangeText={setCustomGoalMl}
+                  placeholder={String(suggestedGoal)} placeholderTextColor={MUTED} />
+                <Text style={s.mlUnit}>ml</Text>
+              </View>
+              {!!customGoalMl && parseInt(customGoalMl) < suggestedGoal && (
+                <Text style={{ fontSize: 11, color: '#f87171', fontWeight: '700' }}>
+                  最低目標為建議值 {suggestedGoal} ml
+                </Text>
+              )}
+            </>
           ) : (
             <Text style={s.goalFinal}>{suggestedGoal} ml</Text>
           )}
@@ -235,7 +233,6 @@ export default function InitialSettingScreen() {
           <Text style={s.backTxt}>←</Text>
         </TouchableOpacity>
         <Text style={s.pageTitle}>選擇水杯夥伴</Text>
-        <Text style={s.pageSub}>每次喝水，夥伴會慢慢裝滿水！</Text>
 
         <View style={s.banner}>
           <Image source={activeCup.image} style={{ width: 60, height: 60 }} resizeMode="contain" />
@@ -268,49 +265,57 @@ export default function InitialSettingScreen() {
   // ── Step 4: 提醒設定 ─────────────────────────────────
   return (
     <SafeAreaView style={s.safeBg}>
-      <ScrollView style={s.scrollFull} contentContainerStyle={s.formInner}
+      <ScrollView style={s.scrollFull} contentContainerStyle={s.formInner4}
         showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={() => setStep(3)} style={s.backBtn}>
           <Text style={s.backTxt}>←</Text>
         </TouchableOpacity>
         <Text style={s.pageTitle}>提醒設定</Text>
-        <Text style={s.pageSub}>設定你的補水提醒與記錄模式</Text>
+        <Text style={s.pageSub}>設定你的補水提醒間距與記錄模式</Text>
 
-        <Text style={s.lbl}>提醒時間間距（分鐘）</Text>
-        <View style={s.segRow}>
-          {['30','45','60','90'].map(v => (
-            <Seg key={v} label={`${v}分`} sel={reminderInterval===v}
-              onPress={() => setReminderInterval(v)} />
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-          <Text style={{ fontSize: 13, color: MUTED, flex: 1 }}>或自訂：</Text>
-          <TextInput style={[s.inp, { width: 80 }]} keyboardType="numeric"
-            value={reminderInterval} onChangeText={setReminderInterval} />
-          <Text style={s.mlUnit}>分鐘</Text>
-        </View>
-
-        <View style={s.switchRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.switchTitle}>我有智慧杯墊</Text>
-            <Text style={s.switchDesc}>開啟後可使用自動記錄功能</Text>
+        {/* 提醒間距 */}
+        <View style={s.section}>
+          <Text style={s.lbl}>提醒時間間距</Text>
+          <View style={s.segRow}>
+            {['30','45','60','90'].map(v => (
+              <Seg key={v} label={`${v}分`} sel={reminderInterval===v}
+                onPress={() => setReminderInterval(v)} />
+            ))}
           </View>
-          <Switch value={hasCoaster} onValueChange={setHasCoaster} trackColor={{ true: BLUE }} />
-        </View>
-
-        <View style={[s.switchRow, !hasCoaster && { opacity: 0.45 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.switchTitle}>自動記錄模式</Text>
-            <Text style={s.switchDesc}>關閉則為手動記錄</Text>
+          <View style={s.customRow}>
+            <Text style={s.customLbl}>或自訂：</Text>
+            <TextInput style={s.customInp} keyboardType="numeric"
+              value={reminderInterval} onChangeText={setReminderInterval} />
+            <Text style={s.mlUnit}>分鐘</Text>
           </View>
-          <Switch value={autoMode && hasCoaster} onValueChange={hasCoaster ? setAutoMode : null}
-            trackColor={{ true: BLUE }} disabled={!hasCoaster} />
         </View>
 
+        {/* 杯墊設定 */}
+        <View style={s.section}>
+          <Text style={s.lbl}>智慧杯墊</Text>
+          <View style={s.switchCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.switchTitle}>我有智慧杯墊</Text>
+              <Text style={s.switchDesc}>擁有智慧杯墊了嗎？開啟後即可使用自動記錄功能</Text>
+            </View>
+            <Switch value={hasCoaster} onValueChange={setHasCoaster} trackColor={{ true: BLUE }} />
+          </View>
+
+          <View style={[s.switchCard, !hasCoaster && { opacity: 0.45 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.switchTitle}>自動記錄模式</Text>
+              <Text style={s.switchDesc}>關閉則為手動記錄</Text>
+            </View>
+            <Switch value={autoMode && hasCoaster} onValueChange={hasCoaster ? setAutoMode : null}
+              trackColor={{ true: BLUE }} disabled={!hasCoaster} />
+          </View>
+        </View>
+
+        {/* 自動記錄時段 */}
         {autoMode && hasCoaster && (
-          <View style={s.timeBox}>
+          <View style={s.section}>
             <Text style={s.lbl}>自動記錄時段</Text>
-            <View style={s.timeRow}>
+            <View style={s.timeBox}>
               <View style={s.timeItem}>
                 <Text style={s.timeLbl}>開始時間</Text>
                 <TextInput style={s.timeInp} value={autoStart} onChangeText={setAutoStart}
@@ -325,6 +330,8 @@ export default function InitialSettingScreen() {
             </View>
           </View>
         )}
+
+        <View style={{ flex: 1 }} />
 
         <TouchableOpacity style={s.btn} onPress={handleComplete} activeOpacity={0.85}>
           <Text style={s.btnTxt}>開始使用</Text>
@@ -343,26 +350,41 @@ const s = StyleSheet.create({
   cupImg:     { width: 120, height: 120 },
   headline:   { fontSize: 30, fontWeight: '900', color: TEXT, textAlign: 'center', lineHeight: 38, marginBottom: 10 },
   subTxt:     { fontSize: 14, color: '#6b8da8', lineHeight: 22, textAlign: 'center' },
-
   safeBg:     { flex: 1, backgroundColor: '#fff' },
   safeBg2:    { flex: 1, backgroundColor: '#f0f7fc' },
   scrollFull: { flex: 1 },
   formInner:  { padding: 24, paddingTop: 56, paddingBottom: 40, gap: 14 },
+  formInner4: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 56, paddingBottom: 24, gap: 24 },
   pageTitle:  { fontSize: 24, fontWeight: '900', color: TEXT },
-  pageSub:    { fontSize: 13, color: MUTED, marginTop: -8 },
+  pageSub:    { fontSize: 13, color: MUTED, marginTop: -12 },
+
+  section:    { gap: 12 },
 
   lbl:    { fontSize: 11, fontWeight: '800', color: '#5a7a96', textTransform: 'uppercase', letterSpacing: 0.7 },
   inp:    { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 2, borderColor: BORDER, fontSize: 16, fontWeight: '700', color: TEXT, backgroundColor: '#f6fafd' },
   twoCol: { flexDirection: 'row', gap: 12 },
   col:    { flex: 1, gap: 6 },
-
-  segRow:    { flexDirection: 'row', gap: 8 },
-  segGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  seg:       { flex: 1, paddingVertical: 13, borderRadius: 13, borderWidth: 2, borderColor: BORDER, backgroundColor: '#f6fafd', alignItems: 'center' },
-  segSel:    { borderColor: BLUE, backgroundColor: BLUE_LIGHT },
-  segHalf:   { minWidth: '47%' },
-  segTxt:    { fontSize: 14, fontWeight: '800', color: '#6b8da8' },
+  segRow: { flexDirection: 'row', gap: 8 },
+  segGrid:{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  seg:    { flex: 1, paddingVertical: 13, borderRadius: 13, borderWidth: 2, borderColor: BORDER, backgroundColor: '#f6fafd', alignItems: 'center' },
+  segSel: { borderColor: BLUE, backgroundColor: BLUE_LIGHT },
+  segHalf:{ minWidth: '47%' },
+  segTxt: { fontSize: 14, fontWeight: '800', color: '#6b8da8' },
   segTxtSel: { color: BLUE_DARK },
+
+  customRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  customLbl: { fontSize: 13, color: MUTED, flex: 1 },
+  customInp: { width: 80, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 16, fontWeight: '700', color: TEXT, textAlign: 'center', backgroundColor: '#f6fafd' },
+
+  switchCard:  { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f6fafd', borderRadius: 16, padding: 18, borderWidth: 1.5, borderColor: BORDER, gap: 12 },
+  switchTitle: { fontSize: 15, fontWeight: '800', color: TEXT, marginBottom: 3 },
+  switchDesc:  { fontSize: 12, color: MUTED, lineHeight: 18 },
+
+  timeBox:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f6fafd', borderRadius: 16, padding: 18, borderWidth: 1.5, borderColor: BORDER },
+  timeItem: { flex: 1, gap: 6 },
+  timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800', textAlign: 'center' },
+  timeInp:  { paddingVertical: 14, paddingHorizontal: 14, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 20, fontWeight: '900', color: TEXT, textAlign: 'center', backgroundColor: '#fff' },
+  timeSep:  { fontSize: 22, color: MUTED, fontWeight: '900' },
 
   goalBox:    { backgroundColor: '#eaf6ff', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: '#bde0f8', gap: 10 },
   goalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -383,18 +405,7 @@ const s = StyleSheet.create({
   cupName:    { fontSize: 14, fontWeight: '900', color: TEXT },
   cupDesc:    { fontSize: 11, color: MUTED, textAlign: 'center' },
 
-  switchRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER },
-  switchTitle: { fontSize: 15, fontWeight: '800', color: TEXT },
-  switchDesc:  { fontSize: 12, color: MUTED, marginTop: 2 },
-
-  timeBox:  { backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER, gap: 10 },
-  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  timeItem: { flex: 1, gap: 4 },
-  timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800' },
-  timeInp:  { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 18, fontWeight: '900', color: TEXT, textAlign: 'center', backgroundColor: '#fff' },
-  timeSep:  { fontSize: 20, color: MUTED, fontWeight: '900' },
-
-  btn:    { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center', width: '70%', alignSelf: 'center', shadowColor: BLUE, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
+  btn:    { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center', width: '100%', alignSelf: 'center', shadowColor: BLUE, shadowOpacity: 0.38, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
   btnTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
   infoBtn:     { width: 18, height: 18, borderRadius: 9, backgroundColor: '#d0e8f8', alignItems: 'center', justifyContent: 'center' },

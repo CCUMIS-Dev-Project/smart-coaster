@@ -221,7 +221,7 @@ export default function MainScreen() {
     <SafeAreaView style={s.safe}>
       <View style={s.topbar}>
         <View>
-          <Text style={s.greeting}>嗨，{profile.name || 'Alex'}</Text>
+          <Text style={s.greeting}>嗨，{profile.name || '沒有填名字的小呆呆'}</Text>
           <Text style={s.date}>{dateStr}</Text>
         </View>
       </View>
