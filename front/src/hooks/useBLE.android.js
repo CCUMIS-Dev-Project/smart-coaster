@@ -32,14 +32,17 @@ export default function useBLE() {
   const [connectedDevice, setConnectedDevice] = useState(null);
 //   const [drinkData, setDrinkData] = useState(0);
 
-  // 定義一個結構化的狀態來存放所有感測器數據
-  const [bleData, setBleData] = useState({
-    systemActive: false,
-    lastStableWeight: 0,
-    isOnCoaster: false,
-    drinkAmount: 0,
-    reminderMs: 0,
-  });
+
+  // 這裡的狀態可以保留，作為內部暫存，或直接回傳給外部處理
+  const [bleData, setBleData] = useState(null);
+  // // 定義一個結構化的狀態來存放所有感測器數據
+  // const [bleData, setBleData] = useState({
+  //   systemActive: false,
+  //   lastStableWeight: 0,
+  //   isOnCoaster: false,
+  //   drinkAmount: 0,
+  //   reminderMs: 0,
+  // });
 
   // 核心 UUID (需與 Pico W 端完全一致)
   const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'; 
@@ -121,21 +124,22 @@ export default function useBLE() {
             return;
           }
           if (characteristic?.value) {
-            // 1. 解碼 Base64
+            // 解碼 Base64 得到原始字串，例如 "W|1|0|150.5"
             const rawString = atob(characteristic.value); 
-            console.log('收到原始字串:', rawString);
+            console.log('收到數據:', rawString);
+            setBleData(rawString); // 將原始字串傳出去給外部解析
 
-            // 2. 解析 CSV (格式: active,weight,on_coaster,drink,reminder)
-            const parts = rawString.split(',');
-            if (parts.length === 5) {
-              setBleData({
-                systemActive: parts[0] === '1',
-                lastStableWeight: parseFloat(parts[1]),
-                isOnCoaster: parts[2] === '1',
-                drinkAmount: parseFloat(parts[3]),
-                reminderMs: parseInt(parts[4]),
-              });
-            }
+            // // 2. 解析 CSV (格式: active,weight,on_coaster,drink,reminder)
+            // const parts = rawString.split(',');
+            // if (parts.length === 5) {
+            //   setBleData({
+            //     systemActive: parts[0] === '1',
+            //     lastStableWeight: parseFloat(parts[1]),
+            //     isOnCoaster: parts[2] === '1',
+            //     drinkAmount: parseFloat(parts[3]),
+            //     reminderMs: parseInt(parts[4]),
+            //   });
+            // }
           }
         }
       );

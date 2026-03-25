@@ -102,135 +102,12 @@ function WaterCup({ logs, goalMl, totalMl }) {
 
 
 const MainScreen = () => {
-  // const { scanAndConnect, connectedDevice, bleData } = useBLE();
-  // const [totalIntake, setTotalIntake] = useState(0);
-  // const dailyTarget = 2000; // 假設目標為 2000ml
-  // const [drinkType, setDrinkType] = useState('水');
-  // const [isSettingVisible, setSettingVisible] = useState(false);
-  // const [isReminderVisible, setReminderVisible] = useState(false);
-
-  // // 監聽 BLE 數據更新水量
-  // useEffect(() => {
-  //   if (bleData.drinkAmount > 0) {
-  //     // 1. 更新前端畫面數字
-  //     setTotalIntake((prev) => prev + bleData.drinkAmount);
-
-  //     // 2. 將數據上傳到 FastAPI 後端
-  //     const uploadData = async () => {
-  //       const payload = {
-  //         lastStableWeight: bleData.lastStableWeight, 
-  //         drinkAmount: bleData.drinkAmount,
-  //         isOnCoaster: bleData.isOnCoaster
-  //       };
-        
-  //       const response = await apiService.uploadSensorData(payload);
-  //       if (response.success) {
-  //         console.log("💧 喝水數據已成功同步至後端資料庫！");
-  //       } else {
-  //         console.error("❌ 同步失敗：", response.error);
-  //       }
-  //     };
-      
-  //     uploadData();
-  //   }
-  // }, [bleData.drinkAmount]);
-
-  // // 計算百分比
-  // const progress = Math.min((totalIntake / dailyTarget) * 100, 100).toFixed(0);
-
-  // // 處理切換飲品的邏輯
-  // const handleChangeDrink = () => {
-  //   Alert.alert(
-  //     "更換飲品",
-  //     "請選擇您目前飲用的液體：",
-  //     [
-  //       { text: "水", onPress: () => setDrinkType("水") },
-  //       { text: "咖啡", onPress: () => setDrinkType("咖啡") },
-  //       { text: "茶", onPress: () => setDrinkType("茶") },
-  //       // { text: "神奇水水", onPress: () => setDrinkType("神奇水水") },
-  //       { text: "取消", style: "cancel" } // 這邊bug顯示不出取消按鈕
-  //     ]
-  //   );
-  // };
-
-  // return (
-  //   <ImageBackground 
-  //     source={require('../assets/background.png')} 
-  //     style={styles.background}
-  //   >
-  //     <SafeAreaView style={styles.container}>
-  //       {/* 頂部狀態與標題 */}
-  //       <View style={styles.header}>
-  //         <TouchableOpacity style={styles.PickerButton} onPress={handleChangeDrink}>
-  //           <View>
-  //               <Text style={styles.drinkLabel}>目前飲用</Text>
-  //               <View style={styles.drinkRow}>
-  //               <Text style={styles.drinkName}>{drinkType}</Text>
-  //               <Ionicons name="chevron-down" size={18} color="#3498db" style={{ marginLeft: 5 }} />
-  //               </View>
-  //           </View>
-  //         </TouchableOpacity>
-
-  //         <TouchableOpacity style={styles.PickerButton} onPress={scanAndConnect}>
-  //           <View>
-  //               <Text style={styles.drinkLabel}>連接杯墊</Text>
-  //           </View>
-  //         </TouchableOpacity>
-          
-  //       </View>
-
-  //       {/* 中央杯子進度區 (對應 main_cup.jpg) */}
-  //       <View style={styles.progressContainer}>
-  //         <View style={styles.circleOutline}>
-  //           <Image 
-  //             source={require('../assets/main_cup.png')} // 杯子圖示
-  //             style={styles.cupImage}
-  //             resizeMode="contain"
-  //           />
-  //           <Text style={styles.progressText}>{progress}%</Text>
-  //         </View>
-  //       </View>
-
-  //       {/* 下方數據卡片 */}
-  //       <View style={styles.infoCard}>
-  //         <View style={styles.dataRow}>
-  //           <View style={styles.dataItem}>
-  //             <Text style={styles.dataLabel}>已飲用</Text>
-  //             <Text style={styles.dataValue}>{totalIntake} <Text style={styles.unit}>ml</Text></Text>
-  //           </View>
-  //           <View style={styles.divider} />
-  //           <View style={styles.dataItem}>
-  //             <Text style={styles.dataLabel}>今日目標</Text>
-  //             <Text style={styles.dataValue}>{dailyTarget} <Text style={styles.unit}>ml</Text></Text>
-  //           </View>
-  //         </View>
-          
-  //         {/* 連接狀態提示 */}
-  //         <Text style={styles.statusText}>
-  //           裝置狀態：{connectedDevice ? '已連線' : '未連線'}
-  //         </Text>
-  //       </View>
-  //     </SafeAreaView>
-
-  //     {/* 設定選單 Modal */}
-  //   <SettingScreen 
-  //     visible={isSettingVisible} 
-  //     onClose={() => setSettingVisible(false)}
-  //     onOpenReminder={() => setReminderVisible(true)} 
-  //   />
-
-  //   {/* 提醒時長設定 Modal */}
-  //   <ReminderSettingScreen 
-  //     visible={isReminderVisible} 
-  //     onClose={() => setReminderVisible(false)} 
-  //   />
-  //   </ImageBackground>
-  // );
+  const { scanAndConnect, connectedDevice, bleData } = useBLE();
 
   const {
       profile, goalMl, totalMl, logs,
       addLog, updateLog, deleteLog, deleteLogs,
-      sensorData
+      sensorData, setSensorData, syncHardwareDrink,
     } = useApp();
   
     const [showAddModal,     setShowAddModal]     = useState(false);
@@ -252,6 +129,19 @@ const MainScreen = () => {
     const hasCoaster  = profile.hasCoaster;
     const isConnected = sensorData.connected;
   
+    const handleConnect = async () => {
+      // 顯示掃描中的提示
+      Alert.alert('連接杯墊', '正在掃描附近的智慧杯墊...');
+      
+      try {
+        await scanAndConnect(); 
+        // scanAndConnect 是從 useBLE() 拿出來的
+      } catch (error) {
+        console.error(error);
+        Alert.alert('連線失敗', '請確認藍牙已開啟');
+      }
+    };
+
     function quickLog(ml) { addLog(ml, '白開水', ''); }
   
     function handleAdd() {
@@ -312,6 +202,8 @@ const MainScreen = () => {
         { text: '刪除', style: 'destructive', onPress: () => deleteLog(id) },
       ]);
     }
+
+    
   
     function renderRecordArea() {
       if (hasCoaster && isConnected) {
@@ -326,8 +218,12 @@ const MainScreen = () => {
       if (hasCoaster && !isConnected) {
         return (
           <View style={s.recordRow}>
-            <TouchableOpacity style={[s.recordBtn, s.recordConnect]}
-              onPress={() => Alert.alert('連接杯墊', '正在掃描附近的智慧杯墊...')} activeOpacity={0.85}>
+
+            <TouchableOpacity 
+              style={[s.recordBtn, s.recordConnect]}
+              onPress={handleConnect} // 直接指向定義好的函數
+              activeOpacity={0.85}
+            >
               <Text style={s.recordBtnTxt}>連接杯墊</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.recordBtn, s.recordManual]}
@@ -347,6 +243,47 @@ const MainScreen = () => {
       );
     }
   
+    // 監聽藍牙原始數據並解析
+    useEffect(() => {
+      if (!bleData) return;
+
+      const parts = bleData.split('|');
+      const type = parts[0]; // 'W' 或 'E'
+
+      if (type === 'W') {
+        // 格式: W | systemActive | isOnCoaster | drinkAmount
+        const isOnCoaster = parts[2] === '1';
+        const drinkAmount = parseFloat(parts[3]);
+
+        setSensorData(prev => ({ 
+          ...prev, 
+          connected: true, 
+          isOnCoaster: isOnCoaster 
+        }));
+
+        // 同步喝水量到 App 紀錄中
+        syncHardwareDrink(drinkAmount);
+
+      } else if (type === 'E') {
+        // 格式: E | temp | hum | reminder_min
+        const temp = parseFloat(parts[1]);
+        const hum = parseFloat(parts[2]);
+
+        setSensorData(prev => ({ 
+          ...prev, 
+          temperature: temp, 
+          humidity: hum,
+          connected: true
+        }));
+      }
+    }, [bleData]);
+
+    // 更新連線狀態 (處理斷線情況)
+    useEffect(() => {
+      setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
+    }, [connectedDevice]);
+
+
     return (
       <SafeAreaView style={s.safe}>
         <View style={s.topbar}>
@@ -544,6 +481,131 @@ const MainScreen = () => {
         </Modal>
       </SafeAreaView>
     );
+      // const { scanAndConnect, connectedDevice, bleData } = useBLE();
+  // const [totalIntake, setTotalIntake] = useState(0);
+  // const dailyTarget = 2000; // 假設目標為 2000ml
+  // const [drinkType, setDrinkType] = useState('水');
+  // const [isSettingVisible, setSettingVisible] = useState(false);
+  // const [isReminderVisible, setReminderVisible] = useState(false);
+
+  // // 監聽 BLE 數據更新水量
+  // useEffect(() => {
+  //   if (bleData.drinkAmount > 0) {
+  //     // 1. 更新前端畫面數字
+  //     setTotalIntake((prev) => prev + bleData.drinkAmount);
+
+  //     // 2. 將數據上傳到 FastAPI 後端
+  //     const uploadData = async () => {
+  //       const payload = {
+  //         lastStableWeight: bleData.lastStableWeight, 
+  //         drinkAmount: bleData.drinkAmount,
+  //         isOnCoaster: bleData.isOnCoaster
+  //       };
+        
+  //       const response = await apiService.uploadSensorData(payload);
+  //       if (response.success) {
+  //         console.log("💧 喝水數據已成功同步至後端資料庫！");
+  //       } else {
+  //         console.error("❌ 同步失敗：", response.error);
+  //       }
+  //     };
+      
+  //     uploadData();
+  //   }
+  // }, [bleData.drinkAmount]);
+
+  // // 計算百分比
+  // const progress = Math.min((totalIntake / dailyTarget) * 100, 100).toFixed(0);
+
+  // // 處理切換飲品的邏輯
+  // const handleChangeDrink = () => {
+  //   Alert.alert(
+  //     "更換飲品",
+  //     "請選擇您目前飲用的液體：",
+  //     [
+  //       { text: "水", onPress: () => setDrinkType("水") },
+  //       { text: "咖啡", onPress: () => setDrinkType("咖啡") },
+  //       { text: "茶", onPress: () => setDrinkType("茶") },
+  //       // { text: "神奇水水", onPress: () => setDrinkType("神奇水水") },
+  //       { text: "取消", style: "cancel" } // 這邊bug顯示不出取消按鈕
+  //     ]
+  //   );
+  // };
+
+  // return (
+  //   <ImageBackground 
+  //     source={require('../assets/background.png')} 
+  //     style={styles.background}
+  //   >
+  //     <SafeAreaView style={styles.container}>
+  //       {/* 頂部狀態與標題 */}
+  //       <View style={styles.header}>
+  //         <TouchableOpacity style={styles.PickerButton} onPress={handleChangeDrink}>
+  //           <View>
+  //               <Text style={styles.drinkLabel}>目前飲用</Text>
+  //               <View style={styles.drinkRow}>
+  //               <Text style={styles.drinkName}>{drinkType}</Text>
+  //               <Ionicons name="chevron-down" size={18} color="#3498db" style={{ marginLeft: 5 }} />
+  //               </View>
+  //           </View>
+  //         </TouchableOpacity>
+
+  //         <TouchableOpacity style={styles.PickerButton} onPress={scanAndConnect}>
+  //           <View>
+  //               <Text style={styles.drinkLabel}>連接杯墊</Text>
+  //           </View>
+  //         </TouchableOpacity>
+          
+  //       </View>
+
+  //       {/* 中央杯子進度區 (對應 main_cup.jpg) */}
+  //       <View style={styles.progressContainer}>
+  //         <View style={styles.circleOutline}>
+  //           <Image 
+  //             source={require('../assets/main_cup.png')} // 杯子圖示
+  //             style={styles.cupImage}
+  //             resizeMode="contain"
+  //           />
+  //           <Text style={styles.progressText}>{progress}%</Text>
+  //         </View>
+  //       </View>
+
+  //       {/* 下方數據卡片 */}
+  //       <View style={styles.infoCard}>
+  //         <View style={styles.dataRow}>
+  //           <View style={styles.dataItem}>
+  //             <Text style={styles.dataLabel}>已飲用</Text>
+  //             <Text style={styles.dataValue}>{totalIntake} <Text style={styles.unit}>ml</Text></Text>
+  //           </View>
+  //           <View style={styles.divider} />
+  //           <View style={styles.dataItem}>
+  //             <Text style={styles.dataLabel}>今日目標</Text>
+  //             <Text style={styles.dataValue}>{dailyTarget} <Text style={styles.unit}>ml</Text></Text>
+  //           </View>
+  //         </View>
+          
+  //         {/* 連接狀態提示 */}
+  //         <Text style={styles.statusText}>
+  //           裝置狀態：{connectedDevice ? '已連線' : '未連線'}
+  //         </Text>
+  //       </View>
+  //     </SafeAreaView>
+
+  //     {/* 設定選單 Modal */}
+  //   <SettingScreen 
+  //     visible={isSettingVisible} 
+  //     onClose={() => setSettingVisible(false)}
+  //     onOpenReminder={() => setReminderVisible(true)} 
+  //   />
+
+  //   {/* 提醒時長設定 Modal */}
+  //   <ReminderSettingScreen 
+  //     visible={isReminderVisible} 
+  //     onClose={() => setReminderVisible(false)} 
+  //   />
+  //   </ImageBackground>
+  // );
+
 };
 
 // const styles = StyleSheet.create({

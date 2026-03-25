@@ -142,6 +142,17 @@ const InitialSettingScreen = () => {
     });
   }
 
+  const handleFinalSubmit = () => {
+  // 1. 稍微延遲 50 毫秒，讓按鈕變暗的點擊特效 (activeOpacity) 可以先渲染
+  setTimeout(() => {
+    // 2. 執行狀態儲存 (呼叫你原本寫好的 handleComplete)
+    handleComplete(); 
+    
+    // 3. 執行頁面跳轉
+    navigation.replace('MainTabs'); 
+  }, 50);
+};
+
   // 活動量說明 Modal（共用）
   const ActivityInfoModal = (
     <Modal visible={showActivityInfo} transparent animationType="fade">
@@ -474,8 +485,8 @@ const InitialSettingScreen = () => {
           </View>
         )}
 
-        <TouchableOpacity style={s.btn} onPress={handleComplete} activeOpacity={0.85}>
-          <Text style={s.btnTxt} onPress={handleStart}>開始使用</Text>
+        <TouchableOpacity style={s.btn} onPress={handleFinalSubmit} activeOpacity={0.85}>
+          <Text style={s.btnTxt}>開始使用</Text>
         </TouchableOpacity>
         <View style={{ height: 40 }} />
       </ScrollView>

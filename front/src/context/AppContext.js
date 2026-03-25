@@ -36,10 +36,14 @@ export function AppProvider({ children }) {
     { day: '今', ml: 0 },
   ]);
 
+  // 紀錄硬體上一次傳來的總喝水量，用來計算差值
+  const [lastHardwareAmount, setLastHardwareAmount] = useState(0);
+
   const [sensorData, setSensorData] = useState({
     temperature: 28,
     humidity: 72,
     connected: false,
+    isOnCoaster: false,
   });
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
@@ -72,6 +76,18 @@ export function AppProvider({ children }) {
     setLogs(prev => prev.filter(log => !ids.includes(log.id)));
   }
 
+  // 當硬體傳來新的喝水量時，計算增量並新增一筆紀錄
+  function syncHardwareDrink(currentTotal) {
+    if (currentTotal > lastHardwareAmount) {
+      const diff = currentTotal - lastHardwareAmount;
+      addLog(Math.round(diff), '白開水', ''); // 自動新增紀錄
+      setLastHardwareAmount(currentTotal);
+    } else if (currentTotal < lastHardwareAmount) {
+      // 如果硬體重置了（重開機），同步重置 App 的基準值
+      setLastHardwareAmount(currentTotal);
+    }
+  }
+
   return (
     <AppContext.Provider value={{
       isSetupDone, completeSetup,
@@ -81,6 +97,7 @@ export function AppProvider({ children }) {
       isRecording, setIsRecording,
       weekData,
       sensorData, setSensorData,
+      syncHardwareDrink,
     }}>
       {children}
     </AppContext.Provider>
