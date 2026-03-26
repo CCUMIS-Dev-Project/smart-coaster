@@ -1,13 +1,39 @@
 from app.services.supabase_service import supabase
+from postgrest.exceptions import APIError
 from datetime import datetime, timezone, date, timedelta
 
 TABLE = "drinking_logs"
 
 def create_log(data: dict) -> dict:
-    response = supabase.table(TABLE).insert(data).execute()
-    return response.data[0]
+    try:
+        response = supabase.table(TABLE).insert(data).execute()
+        result = response.data[0]
+    except APIError as e:
+        # unique constraint violation (PostgreSQL error code 23505)
+        if "23505" in str(e) or "duplicate key" in str(e).lower():
+            record_dt = datetime.fromisoformat(data["record_at"].replace("Z", "+00:00"))
+            day_start = record_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            existing = (
+                supabase.table(TABLE)
+                .select("log_id, type_id, d_volume, record_at")
+                .eq("user_id", data["user_id"])
+                .eq("record_at", data["record_at"])
+                .gte("record_at", day_start.isoformat())
+                .lt("record_at", day_end.isoformat())
+                .is_("delete_at", "null")
+                .execute()
+            )
+            return existing.data[0]
+        raise
+    try:
+        from app.services.reward_service import check_and_update_streak
+        check_and_update_streak(data["user_id"])
+    except Exception as e:
+        print(f"[reward] streak update failed for user {data.get('user_id')}: {e}")
+    return result
 
-def soft_delete_log(log_id: int) -> dict | None:
+def soft_delete_log(log_id: int, user_id: int) -> dict | None:
     response = (
         supabase.table(TABLE)
         .update({"delete_at": datetime.now(timezone.utc).isoformat()})
@@ -15,7 +41,14 @@ def soft_delete_log(log_id: int) -> dict | None:
         .is_("delete_at", "null")   # 避免對已刪除的再操作
         .execute()
     )
-    return response.data[0] if response.data else None
+    result = response.data[0] if response.data else None
+    if result:
+        try:
+            from app.services.reward_service import undo_today_streak_if_needed
+            undo_today_streak_if_needed(user_id)
+        except Exception as e:
+            print(f"[reward] streak undo failed for user {user_id}: {e}")
+    return result
 
 # 基本查詢：選定特定欄位、指定用戶、排除已刪除、按時間新到舊排序
 def get_logs(user_id: int, date_filter: date | None = None) -> list:
