@@ -83,11 +83,17 @@ export default function MainScreen() {
     setLastDeleted(last);
     deleteLog(last.id);
   }
-
+  
   function handleRedo() {
     if (!lastDeleted) return;
     addLog(lastDeleted.ml, lastDeleted.type, '');
     setLastDeleted(null);
+  }
+  
+  function handleDeleteOne(id) {
+    const target = logs.find(l => l.id === id);
+    if (target) setLastDeleted(target);
+    deleteLog(id);
   }
 
   function quickLog(ml) { addLog(ml, drinkType, ''); setLastDeleted(null); }
@@ -101,12 +107,7 @@ export default function MainScreen() {
     setAddMl('250');
   }
 
-  function handleDeleteOne(id) {
-    Alert.alert('刪除紀錄', '確定刪除這筆紀錄？', [
-      { text: '取消', style: 'cancel' },
-      { text: '刪除', style: 'destructive', onPress: () => deleteLog(id) },
-    ]);
-  }
+  
 
   function handleDeleteSelected() {
     Alert.alert('刪除紀錄', `確定刪除 ${selected.length} 筆紀錄？`, [
@@ -181,16 +182,18 @@ export default function MainScreen() {
 
   const handleChangeDrink = () => {
     const BASE = ['水', '咖啡', '茶'];
-    const customOptions = customDrinks.filter(d => !BASE.includes(d)).map(d => ({ text: d, onPress: () => setDrinkType(d) }));
-    Alert.alert('目前飲用', '選好飲品後，用快速記錄鍵記錄喝水量', [
-      { text: '水',          onPress: () => setDrinkType('水') },
-      { text: '咖啡',        onPress: () => setDrinkType('咖啡') },
-      { text: '茶',          onPress: () => setDrinkType('茶') },
-      ...customOptions,
-      { text: '＋ 自訂飲品', onPress: () => setShowCustomDrinkModal(true) },
-      { text: '取消',        style: 'cancel' },
-    ]);
+    Alert.alert(
+      '目前飲用',
+      '選好飲品後，用快速記錄鍵記錄喝水量',
+      [
+        { text: '水',   onPress: () => setDrinkType('水') },
+        { text: '咖啡', onPress: () => setDrinkType('咖啡') },
+        { text: '茶',   onPress: () => setDrinkType('茶') },
+        { text: '取消', style: 'cancel' },
+      ]
+    );
   };
+
 
   const handleConnect = () => Alert.alert('連接杯墊', '正在掃描附近的智慧杯墊...');
   const cupImage = profile?.selectedCup?.image || require('../assets/cup_main.png');
@@ -264,9 +267,11 @@ export default function MainScreen() {
               </View>
             </View>
             <Text style={s.caffTitle}>咖啡因</Text>
-            <Text style={[s.caffStatusSmall, { color: caffStatusColor }]}>{caffStatus}</Text>
-            <Text style={s.caffMax}>上限 {MAX_CAFFEINE}mg</Text>
-          </View>
+<View style={[s.caffStatusBadge, { backgroundColor: caffStatusColor }]}>
+  <Text style={s.caffStatusBadgeTxt}>{caffStatus}</Text>
+</View>
+<Text style={s.caffMax}>上限 {MAX_CAFFEINE}mg</Text>
+</View>
         </View>
 
         {/* 復原/重做 + 飲品提示 */}
@@ -489,7 +494,8 @@ const s = StyleSheet.create({
   caffNum:     { fontSize: 22, fontWeight: '900', color: '#fff' },
   caffUnit:    { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '700' },
   caffTitle:   { fontSize: 13, fontWeight: '900', color: 'rgba(255,255,255,0.95)' },
-  caffStatusSmall: { fontSize: 10, fontWeight: '800' },
+  caffStatusBadge:    { borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10, marginTop: 2 },
+  caffStatusBadgeTxt: { fontSize: 11, fontWeight: '900', color: '#fff' },
   caffMax:     { fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: '700' },
   undoRow:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   arrowBtn:   { backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E1E8EE' },
@@ -502,8 +508,6 @@ const s = StyleSheet.create({
   qBtnPlus: { borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.08)' },
   qBtnName: { fontSize: 13, fontWeight: '900', color: '#333' },
   qBtnMl:   { fontSize: 11, fontWeight: '700', color: '#999' },
-
-  // 今日紀錄
   logCard:  { flex: 1, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 24, padding: 14, marginBottom: 16 },
   logHead:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   logTitle: { fontSize: 14, fontWeight: '900', color: '#333' },
@@ -517,7 +521,6 @@ const s = StyleSheet.create({
   logMeta:  { fontSize: 11, color: '#999' },
   checkbox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#ccc', alignItems: 'center', justifyContent: 'center' },
   checkboxSel: { backgroundColor: '#3498db', borderColor: '#3498db' },
-
   modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard:      { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
   modalTitle:     { fontSize: 20, fontWeight: '900', color: '#333', marginBottom: 18 },

@@ -1,9 +1,10 @@
 // src/screens/InitialSettingScreen.js
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image, Modal, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
+
 
 const BLUE = colors.blue, BLUE_DARK = colors.blueDark, BLUE_LIGHT = colors.blueLight;
 const TEXT = colors.text, MUTED = colors.muted, BORDER = colors.border;
@@ -216,9 +217,17 @@ export default function InitialSettingScreen() {
           )}
         </View>
 
-        <TouchableOpacity style={s.btn} onPress={() => setStep(3)} activeOpacity={0.85}>
-          <Text style={s.btnTxt}>選擇我的水杯 →</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={s.btn} onPress={() => {
+  if (!name.trim()) {
+    Alert.alert('請輸入姓名', '請填寫你的名字或暱稱才能繼續');
+    return;
+  }
+
+  setStep(3);
+}} activeOpacity={0.85}>
+  <Text style={s.btnTxt}>選擇我的水杯 →</Text>
+</TouchableOpacity>
+
         <View style={{ height: Platform.OS === 'ios' ? 40 : 20 }} />
       </ScrollView>
     </SafeAreaView>

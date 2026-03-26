@@ -11,27 +11,11 @@ const URINE_LABELS = ['淺黃 → 補水充足','淡黃 → 正常','黃色 → 
 
 const ACTIVITY_INFO = [
   { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
-  { label: '輕度', desc: '每週 1–2 次輕鬆散步或瑜珈' },
-  { label: '中度', desc: '每週 3–4 次 30 分鐘有氧或健走' },
-  { label: '高度', desc: '每週 5 次以上激烈運動或勞動工作' },
+  { label: '輕度', desc: '每週運動1–2次' },
+  { label: '中度', desc: '每週運動3–4次' },
+  { label: '高度', desc: '每週運動5次以上' },
+  { label: '運動標準', desc: '一、感覺有點喘、說話稍費力，且持續時間超過 30 分鐘\n二、日均步數超過一萬步' },
 ];
-
-function Seg({ label, sel, onPress }) {
-  return (
-    <TouchableOpacity style={[s.seg, sel && s.segSel]} onPress={onPress} activeOpacity={0.75}>
-      <Text style={[s.segTxt, sel && s.segTxtSel]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <View style={s.infoRow}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value}</Text>
-    </View>
-  );
-}
 
 function RippleRing({ delay }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -49,39 +33,92 @@ function RippleRing({ delay }) {
   return <Animated.View style={[s.rippleRing, { transform: [{ scale }], opacity }]} />;
 }
 
+// 可點擊編輯的資料列
+function EditableRow({ label, value, onEdit }) {
+  return (
+    <TouchableOpacity style={s.infoRow} onPress={onEdit} activeOpacity={0.6}>
+      <Text style={s.infoLabel}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Text style={s.infoValue}>{value}</Text>
+        <Text style={{ color: '#ccc', fontSize: 16 }}>›</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function ProfileScreen() {
   const { profile, updateProfile, goalMl } = useApp();
-  const [editing, setEditing] = useState(false);
   const [urineIdx, setUrineIdx] = useState(0);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
 
-  const [name,             setName]             = useState(profile.name);
-  const [gender,           setGender]           = useState(profile.gender);
-  const [weight,           setWeight]           = useState(String(profile.weight));
-  const [age,              setAge]              = useState(String(profile.age));
-  const [activity,         setActivity]         = useState(profile.activity);
-  const [customGoal,       setCustomGoal]       = useState(profile.customGoal);
-  const [customGoalMl,     setCustomGoalMl]     = useState(String(profile.goalMl));
-  const [reminderInterval, setReminderInterval] = useState(String(profile.reminderInterval));
-  const [autoMode,         setAutoMode]         = useState(profile.autoMode);
-  const [autoStart,        setAutoStart]        = useState(profile.autoStart);
-  const [autoEnd,          setAutoEnd]          = useState(profile.autoEnd);
-  const [hasCoaster,       setHasCoaster]       = useState(profile.hasCoaster);
+  // 個別編輯 modal 狀態
+  const [editField, setEditField] = useState(null); // 'name'|'gender'|'weight'|'age'|'activity'|'goal'|'reminder'|'coaster'
+  const [tempVal, setTempVal] = useState('');
+  const [tempGender, setTempGender] = useState(profile.gender);
+  const [tempActivity, setTempActivity] = useState(profile.activity);
+  const [tempCustomGoal, setTempCustomGoal] = useState(profile.customGoal);
+  const [tempCustomGoalMl, setTempCustomGoalMl] = useState(String(profile.goalMl));
+  const [tempHasCoaster, setTempHasCoaster] = useState(profile.hasCoaster);
+  const [tempAutoMode, setTempAutoMode] = useState(profile.autoMode);
+  const [tempAutoStart, setTempAutoStart] = useState(profile.autoStart);
+  const [tempAutoEnd, setTempAutoEnd] = useState(profile.autoEnd);
 
-  const suggestedGoal = calcWaterGoal({ gender, weight: parseFloat(weight)||65, age: parseFloat(age)||28, activity });
+  const suggestedGoal = calcWaterGoal({
+    gender: tempGender,
+    weight: parseFloat(profile.weight) || 65,
+    age: parseFloat(profile.age) || 28,
+    activity: tempActivity,
+  });
 
-  function handleSave() {
-    updateProfile({
-      name, gender,
-      weight: parseFloat(weight)||65,
-      age: parseFloat(age)||28,
-      activity,
-      goalMl: customGoal ? Math.max(parseInt(customGoalMl)||suggestedGoal, suggestedGoal) : suggestedGoal,
-      reminderInterval: parseInt(reminderInterval)||60,
-      autoMode, autoStart, autoEnd, hasCoaster,
-    });
-    setEditing(false);
-    Alert.alert('儲存成功', '個人資料已更新');
+  function openEdit(field) {
+    setEditField(field);
+    if (field === 'name') setTempVal(profile.name || '');
+    if (field === 'weight') setTempVal(String(profile.weight));
+    if (field === 'age') setTempVal(String(profile.age));
+    if (field === 'reminder') setTempVal(String(profile.reminderInterval));
+    if (field === 'gender') setTempGender(profile.gender);
+    if (field === 'activity') setTempActivity(profile.activity);
+    if (field === 'goal') {
+      setTempCustomGoal(profile.customGoal);
+      setTempCustomGoalMl(String(profile.goalMl));
+    }
+    if (field === 'coaster') {
+      setTempHasCoaster(profile.hasCoaster);
+      setTempAutoMode(profile.autoMode);
+      setTempAutoStart(profile.autoStart);
+      setTempAutoEnd(profile.autoEnd);
+    }
+  }
+
+  function saveField() {
+    let update = {};
+    if (editField === 'name') {
+      if (!tempVal.trim()) { Alert.alert('請輸入姓名'); return; }
+      update = { name: tempVal.trim() };
+    }
+    if (editField === 'weight') update = { weight: parseFloat(tempVal) || profile.weight };
+    if (editField === 'age') update = { age: parseFloat(tempVal) || profile.age };
+    if (editField === 'reminder') update = { reminderInterval: parseInt(tempVal) || profile.reminderInterval };
+    if (editField === 'gender') update = { gender: tempGender };
+    if (editField === 'activity') update = { activity: tempActivity };
+    if (editField === 'goal') {
+      update = {
+        customGoal: tempCustomGoal,
+        goalMl: tempCustomGoal
+          ? Math.max(parseInt(tempCustomGoalMl) || suggestedGoal, suggestedGoal)
+          : suggestedGoal,
+      };
+    }
+    if (editField === 'coaster') {
+      update = {
+        hasCoaster: tempHasCoaster,
+        autoMode: tempAutoMode,
+        autoStart: tempAutoStart,
+        autoEnd: tempAutoEnd,
+      };
+    }
+    updateProfile(update);
+    setEditField(null);
   }
 
   const ActivityInfoModal = (
@@ -96,19 +133,210 @@ export default function ProfileScreen() {
             </View>
           ))}
           <TouchableOpacity style={s.actClose} onPress={() => setShowActivityInfo(false)}>
-            <Text style={s.actCloseTxt}>了解了</Text>
+            <Text style={s.actCloseTxt}>了解</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
   );
 
-  // ── 檢視模式 ─────────────────────────────────────────
-  if (!editing) return (
+  // 個別欄位編輯 Modal 內容
+  function renderEditModal() {
+    if (!editField) return null;
+    let title = '';
+    let content = null;
+
+    if (editField === 'name') {
+      title = '編輯姓名';
+      content = (
+        <TextInput style={s.inp} value={tempVal} onChangeText={setTempVal}
+          placeholder="輸入姓名/暱稱" placeholderTextColor={MUTED} autoFocus />
+      );
+    }
+    if (editField === 'weight') {
+      title = '編輯體重';
+      content = (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={setTempVal}
+            keyboardType="numeric" autoFocus />
+          <Text style={{ color: MUTED, fontWeight: '800', fontSize: 16 }}>kg</Text>
+        </View>
+      );
+    }
+    if (editField === 'age') {
+      title = '編輯年齡';
+      content = (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={setTempVal}
+            keyboardType="numeric" autoFocus />
+          <Text style={{ color: MUTED, fontWeight: '800', fontSize: 16 }}>歲</Text>
+        </View>
+      );
+    }
+    if (editField === 'reminder') {
+      title = '提醒間距';
+      content = (
+        <>
+          <View style={s.segRow}>
+            {['30','45','60','90'].map(v => (
+              <TouchableOpacity key={v}
+                style={[s.seg, tempVal === v && s.segSel]}
+                onPress={() => setTempVal(v)} activeOpacity={0.75}>
+                <Text style={[s.segTxt, tempVal === v && s.segTxtSel]}>{v}分</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={setTempVal}
+              keyboardType="numeric" placeholder="自訂" placeholderTextColor={MUTED} />
+            <Text style={{ color: MUTED, fontWeight: '800' }}>分鐘</Text>
+          </View>
+        </>
+      );
+    }
+    if (editField === 'gender') {
+      title = '編輯性別';
+      content = (
+        <View style={s.segRow}>
+          {[{key:'male',label:'生理男'},{key:'female',label:'生理女'}].map(g => (
+            <TouchableOpacity key={g.key}
+              style={[s.seg, tempGender === g.key && s.segSel]}
+              onPress={() => setTempGender(g.key)} activeOpacity={0.75}>
+              <Text style={[s.segTxt, tempGender === g.key && s.segTxtSel]}>{g.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      );
+    }
+    if (editField === 'activity') {
+      title = '編輯活動量';
+      content = (
+        <>
+          <View style={s.segGrid}>
+            {ACTIVITY_LEVELS.map(a => (
+              <TouchableOpacity key={a.key}
+                style={[s.seg, tempActivity === a.key && s.segSel, s.segHalf]}
+                onPress={() => setTempActivity(a.key)} activeOpacity={0.75}>
+                <Text style={[s.segTxt, tempActivity === a.key && s.segTxtSel]}>{a.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity onPress={() => setShowActivityInfo(true)} style={{ marginTop: 8 }}>
+            <Text style={{ color: BLUE, fontSize: 13, fontWeight: '800' }}>活動量標準說明</Text>
+          </TouchableOpacity>
+        </>
+      );
+    }
+    if (editField === 'goal') {
+      title = '每日飲水目標';
+      content = (
+        <View style={s.goalBox}>
+          <View style={s.goalHeader}>
+            <View>
+              <Text style={s.goalTitle}>建議值</Text>
+              <Text style={s.goalSub}>{suggestedGoal} ml</Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: MUTED }}>自訂</Text>
+              <Switch value={tempCustomGoal} onValueChange={setTempCustomGoal} trackColor={{ true: BLUE }} />
+            </View>
+          </View>
+          {tempCustomGoal ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
+                  value={tempCustomGoalMl} onChangeText={setTempCustomGoalMl} />
+                <Text style={{ color: MUTED, fontWeight: '800' }}>ml</Text>
+              </View>
+              {!!tempCustomGoalMl && parseInt(tempCustomGoalMl) < suggestedGoal && (
+                <Text style={{ fontSize: 11, color: '#f87171', fontWeight: '700' }}>
+                  最低目標為建議值 {suggestedGoal} ml
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text style={s.goalFinal}>{suggestedGoal} ml</Text>
+          )}
+        </View>
+      );
+    }
+    if (editField === 'coaster') {
+      title = '智慧杯墊設定';
+      content = (
+        <View style={{ gap: 12 }}>
+          <View style={s.switchRow}>
+            <Text style={s.switchTitle}>我有智慧杯墊</Text>
+            <Switch value={tempHasCoaster} onValueChange={setTempHasCoaster} trackColor={{ true: BLUE }} />
+          </View>
+          <View style={[s.switchRow, !tempHasCoaster && { opacity: 0.45 }]}>
+            <Text style={s.switchTitle}>自動記錄模式</Text>
+            <Switch value={tempAutoMode && tempHasCoaster}
+              onValueChange={tempHasCoaster ? setTempAutoMode : null}
+              disabled={!tempHasCoaster} trackColor={{ true: BLUE }} />
+          </View>
+          {tempAutoMode && tempHasCoaster && (
+            <View style={s.timeBox}>
+              <Text style={s.lbl}>自動記錄時段</Text>
+              <View style={s.timeRow}>
+                <View style={s.timeItem}>
+                  <Text style={s.timeLbl}>開始</Text>
+                  <TextInput style={s.timeInp} value={tempAutoStart} onChangeText={setTempAutoStart} />
+                </View>
+                <Text style={s.timeSep}>—</Text>
+                <View style={s.timeItem}>
+                  <Text style={s.timeLbl}>結束</Text>
+                  <TextInput style={s.timeInp} value={tempAutoEnd} onChangeText={setTempAutoEnd} />
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <Modal visible={!!editField} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>{title}</Text>
+              <TouchableOpacity onPress={() => setEditField(null)}>
+                <Text style={{ fontSize: 24, color: MUTED }}>×</Text>
+              </TouchableOpacity>
+            </View>
+            {content}
+            <TouchableOpacity style={s.saveBtn} onPress={saveField} activeOpacity={0.85}>
+              <Text style={s.saveBtnTxt}>儲存</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {showActivityInfo && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+            <View style={s.actModal}>
+              <Text style={s.actTitle}>活動量標準</Text>
+              {ACTIVITY_INFO.map(a => (
+                <View key={a.label} style={s.actRow}>
+                  <Text style={s.actLabel}>{a.label}</Text>
+                  <Text style={s.actDesc}>{a.desc}</Text>
+                </View>
+              ))}
+              <TouchableOpacity style={s.actClose} onPress={() => setShowActivityInfo(false)}>
+                <Text style={s.actCloseTxt}>了解</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </Modal>
+    );
+  }
+
+  return (
     <SafeAreaView style={s.safe}>
       {ActivityInfoModal}
-      
+      {renderEditModal()}
+
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
+        {/* 頭部 */}
         <View style={s.header}>
           <View style={s.rippleWrap}>
             <RippleRing delay={0} />
@@ -116,28 +344,41 @@ export default function ProfileScreen() {
             <RippleRing delay={1600} />
             <Image source={profile.selectedCup?.image} style={{ width: 80, height: 80 }} resizeMode="contain" />
           </View>
+          {profile.name
+            ? <Text style={s.userName}>{profile.name}</Text>
+            : <TouchableOpacity onPress={() => openEdit('name')}>
+                <Text style={{ color: BLUE, fontSize: 14, fontWeight: '800' }}>點此設定暱稱</Text>
+              </TouchableOpacity>
+          }
         </View>
 
+        {/* 基本資料 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>基本資料</Text>
-          <InfoRow label="姓名"   value={profile.name || '沒有填名字的小呆呆'} />
-          <InfoRow label="性別"   value={profile.gender === 'male' ? '生理男' : '生理女'} />
-          <InfoRow label="體重"   value={`${profile.weight} kg`} />
-          <InfoRow label="年齡"   value={`${profile.age} 歲`} />
-          <InfoRow label="活動量" value={ACTIVITY_LEVELS.find(a => a.key === profile.activity)?.label || '-'} />
+          <EditableRow label="姓名"   value={profile.name || '未設定'}
+            onEdit={() => openEdit('name')} />
+          <EditableRow label="性別"   value={profile.gender === 'male' ? '生理男' : '生理女'}
+            onEdit={() => openEdit('gender')} />
+          <EditableRow label="體重"   value={`${profile.weight} kg`}
+            onEdit={() => openEdit('weight')} />
+          <EditableRow label="年齡"   value={`${profile.age} 歲`}
+            onEdit={() => openEdit('age')} />
+          <EditableRow label="活動量" value={ACTIVITY_LEVELS.find(a => a.key === profile.activity)?.label || '-'}
+            onEdit={() => openEdit('activity')} />
         </View>
 
+        {/* 飲水設定 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>飲水設定</Text>
-          <InfoRow label="每日目標" value={`${goalMl} ml`} />
-          <InfoRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`} />
-          <InfoRow label="記錄模式" value={profile.autoMode ? '自動' : '手動'} />
-          {profile.autoMode && (
-            <InfoRow label="記錄時段" value={`${profile.autoStart} – ${profile.autoEnd}`} />
-          )}
-          <InfoRow label="智慧杯墊" value={profile.hasCoaster ? '已連接' : '未連接'} />
+          <EditableRow label="每日目標" value={`${goalMl} ml`}
+            onEdit={() => openEdit('goal')} />
+          <EditableRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`}
+            onEdit={() => openEdit('reminder')} />
+          <EditableRow label="智慧杯墊" value={profile.hasCoaster ? (profile.autoMode ? '自動記錄' : '手動記錄') : '未連接'}
+            onEdit={() => openEdit('coaster')} />
         </View>
 
+        {/* 尿液顏色 */}
         <View style={s.urineCard}>
           <Text style={s.urineTitle}>今日尿液顏色</Text>
           <Text style={s.urineSub}>幫助系統微調明日補水目標（可選填）</Text>
@@ -150,132 +391,8 @@ export default function ProfileScreen() {
           </View>
           <Text style={s.urineLabel}>{URINE_LABELS[urineIdx]}</Text>
         </View>
+
         <View style={{ height: 20 }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-
-  // ── 編輯模式 ─────────────────────────────────────────
-  return (
-    <SafeAreaView style={s.safe}>
-      {ActivityInfoModal}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.inner}
-        showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={s.editHeader}>
-          <TouchableOpacity onPress={() => setEditing(false)}>
-            <Text style={s.cancelTxt}>取消</Text>
-          </TouchableOpacity>
-          <Text style={s.editTitle}>編輯資料</Text>
-          <TouchableOpacity onPress={handleSave}>
-            <Text style={s.saveTxt}>儲存</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={s.lbl}>姓名</Text>
-        <TextInput style={s.inp} value={name} onChangeText={setName} />
-
-        <Text style={s.lbl}>生理性別</Text>
-        <View style={s.segRow}>
-          <Seg label="生理男" sel={gender==='male'}   onPress={() => setGender('male')} />
-          <Seg label="生理女" sel={gender==='female'} onPress={() => setGender('female')} />
-        </View>
-
-        <View style={s.twoCol}>
-          <View style={s.col}>
-            <Text style={s.lbl}>體重 (kg)</Text>
-            <TextInput style={s.inp} keyboardType="numeric" value={weight} onChangeText={setWeight} />
-          </View>
-          <View style={s.col}>
-            <Text style={s.lbl}>年齡</Text>
-            <TextInput style={s.inp} keyboardType="numeric" value={age} onChangeText={setAge} />
-          </View>
-        </View>
-
-        {/* 活動量 + 問號 */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={s.lbl}>活動量</Text>
-          <TouchableOpacity onPress={() => setShowActivityInfo(true)} activeOpacity={0.75}>
-            <View style={s.infoBtn}>
-              <Text style={s.infoBtnTxt}>?</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-        <View style={s.segGrid}>
-          {ACTIVITY_LEVELS.map(a => (
-            <TouchableOpacity key={a.key}
-              style={[s.seg, activity===a.key && s.segSel, s.segHalf]}
-              onPress={() => setActivity(a.key)} activeOpacity={0.75}>
-              <Text style={[s.segTxt, activity===a.key && s.segTxtSel]}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={s.goalBox}>
-          <View style={s.goalHeader}>
-            <View>
-              <Text style={s.goalTitle}>每日飲水目標</Text>
-              <Text style={s.goalSub}>建議值：{suggestedGoal} ml</Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: MUTED }}>自訂</Text>
-              <Switch value={customGoal} onValueChange={setCustomGoal} trackColor={{ true: BLUE }} />
-            </View>
-          </View>
-          {customGoal ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
-                value={customGoalMl} onChangeText={setCustomGoalMl} />
-              <Text style={{ color: MUTED, fontWeight: '800' }}>ml</Text>
-            </View>
-          ) : (
-            <Text style={s.goalFinal}>{suggestedGoal} ml</Text>
-          )}
-        </View>
-
-        <Text style={s.lbl}>提醒時間間距（分鐘）</Text>
-        <View style={s.segRow}>
-          {['30','45','60','90'].map(v => (
-            <TouchableOpacity key={v}
-              style={[s.seg, reminderInterval===v && s.segSel]}
-              onPress={() => setReminderInterval(v)} activeOpacity={0.75}>
-              <Text style={[s.segTxt, reminderInterval===v && s.segTxtSel]}>{v}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={s.switchRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.switchTitle}>我有智慧杯墊</Text>
-          </View>
-          <Switch value={hasCoaster} onValueChange={setHasCoaster} trackColor={{ true: BLUE }} />
-        </View>
-
-        <View style={[s.switchRow, !hasCoaster && { opacity: 0.5 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.switchTitle}>自動記錄模式</Text>
-          </View>
-          <Switch value={autoMode && hasCoaster} onValueChange={hasCoaster ? setAutoMode : null}
-            disabled={!hasCoaster} trackColor={{ true: BLUE }} />
-        </View>
-
-        {autoMode && hasCoaster && (
-          <View style={s.timeBox}>
-            <Text style={s.lbl}>自動記錄時段</Text>
-            <View style={s.timeRow}>
-              <View style={s.timeItem}>
-                <Text style={s.timeLbl}>開始</Text>
-                <TextInput style={s.timeInp} value={autoStart} onChangeText={setAutoStart} />
-              </View>
-              <Text style={s.timeSep}>—</Text>
-              <View style={s.timeItem}>
-                <Text style={s.timeLbl}>結束</Text>
-                <TextInput style={s.timeInp} value={autoEnd} onChangeText={setAutoEnd} />
-              </View>
-            </View>
-          </View>
-        )}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -289,13 +406,14 @@ const s = StyleSheet.create({
   rippleRing: { position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#5ab4f5' },
   header:   { alignItems: 'center', gap: 6, paddingVertical: 8 },
   userName: { fontSize: 22, fontWeight: '900', color: TEXT },
-  userTag:  { fontSize: 13, color: BLUE, fontWeight: '700' },
 
   group:      { backgroundColor: CARD, borderRadius: 20, overflow: 'hidden' },
   groupTitle: { fontSize: 14, fontWeight: '900', color: TEXT, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6 },
   infoRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 13, borderTopWidth: 1, borderTopColor: '#f0f5fa', gap: 12 },
   infoLabel:  { flex: 1, fontSize: 15, color: '#6b8da8', fontWeight: '600' },
   infoValue:  { fontSize: 15, fontWeight: '800', color: TEXT },
+  editChip:   { backgroundColor: '#eaf3fc', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10 },
+  editChipTxt:{ fontSize: 12, fontWeight: '900', color: BLUE },
 
   urineCard:     { backgroundColor: CARD, borderRadius: 20, padding: 16, gap: 8 },
   urineTitle:    { fontSize: 14, fontWeight: '900', color: TEXT },
@@ -305,12 +423,12 @@ const s = StyleSheet.create({
   urineSwatchSel:{ borderColor: '#1a2a3a' },
   urineLabel:    { fontSize: 12, fontWeight: '800', color: MUTED, textAlign: 'center' },
 
-  editBtn:    { backgroundColor: BLUE, paddingVertical: 17, borderRadius: 16, alignItems: 'center' },
-  editBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  editHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  editTitle:  { fontSize: 18, fontWeight: '900', color: TEXT },
-  cancelTxt:  { fontSize: 16, color: MUTED, fontWeight: '700' },
-  saveTxt:    { fontSize: 16, color: BLUE, fontWeight: '900' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard:    { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 },
+  modalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  modalTitle:   { fontSize: 20, fontWeight: '900', color: TEXT },
+  saveBtn:      { backgroundColor: BLUE, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 4 },
+  saveBtnTxt:   { color: '#fff', fontSize: 16, fontWeight: '900' },
 
   lbl:    { fontSize: 11, fontWeight: '800', color: '#5a7a96', textTransform: 'uppercase', letterSpacing: 0.7 },
   inp:    { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 2, borderColor: BORDER, fontSize: 16, fontWeight: '700', color: TEXT, backgroundColor: '#f6fafd' },
@@ -330,7 +448,7 @@ const s = StyleSheet.create({
   goalSub:    { fontSize: 12, color: MUTED },
   goalFinal:  { fontSize: 28, fontWeight: '900', color: BLUE, textAlign: 'center' },
 
-  switchRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER },
+  switchRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER, justifyContent: 'space-between' },
   switchTitle: { fontSize: 15, fontWeight: '800', color: TEXT },
 
   timeBox:  { backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER, gap: 10 },
