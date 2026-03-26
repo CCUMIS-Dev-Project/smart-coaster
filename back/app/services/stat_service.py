@@ -80,21 +80,27 @@ def get_daily_stat(user_id: int) -> DailyStatResponse:
 def get_weekly_stat(user_id: int) -> WeeklyStatResponse:
     now = _get_now_anchored(user_id)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    fourteen_days_ago = today_start - timedelta(days=14)
+
+    # 找本周日（Python weekday: 週一=0, 週日=6）
+    days_since_sunday = (today_start.weekday() + 1) % 7
+    week_start = today_start - timedelta(days=days_since_sunday)  # 本周日
+    week_end = week_start + timedelta(days=6)                     # 本周六
+
+    last_week_start = week_start - timedelta(days=7)
 
     logs_res = (
         supabase.table("drinking_logs")
         .select("type_id, d_volume, record_at, drinks(type_name)")
         .eq("user_id", user_id)
         .is_("delete_at", "null")
-        .gte("record_at", fourteen_days_ago.isoformat())
+        .gte("record_at", last_week_start.isoformat())
         .lte("record_at", now.isoformat())
         .execute()
     )
 
-    # Build per-day, per-type buckets for this week (last 7 days) and last week (days 8-14)
-    this_week_dates = [(today_start - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6, -1, -1)]
-    last_week_dates = set((today_start - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7, 14))
+    # 本周：周日~周六 7 天；上周：上周日~上周六
+    this_week_dates = [(week_start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+    last_week_dates = set((last_week_start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7))
 
     # {date: {type_id: {type_name, volume_ml}}}
     this_week_buckets: dict[str, dict[int, dict]] = {d: {} for d in this_week_dates}
@@ -126,7 +132,10 @@ def get_weekly_stat(user_id: int) -> WeeklyStatResponse:
         total_ml = sum(t.volume_ml for t in by_type)
         days.append(DayStat(date=date_str, total_ml=total_ml, by_type=by_type))
 
-    avg_this_week = sum(d.total_ml for d in days) / 7
+    # 平均只計算已過的天（今天含），未來的日期不列入分母
+    today_str = today_start.strftime("%Y-%m-%d")
+    past_days = [d for d in days if d.date <= today_str]
+    avg_this_week = sum(d.total_ml for d in past_days) / len(past_days) if past_days else 0.0
     avg_last_week = sum(last_week_totals.values()) / 7
 
     if avg_last_week == 0:

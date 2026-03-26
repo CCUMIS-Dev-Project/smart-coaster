@@ -4,14 +4,8 @@ import { useState } from 'react';
 export default function useBLE() {
   const [connectedDevice, setConnectedDevice] = useState(null);
 
-  // 【修正關鍵】必須定義 bleData 及其初始值，結構要跟 Android 版一模一樣
-  const [bleData, setBleData] = useState({
-    systemActive: false,     // 對應 undefined 錯誤的屬性
-    lastStableWeight: 0,
-    isOnCoaster: false,
-    drinkAmount: 0,
-    reminderMs: 0,
-  });
+  // 初始值為 null，與 Android 版一致（MainScreen 的 if (!bleData) return 會擋住）
+  const [bleData, setBleData] = useState(null);
 
   const scanAndConnect = async () => {
     console.log("Web 環境：不支援藍牙掃描");
