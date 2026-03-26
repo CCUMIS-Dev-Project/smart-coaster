@@ -381,7 +381,7 @@ export default function ProfileScreen() {
         {/* 尿液顏色 */}
         <View style={s.urineCard}>
           <Text style={s.urineTitle}>今日尿液顏色</Text>
-          <Text style={s.urineSub}>幫助系統微調明日補水目標（可選填）</Text>
+          <Text style={s.urineSub}>可透過尿液顏色去調整自己的喝水量喔！</Text>
           <View style={s.urineScale}>
             {URINE_COLORS.map((c, i) => (
               <TouchableOpacity key={i}

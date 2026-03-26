@@ -43,9 +43,10 @@ function Seg({ label, sel, onPress, half }) {
 
 const ACTIVITY_INFO = [
   { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
-  { label: '輕度', desc: '每週1–2次，會進行輕鬆散步或瑜珈' },
-  { label: '中度', desc: '每週3–4次，30分鐘有氧等運動' },
-  { label: '高度', desc: '每週5次以上，激烈運動或勞動工作' },
+  { label: '輕度', desc: '每週運動1–2次' },
+  { label: '中度', desc: '每週運動3–4次' },
+  { label: '高度', desc: '每週運動5次以上' },
+  { label: '運動標準', desc: '一、感覺有點喘、說話稍費力，且持續時間超過 30 分鐘\n二、日均步數超過一萬步' },
 ];
 
 export default function InitialSettingScreen() {
