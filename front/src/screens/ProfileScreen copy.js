@@ -1,6 +1,6 @@
+// src/screens/ProfileScreen.js
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Image, Animated, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
 
@@ -16,23 +16,6 @@ const ACTIVITY_INFO = [
   { label: '高度', desc: '每週運動5次以上' },
   { label: '運動標準', desc: '一、感覺有點喘、說話稍費力，且持續時間超過 30 分鐘\n二、日均步數超過一萬步' },
 ];
-
-function Seg({ label, sel, onPress }) {
-  return (
-    <TouchableOpacity style={[s.seg, sel && s.segSel]} onPress={onPress} activeOpacity={0.75}>
-      <Text style={[s.segTxt, sel && s.segTxtSel]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <View style={s.infoRow}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value}</Text>
-    </View>
-  );
-}
 
 function RippleRing({ delay }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -63,7 +46,7 @@ function EditableRow({ label, value, onEdit }) {
   );
 }
 
-const ProfileScreen = () => {
+export default function ProfileScreen() {
   const { profile, updateProfile, goalMl } = useApp();
   const [urineIdx, setUrineIdx] = useState(0);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
@@ -415,7 +398,6 @@ const ProfileScreen = () => {
   );
 }
 
-
 const s = StyleSheet.create({
   safe:  { flex: 1, backgroundColor: BG },
   inner: { padding: 20, paddingTop: 56, paddingBottom: 32, gap: 14 },
@@ -487,4 +469,3 @@ const s = StyleSheet.create({
   actClose:    { backgroundColor: '#5ab4f5', paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 4 },
   actCloseTxt: { color: '#fff', fontSize: 15, fontWeight: '900' },
 });
-export default ProfileScreen;
