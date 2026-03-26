@@ -1,9 +1,10 @@
 // src/screens/InitialSettingScreen.js
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, Animated, Switch, Image, Modal, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
+
 
 const BLUE = colors.blue, BLUE_DARK = colors.blueDark, BLUE_LIGHT = colors.blueLight;
 const TEXT = colors.text, MUTED = colors.muted, BORDER = colors.border;
@@ -42,9 +43,10 @@ function Seg({ label, sel, onPress, half }) {
 
 const ACTIVITY_INFO = [
   { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
-  { label: '輕度', desc: '每週1–2次，會進行輕鬆散步或瑜珈' },
-  { label: '中度', desc: '每週3–4次，30分鐘有氧等運動' },
-  { label: '高度', desc: '每週5次以上，激烈運動或勞動工作' },
+  { label: '輕度', desc: '每週運動1–2次' },
+  { label: '中度', desc: '每週運動3–4次' },
+  { label: '高度', desc: '每週運動5次以上' },
+  { label: '運動標準', desc: '一、感覺有點喘、說話稍費力，且持續時間超過 30 分鐘\n二、日均步數超過一萬步' },
 ];
 
 export default function InitialSettingScreen() {
@@ -216,9 +218,17 @@ export default function InitialSettingScreen() {
           )}
         </View>
 
-        <TouchableOpacity style={s.btn} onPress={() => setStep(3)} activeOpacity={0.85}>
-          <Text style={s.btnTxt}>選擇我的水杯 →</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={s.btn} onPress={() => {
+  if (!name.trim()) {
+    Alert.alert('請輸入姓名', '請填寫你的名字或暱稱才能繼續');
+    return;
+  }
+
+  setStep(3);
+}} activeOpacity={0.85}>
+  <Text style={s.btnTxt}>選擇我的水杯 →</Text>
+</TouchableOpacity>
+
         <View style={{ height: Platform.OS === 'ios' ? 40 : 20 }} />
       </ScrollView>
     </SafeAreaView>
