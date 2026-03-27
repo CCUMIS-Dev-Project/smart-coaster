@@ -94,9 +94,9 @@ export default function useBLE() {
     }
 
     // 【偵錯關鍵】印出所有搜到的裝置名稱與 ID
-    if (device.name || device.localName) {
-        console.log(`發現裝置: [${device.name || '無名稱'}] ID: ${device.id}`);
-    }
+    // if (device.name || device.localName) {
+    //     console.log(`發現裝置: [${device.name || '無名稱'}] ID: ${device.id}`);
+    // }
 
     // 嘗試用 ID 或 名稱 進行比對
     if (device.name === 'SmartCoaster' || device.localName === 'SmartCoaster') {

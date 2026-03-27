@@ -338,7 +338,7 @@ const MainScreen = () => {
       if (!bleData) return;
 
       const parts = bleData.split('|');
-      const type = parts[0]; // 'W' 或 'E'
+      const type = parts[0]; // 'W' 或 'E', 或 'O'
 
       if (type === 'W') {
         // 格式: W | systemActive | isOnCoaster | drinkAmount
@@ -365,8 +365,19 @@ const MainScreen = () => {
           humidity: hum,
           connected: true
         }));
+      }else if (type === 'O') {
+        // 【新增】格式: O | ticks_ms | diffAmount
+        const diffAmount = parseFloat(parts[2]);
+        
+        if (diffAmount > 0) {
+          console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml`);
+          // 呼叫 useApp() 提供的 addLog 函式，直接把這筆水量加進今日紀錄中
+          // 可以加上一個特殊符號 (例如 🔄) 讓使用者知道這是離線補傳的
+          addLog(diffAmount, drinkType, '🔄'); 
+        }
       }
-    }, [bleData]);
+    // 記得在 Dependency Array 加入 drinkType 和 addLog
+    }, [bleData, drinkType, addLog]);
 
     // 更新連線狀態 (處理斷線情況)
     useEffect(() => {
