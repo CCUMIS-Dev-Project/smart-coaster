@@ -64,6 +64,7 @@ last_interaction_time = 0
 last_sensor_ticks = 0
 last_display_ticks = 0
 place_down_ticks = 0
+last_sync_attempt = 0  # 紀錄上次嘗試同步離線數據的時間
 
 # --- 3. 輔助函式 ---
 def get_average_weight(samples=15):
@@ -155,8 +156,8 @@ while True:
                         leds.turn_off()
                         utime.sleep(1) 
                         
-                        if diff > 15:
-                            drink_amount += diff
+                        if diff > 5:
+                            drink_amount = diff
                             last_interaction_time = current_ticks # 喝水了，重設計時器
                             is_overdue = False
                             # 【離線儲存邏輯】
@@ -213,27 +214,31 @@ while True:
                 
             # --- 4. 歷史離線數據同步邏輯 ---
             if ble.is_connected and storage.has_data():
-                print("偵測到 APP 連線，開始同步離線數據...")
-                display.clear()
-                display.oled.text("Syncing Data...", 10, 30)
-                display.show()
-                
-                # 讀取所有離線數據
-                offline_records = storage.get_all_data()
-                
-                # 將每一筆記錄傳給 APP
-                try:
-                    for record in offline_records:
-                        # 這裡可以設計一個專屬的 BLE 標記，例如 'O' 代表 Offline
-                        # 格式: "O|ticks|diff" -> 範例: "O|168000|150.5"
-                        ble._notify(record) 
-                        utime.sleep_ms(100) # 稍微暫停一下，避免藍牙塞車
+                if utime.ticks_diff(current_ticks, last_sync_attempt) > 3000:
+                    last_sync_attempt = current_ticks # 更新嘗試時間
                     
-                    # 同步完成後清空檔案
-                    storage.clear_data()
-                    print("離線數據同步完成！")
-                except Exception as e:
-                        print("離線同步時發生錯誤，保留檔案下次再傳:", e)
+                    print("偵測到 APP 連線，準備同步離線數據...")
+                    display.clear()
+                    display.oled.text("Syncing...", 10, 30)
+                    display.show()
+                    
+                    # 讀取所有離線數據
+                    offline_records = storage.get_all_data()
+                    
+                    try:
+                        # 將每一筆記錄傳給 APP
+                        for record in offline_records:
+                            utime.sleep_ms(1000) # 暫停 1000ms 讓 APP 有時間消化
+                            ble._notify(record) 
+                        
+                        # 全部傳送成功後，才清空檔案
+                        storage.clear_data()
+                        display.clear() # 同步完成後清除畫面，讓它自然回到主儀表板
+                        print("✅ 離線數據同步完成！")
+                        
+                    except Exception as e:
+                        print(f"❌ 同步失敗 (APP 尚未準備好): {e}")
+                        print("將於 3 秒後重新嘗試...")
                 
         except OSError:
             pass

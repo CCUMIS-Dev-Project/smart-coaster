@@ -147,26 +147,6 @@ const MainScreen = () => {
     const isConnected = sensorData.connected;
     const pct = Math.min(totalMl / Math.max(goalMl, 1), 1);
   
-
-    // const [showAddModal,     setShowAddModal]     = useState(false);
-    // const [showEditModal,    setShowEditModal]    = useState(false);
-    // const [editingLog,       setEditingLog]       = useState(null);
-    // const [selMode,          setSelMode]          = useState(false);
-    // const [selected,         setSelected]         = useState([]);
-    // const [addMl,            setAddMl]            = useState('250');
-    // const [addType,          setAddType]          = useState(DRINK_TYPES[0]);
-    // const [customDrinkName,  setCustomDrinkName]  = useState('');
-    // const [editMl,           setEditMl]           = useState('');
-    // const [editType,         setEditType]         = useState(DRINK_TYPES[0]);
-    // const [editCustomName,   setEditCustomName]   = useState('');
-  
-    // const now = new Date();
-    // const DAYS = ['週日','週一','週二','週三','週四','週五','週六'];
-    // const dateStr = `${DAYS[now.getDay()]} · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
-  
-    // const hasCoaster  = profile.hasCoaster;
-    // const isConnected = sensorData.connected;
-  
     // 計算咖啡因的函數
     function getCaffeineMg(type, ml) {
       if (customCaffeine[type]) return Math.round((customCaffeine[type].per100ml * ml) / 100);
@@ -370,14 +350,14 @@ const MainScreen = () => {
         const diffAmount = parseFloat(parts[2]);
         
         if (diffAmount > 0) {
-          console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml`);
+          // console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml`);
           // 呼叫 useApp() 提供的 addLog 函式，直接把這筆水量加進今日紀錄中
           // 可以加上一個特殊符號 (例如 🔄) 讓使用者知道這是離線補傳的
           addLog(diffAmount, drinkType, '🔄'); 
         }
       }
     // 記得在 Dependency Array 加入 drinkType 和 addLog
-    }, [bleData, drinkType, addLog]);
+    }, [bleData]);
 
     // 更新連線狀態 (處理斷線情況)
     useEffect(() => {
