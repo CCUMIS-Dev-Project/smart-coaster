@@ -3,6 +3,7 @@
 # ==========================================
 import os
 import utime
+import machine
 
 class StorageManager:
     def __init__(self, filename="offline_data.csv"):
@@ -10,16 +11,17 @@ class StorageManager:
         self.filename = filename
 
     def save_record(self, diff):
-        """
-        將喝水量寫入檔案 (附加模式 'a')
-        改用與藍牙統一的 '|' 分隔符號，並加上 'O' 標籤代表 Offline
-        格式: O|系統相對毫秒數|單次喝水量
-        """
         try:
+            rtc = machine.RTC()
+            t = rtc.datetime()
+            # 組合出標準時間字串: "YYYY/MM/DD HH:MM:SS"
+            time_str = f"{t[0]}/{t[1]:02d}/{t[2]:02d} {t[4]:02d}:{t[5]:02d}:{t[6]:02d}"
+            
             with open(self.filename, 'a') as f:
-                # 寫入格式範例: O|1680000|50.5
-                f.write(f"O|{utime.ticks_ms()}|{diff:.1f}\n")
-            print(f"[Storage] 成功暫存離線數據: {diff:.1f} ml")
+                # 寫入格式變成: O|2024/03/24 15:30:00|50.5
+                f.write(f"O|{time_str}|{diff:.1f}\n")
+                
+            print(f"[Storage] 成功暫存離線數據 ({time_str}): {diff:.1f} ml")
         except Exception as e:
             print(f"[Storage] 寫入失敗: {e}")
             

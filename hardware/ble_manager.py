@@ -8,6 +8,7 @@ from config import * # 匯入 UUID 與設備名稱等設定
 # BLE 事件常數
 _IRQ_CENTRAL_CONNECT = 1
 _IRQ_CENTRAL_DISCONNECT = 2
+_IRQ_GATTS_WRITE = 3
 
 class BLEManager:
     def __init__(self):
@@ -19,7 +20,7 @@ class BLEManager:
         
         # 1. 將 config.py 的字串 UUID 轉為藍牙物件
         service_uuid = bluetooth.UUID(BLE_SERVICE_UUID)
-        char_uuid = (bluetooth.UUID(BLE_CHAR_UUID), bluetooth.FLAG_NOTIFY | bluetooth.FLAG_READ)
+        char_uuid = (bluetooth.UUID(BLE_CHAR_UUID), bluetooth.FLAG_NOTIFY | bluetooth.FLAG_READ | bluetooth.FLAG_WRITE)
         self._service = (service_uuid, (char_uuid,),)
         
         # 2. 註冊服務並取得特徵控制碼 (handle)
@@ -32,6 +33,7 @@ class BLEManager:
         
         # 4. 開始廣播
         self._advertise()
+        self.on_rx = None  # 用來把收到的資料傳回給 main.py
 
     def _irq(self, event, data):
         """處理藍牙中斷事件 (連線/斷線)"""
@@ -44,6 +46,13 @@ class BLEManager:
             self._connections.remove(conn_handle)
             print("APP 已斷線")
             self._advertise()  # 斷線後重新開始廣播
+        elif event == _IRQ_GATTS_WRITE:
+            # 當 APP 傳送資料給杯墊時會觸發
+            conn_handle, value_handle = data
+            value = self._ble.gatts_read(value_handle)
+            if self.on_rx:
+                # 將 byte 轉成字串並呼叫 main.py 的處理函式
+                self.on_rx(value.decode('utf-8').strip())
 
     def _advertise(self):
         """開始發送藍牙廣播"""

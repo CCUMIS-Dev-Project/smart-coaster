@@ -118,7 +118,7 @@ function WaterCup({ logs, goalMl, totalMl }) {
 
 const MainScreen = () => {
   const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzc0ODQ1MjAyfQ.sg3hv2Et8wdUt5FEAthgw9lhluIg0455kibOyd9AvV0"; // 先寫死access_token，待改！！
-  const { scanAndConnect, connectedDevice, bleData } = useBLE(testToken);
+  const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken); // 先用testToken，待改！！
 
   const {
       profile, goalMl, totalMl, logs,
@@ -347,22 +347,40 @@ const MainScreen = () => {
           connected: true
         }));
       }else if (type === 'O') {
-        // 【新增】格式: O | ticks_ms | diffAmount
+        // O | 2024/03/24 15:30:00 | diffAmount
+        const offlineTime = parts[1]; // 取出杯墊記錄的真實時間
         const diffAmount = parseFloat(parts[2]);
         
         if (diffAmount > 0) {
-          // console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml`);
-          // 呼叫 useApp() 提供的 addLog 函式，直接把這筆水量加進今日紀錄中
-          // 可以加上一個特殊符號 (例如 🔄) 讓使用者知道這是離線補傳的
+          console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml, 發生時間: ${offlineTime}`);
+          
+          // 如果你的 addLog 支援傳入時間，可以把 offlineTime 傳進去
+          // 目前先維持原本的寫法，加上 🔄 標記
           addLog(diffAmount, drinkType, '🔄'); 
         }
       }
     // 記得在 Dependency Array 加入 drinkType 和 addLog
     }, [bleData]);
 
-    // 更新連線狀態 (處理斷線情況)
+    // 更新連線狀態並執行 RTC 校時
     useEffect(() => {
       setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
+
+      // 當裝置成功連線時
+      if (connectedDevice) {
+        const now = new Date();
+        // 組合時間指令格式: T|YYYY|MM|DD|HH|MM|SS
+        const timeCmd = `T|${now.getFullYear()}|${now.getMonth() + 1}|${now.getDate()}|${now.getHours()}|${now.getMinutes()}|${now.getSeconds()}`;
+        
+        console.log("[BLE] 準備發送校時指令:", timeCmd);
+        
+        // 呼叫從 useBLE 拿到的寫入函數
+        if (writeToDevice) {
+            writeToDevice(timeCmd);
+        } else {
+            console.warn("useBLE 中沒有找到寫入函數，無法執行校時！");
+        }
+      }
     }, [connectedDevice]);
 
 

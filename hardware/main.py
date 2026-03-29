@@ -9,7 +9,7 @@
 # =================================================================
 
 # 1. 核心狀態數據 (發送時機：放回杯墊、拿起水杯、系統切換時)
-# 格式: "W|{系統開關}|{是否在位}|{當日累積喝水量}"
+# 格式: "W|{系統開關}|{是否在位}|{本次喝水量}"
 # 範例: "W|1|0|150.5"
 # 欄位說明:
 #   - 系統開關: 1 (啟動), 0 (關機/休眠)
@@ -26,9 +26,11 @@
 # =================================================================
 import utime
 import math
+import machine
 from machine import Pin
 import dht
 from hx711_pio import HX711
+
 
 # 匯入我們寫好的專屬模組與設定檔
 from config import *
@@ -79,6 +81,26 @@ def get_average_weight(samples=15):
         utime.sleep_ms(10)
     if valid_count == 0: return 0
     return (total / valid_count - hx.OFFSET) / hx.SCALE
+
+# --- 設定藍牙接收回呼函數 ---
+def handle_ble_rx(data):
+    print(f"收到 APP 指令: {data}")
+    if data.startswith('T|'):
+        try:
+            # 解析時間格式: T|YYYY|MM|DD|HH|MM|SS
+            parts = data.split('|')
+            y, m, d, h, mns, s = map(int, parts[1:])
+
+            # 設定硬體 RTC
+            rtc = machine.RTC()
+            # 格式: (year, month, day, weekday, hours, minutes, seconds, subseconds)
+            rtc.datetime((y, m, d, 0, h, mns, s, 0))
+            print(f"✅ 系統 RTC 校時成功: {y}/{m:02d}/{d:02d} {h:02d}:{mns:02d}:{s:02d}")
+        except Exception as e:
+            print("❌ RTC 校時失敗:", e)
+
+# 將這個函數綁定給藍牙模組
+ble.on_rx = handle_ble_rx
 
 # --- 4. 啟動初始畫面 ---
 display.show_init_screen()
@@ -210,6 +232,7 @@ while True:
             # --- 3. 數據發送邏輯 ---
             if data_changed:
                 ble.send_water_status(system_active, is_on_coaster, drink_amount)
+                drink_amount = 0
                 data_changed = False
                 
             # --- 4. 歷史離線數據同步邏輯 ---
@@ -247,3 +270,4 @@ while True:
     
     # 避免迴圈跑太快佔用過多資源
     utime.sleep_ms(20)
+

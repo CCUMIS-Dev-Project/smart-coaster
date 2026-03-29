@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
-import { decode as atob } from 'base-64';
+import { decode as atob, encode as btoa } from 'base-64';
 import apiService from '../services/api';
+
 
 // 如果沒有 react-native-quick-base64，可以用這個簡單函式
 const base64ToString = (base64) => {
@@ -15,7 +16,7 @@ const base64ToString = (base64) => {
   );
 };
 
-// 簡單的 polyfill 如果環境沒有 atob
+// atob
 if (!global.atob) {
   global.atob = (input) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -26,20 +27,18 @@ if (!global.atob) {
     return new Buffer(input, 'base64').toString('ascii'); 
   };
 }
+// btoa
+if (!global.btoa) {
+  global.btoa = (input) => {
+    return new Buffer(input, 'ascii').toString('base64');
+  };
+}
 
 
 export default function useBLE(userToken) {
   const bleManager = useMemo(() => new BleManager(), []);
   const [connectedDevice, setConnectedDevice] = useState(null);
   const [bleData, setBleData] = useState(null);
-  // // 定義一個結構化的狀態來存放所有感測器數據
-  // const [bleData, setBleData] = useState({
-  //   systemActive: false,
-  //   lastStableWeight: 0,
-  //   isOnCoaster: false,
-  //   drinkAmount: 0,
-  //   reminderMs: 0,
-  // });
 
   // 核心 UUID (需與 Pico W 端完全一致)
   const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'; 
@@ -108,8 +107,8 @@ export default function useBLE(userToken) {
   const connectToDevice = async (device) => {
     try {
       const deviceConnection = await device.connect();
-      setConnectedDevice(deviceConnection);
       await deviceConnection.discoverAllServicesAndCharacteristics();
+      setConnectedDevice(deviceConnection);
       
       console.log('✅ 連線成功，開始監聽數據...');
       deviceConnection.monitorCharacteristicForService(
@@ -139,5 +138,28 @@ export default function useBLE(userToken) {
     }
   };
 
-  return { scanAndConnect, connectedDevice, bleData };
+  // 4. 寫入資料到藍牙裝置 (發送指令)
+  const writeToDevice = async (dataString) => {
+    if (!connectedDevice) {
+      console.log('❌ 尚未連線，無法發送數據');
+      return;
+    }
+    
+    try {
+      // BLE 傳輸必須將字串轉為 Base64 格式
+      const base64Data = btoa(dataString);
+      
+      // 將資料寫入我們指定的特徵值 (Characteristic)
+      await connectedDevice.writeCharacteristicWithResponseForService(
+        SERVICE_UUID,
+        CHAR_UUID,
+        base64Data
+      );
+      console.log('✅ 成功發送數據到杯墊:', dataString);
+    } catch (error) {
+      console.log('❌ 發送數據失敗:', error.message);
+    }
+  };
+
+  return { scanAndConnect, connectedDevice, bleData, writeToDevice };
 }
