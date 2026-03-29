@@ -117,7 +117,8 @@ function WaterCup({ logs, goalMl, totalMl }) {
 
 
 const MainScreen = () => {
-  const { scanAndConnect, connectedDevice, bleData } = useBLE();
+  const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzc0ODQ1MjAyfQ.sg3hv2Et8wdUt5FEAthgw9lhluIg0455kibOyd9AvV0"; // 先寫死access_token，待改！！
+  const { scanAndConnect, connectedDevice, bleData } = useBLE(testToken);
 
   const {
       profile, goalMl, totalMl, logs,

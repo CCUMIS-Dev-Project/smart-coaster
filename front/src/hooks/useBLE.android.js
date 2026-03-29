@@ -4,6 +4,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
 import { decode as atob } from 'base-64';
+import apiService from '../services/api';
 
 // 如果沒有 react-native-quick-base64，可以用這個簡單函式
 const base64ToString = (base64) => {
@@ -27,13 +28,9 @@ if (!global.atob) {
 }
 
 
-export default function useBLE() {
+export default function useBLE(userToken) {
   const bleManager = useMemo(() => new BleManager(), []);
   const [connectedDevice, setConnectedDevice] = useState(null);
-//   const [drinkData, setDrinkData] = useState(0);
-
-
-  // 這裡的狀態可以保留，作為內部暫存，或直接回傳給外部處理
   const [bleData, setBleData] = useState(null);
   // // 定義一個結構化的狀態來存放所有感測器數據
   // const [bleData, setBleData] = useState({
@@ -129,17 +126,11 @@ export default function useBLE() {
             console.log('收到數據:', rawString);
             setBleData(rawString); // 將原始字串傳出去給外部解析
 
-            // // 2. 解析 CSV (格式: active,weight,on_coaster,drink,reminder)
-            // const parts = rawString.split(',');
-            // if (parts.length === 5) {
-            //   setBleData({
-            //     systemActive: parts[0] === '1',
-            //     lastStableWeight: parseFloat(parts[1]),
-            //     isOnCoaster: parts[2] === '1',
-            //     drinkAmount: parseFloat(parts[3]),
-            //     reminderMs: parseInt(parts[4]),
-            //   });
-            // }
+            if (userToken) {
+              apiService.handleWaterData(rawString, userToken);
+            } else {
+              console.log('尚未取得 userToken，暫不上傳');
+            }
           }
         }
       );

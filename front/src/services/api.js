@@ -54,15 +54,43 @@ const apiService = {
    * @param {object} sensorData - { systemActive, weight, isOnCoaster, ... }
    */
 
-  uploadSensorData: async (sensorData) => {
-    try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.SENSOR_LOG, sensorData);
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('上傳感測器數據失敗:', error);
-      return { success: false, error: error.message };
+  // 解析並上傳喝水紀錄
+  handleWaterData : async (rawString, userToken) => {
+    // 1. 解析字串，格式範例: "W|1|0|150.5"
+    const parts = rawString.split('|');
+    
+    if (parts[0] === 'W') {
+      const isSystemActive = parts[1] === '1';
+      const isOnCoaster = parts[2] === '1';
+      const volume = parseFloat(parts[3]);
+
+      // 2. 判斷是否有新的喝水量（例如 > 0），且杯子目前是在位狀態或剛拿起
+      if (volume > 0) {
+        const payload = {
+          type_id: 1, // 1 是「水」的 ID
+          d_volume: Math.round(volume), // 轉為整數以符合後端 schemas 要求
+          record_at: new Date().toISOString(),
+          is_auto: true
+        };
+
+        // 3. 發送至 FastAPI 後端
+        try {
+          const response = await apiClient.post('/logs', payload, {
+            headers: {
+              'Authorization': `Bearer ${userToken}`
+            }
+          });
+
+          console.log("上傳成功:", response.data);
+          return { success: true, data: response.data };
+        } catch (error) {
+          console.error("API 上傳失敗:", error.response?.data || error.message);
+          return { success: false, error: error.message };
+        }
+      }
     }
   },
+
 
   // 獲取 AI 週報
   getWeeklyReport: async (userId) => {
