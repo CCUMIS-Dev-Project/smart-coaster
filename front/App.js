@@ -7,8 +7,12 @@ import { AppProvider, useApp } from './src/context/AppContext';
 
 // 引入 API 服務 (請確保路徑正確)
 import apiService from './src/services/api';
+
+// 引入頁面元件
 import InitialSettingScreen from './src/screens/InitialSettingScreen';
 import MainTabNavigator from './src/navigation/TabNavigator';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 
 const Stack = createStackNavigator();
 
@@ -32,9 +36,12 @@ export default function App() {
         <StatusBar style="auto" />
         
         <Stack.Navigator 
-          initialRouteName="Initial" // 設定啟動時的第一個頁面
+          initialRouteName="Login"
           screenOptions={{ headerShown: false }}
         >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+
           {/* 初始設定頁面 */}
           <Stack.Screen name="Initial" component={InitialSettingScreen} />
           

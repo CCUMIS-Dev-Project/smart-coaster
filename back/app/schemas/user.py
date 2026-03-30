@@ -5,14 +5,13 @@ from typing import Optional
 class UserRegister(BaseModel):
     username: str
     password: str
-    gender: str
-    weight: float
-    levelid: int
-    # goals 表
-    daily_target: int  # 前端算好傳來
-    rmd_interval: Optional[int] = None #可選，沒有的話即用預設值
-    act_start: Optional[str] = None
-    act_end: Optional[str] = None
+    gender: Optional[str] = "U"
+    weight: Optional[float] = 60.0
+    levelid: Optional[int] = 1
+    daily_target: Optional[int] = 2000
+    rmd_interval: Optional[int] = 60
+    act_start: Optional[str] = "08:00"
+    act_end: Optional[str] = "22:00"
 
 
 class UserLogin(BaseModel):

@@ -26,6 +26,26 @@ const apiService = {
     }
   },
 
+  // 登入
+  login: async (username, password) => {
+    try {
+      const response = await apiClient.post('/auth/login', { username, password });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || "登入失敗" };
+    }
+  },
+
+  // 註冊
+  register: async (userData) => {
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || "註冊失敗" };
+    }
+  },
+
   /**
    * Send message to chatbot
    * @param {string} message - User message to send
