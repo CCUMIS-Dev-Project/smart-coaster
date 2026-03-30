@@ -117,8 +117,7 @@ function WaterCup({ logs, goalMl, totalMl }) {
 
 
 const MainScreen = () => {
-  const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzc0ODQ1MjAyfQ.sg3hv2Et8wdUt5FEAthgw9lhluIg0455kibOyd9AvV0"; // 先寫死access_token，待改！！
-  const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken); // 先用testToken，待改！！
+  const { scanAndConnect, connectedDevice, bleData } = useBLE();
 
   const {
       profile, goalMl, totalMl, logs,
@@ -147,6 +146,26 @@ const MainScreen = () => {
   
     const isConnected = sensorData.connected;
     const pct = Math.min(totalMl / Math.max(goalMl, 1), 1);
+  
+
+    // const [showAddModal,     setShowAddModal]     = useState(false);
+    // const [showEditModal,    setShowEditModal]    = useState(false);
+    // const [editingLog,       setEditingLog]       = useState(null);
+    // const [selMode,          setSelMode]          = useState(false);
+    // const [selected,         setSelected]         = useState([]);
+    // const [addMl,            setAddMl]            = useState('250');
+    // const [addType,          setAddType]          = useState(DRINK_TYPES[0]);
+    // const [customDrinkName,  setCustomDrinkName]  = useState('');
+    // const [editMl,           setEditMl]           = useState('');
+    // const [editType,         setEditType]         = useState(DRINK_TYPES[0]);
+    // const [editCustomName,   setEditCustomName]   = useState('');
+  
+    // const now = new Date();
+    // const DAYS = ['週日','週一','週二','週三','週四','週五','週六'];
+    // const dateStr = `${DAYS[now.getDay()]} · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  
+    // const hasCoaster  = profile.hasCoaster;
+    // const isConnected = sensorData.connected;
   
     // 計算咖啡因的函數
     function getCaffeineMg(type, ml) {
@@ -319,7 +338,7 @@ const MainScreen = () => {
       if (!bleData) return;
 
       const parts = bleData.split('|');
-      const type = parts[0]; // 'W' 或 'E', 或 'O'
+      const type = parts[0]; // 'W' 或 'E'
 
       if (type === 'W') {
         // 格式: W | systemActive | isOnCoaster | drinkAmount
@@ -346,41 +365,12 @@ const MainScreen = () => {
           humidity: hum,
           connected: true
         }));
-      }else if (type === 'O') {
-        // O | 2024/03/24 15:30:00 | diffAmount
-        const offlineTime = parts[1]; // 取出杯墊記錄的真實時間
-        const diffAmount = parseFloat(parts[2]);
-        
-        if (diffAmount > 0) {
-          console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml, 發生時間: ${offlineTime}`);
-          
-          // 如果你的 addLog 支援傳入時間，可以把 offlineTime 傳進去
-          // 目前先維持原本的寫法，加上 🔄 標記
-          addLog(diffAmount, drinkType, '🔄'); 
-        }
       }
-    // 記得在 Dependency Array 加入 drinkType 和 addLog
     }, [bleData]);
 
-    // 更新連線狀態並執行 RTC 校時
+    // 更新連線狀態 (處理斷線情況)
     useEffect(() => {
       setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
-
-      // 當裝置成功連線時
-      if (connectedDevice) {
-        const now = new Date();
-        // 組合時間指令格式: T|YYYY|MM|DD|HH|MM|SS
-        const timeCmd = `T|${now.getFullYear()}|${now.getMonth() + 1}|${now.getDate()}|${now.getHours()}|${now.getMinutes()}|${now.getSeconds()}`;
-        
-        console.log("[BLE] 準備發送校時指令:", timeCmd);
-        
-        // 呼叫從 useBLE 拿到的寫入函數
-        if (writeToDevice) {
-            writeToDevice(timeCmd);
-        } else {
-            console.warn("useBLE 中沒有找到寫入函數，無法執行校時！");
-        }
-      }
     }, [connectedDevice]);
 
 
