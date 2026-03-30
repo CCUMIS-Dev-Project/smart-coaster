@@ -85,7 +85,7 @@
 1. `cd back`
 2. 啟動虛擬環境 (如果還沒)：`source venv/bin/activate` (Mac/Linux) 或 `venv\Scripts\activate` (Windows)
 3. 安裝套件 (第一次)：`pip install -r requirements.txt`
-4. 啟動伺服器：`uvicorn main:app --port 5001 --reload`
+4. 啟動伺服器：```uvicorn main:app --host 0.0.0.0 --port 5001 --reload```
 
 * *註：伺服器預設於 `http://127.0.0.1:5001` 運行。*
 * *開發者可以直接開啟 `http://localhost:5001/docs` 查看自動生成的 API 文件 (Swagger UI)。*
