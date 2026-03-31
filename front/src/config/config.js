@@ -1,11 +1,5 @@
-import Constants from 'expo-constants';
-
-const debuggerHost = Constants.expoConfig?.hostUri?.split(':').shift();
-const API_URL = debuggerHost ? `http://${debuggerHost}:5001` : 'http://localhost:5001';
-
 const API_CONFIG = {
-  // 讀取環境變數，若沒設定則回退到 localhost
-  BASE_URL: API_URL,
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001',
 
   ENDPOINTS: {
     HEALTH: '/health',
