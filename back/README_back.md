@@ -60,6 +60,8 @@
  └── setup_env.py               # 環境設定工具
 
 
+
+資料路徑: routes → schemas → services → database
 ```
 
 

@@ -1,24 +1,22 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from app.services import groq_service, supabase_service
+from app.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api")
-
-class ReportRequest(BaseModel):
-    user_id: int
 
 class ReportResponse(BaseModel):
     report_markdown: str
     status: str
 
 @router.post("/report/weekly", response_model=ReportResponse)
-async def generate_weekly_report_endpoint(request: ReportRequest):
+async def generate_weekly_report_endpoint(user_id: int = Depends(get_current_user)):
     """
     Generates a markdown weekly report for the user.
     """
     try:
-        user_info = supabase_service.fetch_user_profile(request.user_id)
-        weekly_data = supabase_service.fetch_weekly_water_sum(request.user_id)
+        user_info = supabase_service.fetch_user_profile(user_id)
+        weekly_data = supabase_service.fetch_weekly_water_sum(user_id)
         
         context_str = f"""
 【使用者基本資料】
