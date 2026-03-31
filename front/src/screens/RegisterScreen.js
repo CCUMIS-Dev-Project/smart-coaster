@@ -38,9 +38,8 @@ const RegisterScreen = ({ navigation }) => {
     const result = await apiService.register(userData);
 
     if (result.success) {
-      Alert.alert('註冊成功', '接下來請完成初始設定', [
+      Alert.alert('註冊成功', '接下來請登入', [
         { 
-          text: '開始設定', 
           onPress: () => navigation.replace('Login') // 註冊成功後導向設定頁面
         }
       ]);

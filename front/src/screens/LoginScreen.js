@@ -23,8 +23,8 @@ const LoginScreen = ({ navigation }) => {
       await AsyncStorage.setItem('userId', result.data.user_id.toString());
       
       Alert.alert('成功', '登入成功！');
-      // 2. 導向主功能頁面 (例如 Home)
-      // navigation.replace('Home'); 
+      // 2. 導向初始設定頁面頁面 (InitialSettingScreen)
+      navigation.replace('Initial'); 
     } else {
       Alert.alert('登入失敗', result.error);
     }

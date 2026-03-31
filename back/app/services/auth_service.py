@@ -95,4 +95,5 @@ def login_user(username: str, password: str) -> str:
         raise ValueError("Invalid credentials")
     
     # 4. create_access_token 產生 JWT 字串，往上回傳給 router
-    return create_access_token(user["user_id"])
+    token = create_access_token(user["user_id"])
+    return token, user["user_id"] 

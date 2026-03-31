@@ -19,8 +19,11 @@ def register(body: UserRegister):
 @router.post("/login", response_model=TokenResponse)
 def login(body: UserLogin):
     try:
-        token = login_user(body.username, body.password)
-        return {"access_token": token} # # 把 token 包成 JSON 回給前端
+        token, user_id = login_user(body.username, body.password)
+        return {
+            "access_token": token,
+            "user_id": user_id 
+        }
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
