@@ -5,9 +5,9 @@ from typing import Optional
 class UserRegister(BaseModel):
     username: str
     password: str
-    gender: Optional[str] = "U"
-    weight: Optional[float] = 60.0
-    levelid: Optional[int] = 1
+    gender: Optional[str]
+    weight: Optional[float]
+    levelid: Optional[int]
     daily_target: Optional[int] = 2000
     rmd_interval: Optional[int] = 60
     act_start: Optional[str] = "08:00"
@@ -36,9 +36,11 @@ class UserProfileResponse(BaseModel):
     weight: float
     levelid: int
     level_type: str
+    age:int
 
 
 class UserUpdate(BaseModel):
     gender: Optional[str] = None
     weight: Optional[float] = None
     levelid: Optional[int] = None
+    age:int

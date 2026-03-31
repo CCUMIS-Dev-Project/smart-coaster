@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import apiService from '../services/api'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE = colors.blue, BLUE_DARK = colors.blueDark, BLUE_LIGHT = colors.blueLight;
 const TEXT = colors.text, MUTED = colors.muted, BORDER = colors.border;
@@ -50,37 +52,30 @@ const ACTIVITY_INFO = [
 
 const InitialSettingScreen = () => {
   const navigation = useNavigation();
-  const { completeSetup } = useApp();
+  const { completeSetup, updateProfile} = useApp();
   const [step, setStep] = useState(1);
-  
-  // // 狀態管理 old
-  // const [name, setName] = useState('');
-  // const [gender, setGender] = useState('男'); // 預設值
-  // const [birthday, setBirthday] = useState('');
-  // const [height, setHeight] = useState('');
-  // const [weight, setWeight] = useState('');
 
   // 個人資料
-    const [name,     setName]     = useState('');
-    const [gender,   setGender]   = useState('male');
-    const [weight,   setWeight]   = useState('65');
-    const [age,      setAge]      = useState('28');
-    const [activity, setActivity] = useState('light');
-    const [customGoal,   setCustomGoal]   = useState(false);
-    const [customGoalMl, setCustomGoalMl] = useState('');
-  
-    // 水杯選擇
-    const [activeCup, setActiveCup] = useState(CUPS[3]);
-  
-    // 提醒設定
-    const [reminderInterval, setReminderInterval] = useState('60');
-    const [autoMode,   setAutoMode]   = useState(true);
-    const [autoStart,  setAutoStart]  = useState('08:00');
-    const [autoEnd,    setAutoEnd]    = useState('22:00');
-    const [hasCoaster, setHasCoaster] = useState(true);
-  
-    // 活動量說明
-    const [showActivityInfo, setShowActivityInfo] = useState(false);
+  const [name,     setName]     = useState('');
+  const [gender,   setGender]   = useState('F'); // 預設為F
+  const [weight,   setWeight]   = useState('65');
+  const [age,      setAge]      = useState('28');
+  const [activity, setActivity] = useState('1');
+  const [customGoal,   setCustomGoal]   = useState(false);
+  const [customGoalMl, setCustomGoalMl] = useState('');
+
+  // 水杯選擇
+  const [activeCup, setActiveCup] = useState(CUPS[3]);
+
+  // 提醒設定
+  const [reminderInterval, setReminderInterval] = useState('60');
+  const [autoMode,   setAutoMode]   = useState(true);
+  const [autoStart,  setAutoStart]  = useState('08:00');
+  const [autoEnd,    setAutoEnd]    = useState('22:00');
+  const [hasCoaster, setHasCoaster] = useState(true);
+
+  // 活動量說明
+  const [showActivityInfo, setShowActivityInfo] = useState(false);
 
   // 動畫
   const bobAnim = useRef(new Animated.Value(0)).current;
@@ -98,30 +93,79 @@ const InitialSettingScreen = () => {
   });
   const finalGoal = customGoal ? (parseInt(customGoalMl)||suggestedGoal) : suggestedGoal;
 
-  function handleComplete() {
-    completeSetup({
-      name, gender,
-      weight: parseFloat(weight)||65,
-      age: parseFloat(age)||28,
-      activity,
-      goalMl: finalGoal,
-      customGoal,
-      selectedCup: { ...activeCup },
-      reminderInterval: parseInt(reminderInterval)||60,
-      autoMode, autoStart, autoEnd, hasCoaster,
-    });
-  }
+  // function handleComplete() {
+  //   completeSetup({
+  //     name, gender,
+  //     weight: parseFloat(weight)||65,
+  //     age: parseFloat(age)||28,
+  //     activity,
+  //     goalMl: finalGoal,
+  //     customGoal,
+  //     selectedCup: { ...activeCup },
+  //     reminderInterval: parseInt(reminderInterval)||60,
+  //     autoMode, autoStart, autoEnd, hasCoaster,
+  //   });
+  // }
 
   const handleFinalSubmit = () => {
-  // 1. 稍微延遲 50 毫秒，讓按鈕變暗的點擊特效 (activeOpacity) 可以先渲染
-  setTimeout(() => {
-    // 2. 執行狀態儲存 (呼叫你原本寫好的 handleComplete)
-    handleComplete(); 
-    
-    // 3. 執行頁面跳轉
-    navigation.replace('MainTabs'); 
-  }, 50);
-};
+    // 1. 稍微延遲 50 毫秒，讓按鈕變暗的點擊特效 (activeOpacity) 可以先渲染
+    setTimeout(() => {
+      // 2. 執行狀態儲存 
+      handleStart(); 
+      
+      // 3. 執行頁面跳轉
+      navigation.replace('MainTabs'); 
+    }, 50);
+  };
+
+  const handleStart = async () => {
+    try {
+      // 1. 取得儲存的 Token
+      const userToken = await AsyncStorage.getItem('userToken');
+      if (!userToken) {
+        Alert.alert('錯誤', '找不到登入資訊，請重新登入');
+        navigation.replace('Login');
+        return;
+      }
+
+      // 2. 準備更新資料
+      const levelMapping = {
+        'Sedentary': 1,
+        'Low': 2,
+        'Moderate': 3,
+        'High': 4
+      };
+
+      const updateData = {
+        gender: gender,
+        weight: parseFloat(weight),            // 確保是數字
+        age: age,
+        levelid: levelMapping[activity] || 1,  // 轉換運動量等級 ID
+      };
+
+      // 3. 呼叫後端 API 更新資料
+      const result = await apiService.updateProfile(updateData, userToken);
+
+      if (result.success) {
+        // 4. 更新 App 內部的全域狀態 (AppContext)
+        updateProfile({
+          gender,
+          weight: parseFloat(weight),
+          age: age,
+          activity,
+          goalMl: calcWaterGoal(parseFloat(weight), activity), // 使用 theme.js 提供的計算公式
+        });
+
+        // 5. 標記初始化完成並進入主頁
+        completeSetup(); // 這會觸發 AppContext 的狀態變更
+      } else {
+        Alert.alert('設定失敗', result.error);
+      }
+    } catch (error) {
+      console.error("設定流程發生錯誤:", error);
+      Alert.alert('錯誤', '系統發生問題，請稍後再試');
+    }
+  };
 
   // 活動量說明 Modal（共用）
   const ActivityInfoModal = (
@@ -199,8 +243,8 @@ const InitialSettingScreen = () => {
 
         <Text style={s.lbl}>生理性別</Text>
         <View style={s.segRow}>
-          <Seg label="生理男" sel={gender==='male'}   onPress={() => setGender('male')} />
-          <Seg label="生理女" sel={gender==='female'} onPress={() => setGender('female')} />
+          <Seg label="生理男" sel={gender==='M'}   onPress={() => setGender('M')} />
+          <Seg label="生理女" sel={gender==='F'} onPress={() => setGender('F')} />
         </View>
 
         <View style={s.twoCol}>
@@ -259,16 +303,16 @@ const InitialSettingScreen = () => {
           )}
         </View>
 
-        <TouchableOpacity style={s.btn} onPress={() => {
-  if (!name.trim()) {
-    Alert.alert('請輸入姓名', '請填寫你的名字或暱稱才能繼續');
-    return;
-  }
-
-  setStep(3);
-}} activeOpacity={0.85}>
-  <Text style={s.btnTxt}>選擇我的水杯 →</Text>
-</TouchableOpacity>
+        <TouchableOpacity 
+        style={s.btn} onPress={() => {
+          if (!name.trim()) {
+            Alert.alert('請輸入姓名', '請填寫你的名字或暱稱才能繼續');
+            return;
+          }
+          setStep(3);
+        }} activeOpacity={0.85}>
+          <Text style={s.btnTxt}>選擇我的水杯 →</Text>
+        </TouchableOpacity>
 
         <View style={{ height: Platform.OS === 'ios' ? 40 : 20 }} />
       </ScrollView>

@@ -46,6 +46,21 @@ const apiService = {
     }
   },
 
+  // 更新個人資料
+  updateProfile: async (userData, userToken) => {
+    try {
+      const response = await apiClient.patch('/users/me', userData, {
+        headers: {
+          'Authorization': `Bearer ${userToken}` // 必須帶上 Token 才能知道是誰在更新
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("更新資料失敗:", error.response?.data || error.message);
+      return { success: false, error: error.response?.data?.detail || "更新失敗" };
+    }
+  },
+
   /**
    * Send message to chatbot
    * @param {string} message - User message to send
