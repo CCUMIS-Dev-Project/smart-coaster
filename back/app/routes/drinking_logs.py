@@ -18,7 +18,7 @@ def add_log(body: DrinkingLogCreate, user_id: int = Depends(get_current_user)):
 
 @router.delete("/{log_id}", response_model=DrinkingLogCreateResponse)
 def delete_log(log_id: int, user_id: int = Depends(get_current_user)):
-    result = soft_delete_log(log_id)
+    result = soft_delete_log(log_id, user_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Log not found or already deleted")
     return result
