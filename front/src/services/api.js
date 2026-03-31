@@ -26,6 +26,41 @@ const apiService = {
     }
   },
 
+  // 登入
+  login: async (username, password) => {
+    try {
+      const response = await apiClient.post('/auth/login', { username, password });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || "登入失敗" };
+    }
+  },
+
+  // 註冊
+  register: async (userData) => {
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || "註冊失敗" };
+    }
+  },
+
+  // 更新個人資料
+  updateProfile: async (userData, userToken) => {
+    try {
+      const response = await apiClient.patch('/users/me', userData, {
+        headers: {
+          'Authorization': `Bearer ${userToken}` // 必須帶上 Token 才能知道是誰在更新
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error("更新資料失敗:", error.response?.data || error.message);
+      return { success: false, error: error.response?.data?.detail || "更新失敗" };
+    }
+  },
+
   /**
    * Send message to chatbot
    * @param {string} message - User message to send
@@ -54,15 +89,78 @@ const apiService = {
    * @param {object} sensorData - { systemActive, weight, isOnCoaster, ... }
    */
 
-  uploadSensorData: async (sensorData) => {
-    try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.SENSOR_LOG, sensorData);
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('上傳感測器數據失敗:', error);
-      return { success: false, error: error.message };
+  // 解析並上傳喝水紀錄
+  handleWaterData : async (rawString, userToken) => {
+    // 1. 解析字串，格式範例: "W|1|0|150.5"
+    const parts = rawString.split('|');
+    // switch(parts[0]){
+    //   // W：連線模式
+    //   case 'W':
+    //     const isSystemActive = parts[1] === '1';
+    //     const isOnCoaster = parts[2] === '1';
+    //     const volume = parseFloat(parts[3]);
+
+    //     // 2. 判斷是否有新的喝水量（例如 > 0），且杯子目前是在位狀態或剛拿起
+    //     if (volume > 0) {
+    //       const payload = {
+    //         type_id: 1, // 1 是「水」的 ID
+    //         d_volume: Math.round(volume), // 轉為整數以符合後端 schemas 要求
+    //         record_at: new Date().toISOString(),
+    //         is_auto: true
+    //       };
+
+    //       // 3. 發送至 FastAPI 後端
+    //       try {
+    //         const response = await apiClient.post('/logs', payload, {
+    //           headers: {
+    //             'Authorization': `Bearer ${userToken}`
+    //           }
+    //         });
+
+    //         console.log("上傳成功:", response.data);
+    //         return { success: true, data: response.data };
+    //       } catch (error) {
+    //         console.error("API 上傳失敗:", error.response?.data || error.message);
+    //         return { success: false, error: error.message };
+    //       }
+    //     }
+    //   // W：離線模式
+    //   case 'O':
+    //     const volume = parseFloat(parts[3]);
+    // }
+
+    if (parts[0] === 'W') {
+      const isSystemActive = parts[1] === '1';
+      const isOnCoaster = parts[2] === '1';
+      const volume = parseFloat(parts[3]);
+
+      // 2. 判斷是否有新的喝水量（例如 > 0），且杯子目前是在位狀態或剛拿起
+      if (volume > 0) {
+        const payload = {
+          type_id: 1, // 1 是「水」的 ID
+          d_volume: Math.round(volume), // 轉為整數以符合後端 schemas 要求
+          record_at: new Date().toISOString(),
+          is_auto: true
+        };
+
+        // 3. 發送至 FastAPI 後端
+        try {
+          const response = await apiClient.post('/logs', payload, {
+            headers: {
+              'Authorization': `Bearer ${userToken}`
+            }
+          });
+
+          console.log("上傳成功:", response.data);
+          return { success: true, data: response.data };
+        } catch (error) {
+          console.error("API 上傳失敗:", error.response?.data || error.message);
+          return { success: false, error: error.message };
+        }
+      }
     }
   },
+
 
   // 獲取 AI 週報
   getWeeklyReport: async (userId) => {

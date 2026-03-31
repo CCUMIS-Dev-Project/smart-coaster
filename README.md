@@ -96,10 +96,10 @@ smart-coaster/
 1. 將 `pico/` 資料夾內所有檔案上傳至 Pico W。
 2. 確保 `main.py` 中的 `gap_name` 設定為 `"SmartCoaster"`。
 3. 執行 `main.py`，OLED 螢幕應顯示「Press to Start」。
-
+---
 ### 2. 後端伺服器 (FastAPI) & AI 功能測試
-
-! 後端測試或操作都須在虛擬環境(venv)中執行，避免全域安裝後在其他的專案上遇到python版本相容性問題 !
+#### 請見back\README.md
+<!-- ! 後端測試或操作都須在虛擬環境(venv)中執行，避免全域安裝後在其他的專案上遇到python版本相容性問題 !
 
 ### venv設定方式 (terminal)
 1. 第一次建立（在 back/ 資料夾裡）: `python -m venv venv`
@@ -131,8 +131,8 @@ smart-coaster/
 1. `cd back`
 2. `source venv/bin/activate`
 3. 測試聊天打字機：`python3 terminal_chat.py`
-4. 測試生成上週週報：`python3 test_weekly_report.py` (若想要看其他user的週報可再去調整test_weekly_report.py裡的user_id)
-
+4. 測試生成上週週報：`python3 test_weekly_report.py` (若想要看其他user的週報可再去調整test_weekly_report.py裡的user_id) -->
+---
 ### 3. 前端 App (Expo)
 
 > **⚠️ 注意**：由於本專案使用藍牙 (BLE) 功能，**不支援 Expo Go**。請務必使用「開發版客戶端 (Development Build)」。

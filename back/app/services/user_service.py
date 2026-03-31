@@ -4,7 +4,13 @@ USERS_TABLE = "users"
 
 # join exercise 表取 level_type
 def get_user(user_id: int) -> dict:
-    res = supabase.table(USERS_TABLE).select("username, gender, weight, levelid, exercise(level_type)").eq("user_id", user_id).execute()
+    res = supabase.table(USERS_TABLE).select(
+        "username, " \
+        "gender, " \
+        "weight, " \
+        "levelid, " \
+        "exercise(level_type)," \
+        "age").eq("user_id", user_id).execute()
     # 跟 drinking_logs join drinks 一樣，需要攤平
     # 沒資料回傳空 dict
     if not res.data:

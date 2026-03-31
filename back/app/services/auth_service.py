@@ -25,11 +25,14 @@ def create_access_token(user_id: int) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 def register_user(body: UserRegister) -> dict:
+    # 1. 檢查使用者是否已存在
     existing = supabase.table(USERS_TABLE).select("user_id").eq("username", body.username).execute()
-    # print("existing.data:", existing.data)  # 加這行 (debug)
     if existing.data:
-        raise ValueError("Username already taken")
+        raise ValueError("使用者已存在")
 
+    # 2. 準備使用者基礎資料
+    # 因為你在 schema 中設定了預設值，若前端沒傳 gender/weight/levelid，
+    # 這裡會自動填入 "未知"、60.0、1 等預設數值
     user_data = {
         "username": body.username,
         "password": hash_password(body.password),
@@ -37,28 +40,33 @@ def register_user(body: UserRegister) -> dict:
         "weight": body.weight,
         "levelid": body.levelid,
     }
+    
     user_response = supabase.table(USERS_TABLE).insert(user_data).execute()
     if not user_response.data:
-        raise RuntimeError("Failed to create user")
+        raise RuntimeError("使用者註冊失敗")
 
     new_user = user_response.data[0]
 
+    # 3. 準備目標設定資料 (Goals)
+    # 同理，daily_target 等欄位也會自動使用 schema 的預設值
     goal_data = {
         "user_id": new_user["user_id"],
         "daily_target": body.daily_target,
-        "rmd_interval": body.rmd_interval or 60,
-        "act_start": body.act_start or "08:00:00",
-        "act_end": body.act_end or "22:00:00",
+        "rmd_interval": body.rmd_interval,
+        "act_start": body.act_start,
+        "act_end": body.act_end,
     }
-  
 
     try:
+        # 建立初始飲水目標
         goal_response = supabase.table(GOALS_TABLE).insert(goal_data).execute()
         if not goal_response.data:
-            raise RuntimeError("Failed to create goal")
-    except Exception:
+            raise RuntimeError("目標設定建立失敗")
+    except Exception as e:
+        # 如果建立目標失敗，為了資料一致性，要把剛剛建好的使用者刪除 (Rollback 概念)
         supabase.table(USERS_TABLE).delete().eq("user_id", new_user["user_id"]).execute()
-        raise RuntimeError("Failed to create goal")
+        print(f"Goal creation failed: {e}")
+        raise RuntimeError("註冊流程不完整，請稍後再試")
 
     return new_user
 
@@ -87,4 +95,5 @@ def login_user(username: str, password: str) -> str:
         raise ValueError("Invalid credentials")
     
     # 4. create_access_token 產生 JWT 字串，往上回傳給 router
-    return create_access_token(user["user_id"])
+    token = create_access_token(user["user_id"])
+    return token, user["user_id"] 

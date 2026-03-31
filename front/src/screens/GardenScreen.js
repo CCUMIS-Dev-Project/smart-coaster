@@ -382,123 +382,97 @@ function PlantSVG({ stage, colored }) {
 
 // ── 全螢幕花園場景 ────────────────────────────────────────
 function GardenScene({ flowers, onFlowerPress, onClose }) {
-  const unlockedFlowers = flowers.filter(f => f.unlocked);
   const stemHeights = [90, 110, 80, 100, 95, 115, 85, 105];
+  const unlockedCount = flowers.filter(f=>f.unlocked).length;
 
   return (
     <View style={gs.container}>
-      {/* 天空 */}
       <View style={gs.sky}>
-        {/* 太陽 */}
-        <View style={gs.sun} />
-        {/* 雲朵 */}
-        <View style={[gs.cloud, {top:40, left:40, width:80, height:28}]} />
-        <View style={[gs.cloud, {top:30, left:80, width:50, height:18}]} />
-        <View style={[gs.cloud, {top:60, right:50, width:70, height:24}]} />
-        <View style={[gs.cloud, {top:50, right:30, width:40, height:16}]} />
-        {/* 標題列 */}
+      <Svg width={120} height={120} style={{ position:'absolute', top:24, right:6 }}>
+      {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i)=>{
+  const rad = a * Math.PI / 180;
+  return <Line key={i} 
+  x1={60+26*Math.cos(rad)} y1={60+26*Math.sin(rad)}
+  x2={60+42*Math.cos(rad)} y2={60+42*Math.sin(rad)}
+    stroke="#FFD700" strokeWidth="3.5" strokeLinecap="round" />;
+})}
+<Circle cx="60" cy="60" r="24" fill="#FFD700" />
+</Svg>
+<Svg width={90} height={40} style={{ position:'absolute', top:36, left:30 }}>
+  <Circle cx="20" cy="28" r="14" fill="#fff" opacity={0.92}/>
+  <Circle cx="40" cy="20" r="18" fill="#fff" opacity={0.92}/>
+  <Circle cx="62" cy="26" r="14" fill="#fff" opacity={0.92}/>
+  <Circle cx="76" cy="30" r="10" fill="#fff" opacity={0.92}/>
+</Svg>
+<Svg width={80} height={36} style={{ position:'absolute', top:70, right:160 }}>
+  <Circle cx="16" cy="22" r="12" fill="#fff" opacity={0.88}/>
+  <Circle cx="32" cy="16" r="15" fill="#fff" opacity={0.88}/>
+  <Circle cx="52" cy="20" r="12" fill="#fff" opacity={0.88}/>
+</Svg>
         <View style={gs.titleBar}>
-          <Text style={gs.titleTxt}>我的花園</Text>
+          <View>
+            <Text style={gs.titleTxt}>我的花園</Text>
+            <Text style={gs.titleSub}>已收集 {unlockedCount} / {flowers.length} 朵</Text>
+          </View>
           <TouchableOpacity onPress={onClose} style={gs.closeBtn}>
             <Text style={gs.closeTxt}>×</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 花朵區域 */}
       <View style={gs.flowerArea}>
         {flowers.map((f, i) => {
           const FlowerComp = FLOWER_COMPONENTS[i];
           const stemH = stemHeights[i % stemHeights.length];
           const isUnlocked = f.unlocked;
           return (
-            <TouchableOpacity
-              key={f.name}
-              style={[gs.flowerItem, { height: stemH + 60 }]}
-              onPress={() => onFlowerPress(f, i)}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity key={f.name} style={[gs.flowerItem, { height: stemH + 60 }]}
+              onPress={() => onFlowerPress(f, i)} activeOpacity={0.8}>
               <View style={{ opacity: isUnlocked ? 1 : 0.25 }}>
                 <FlowerComp size={isUnlocked ? 44 : 36} colored={isUnlocked} />
               </View>
-              {/* 莖 */}
               <View style={[gs.stem, { height: stemH, opacity: isUnlocked ? 1 : 0.3 }]} />
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* 草地 */}
       <View style={gs.grassWrap}>
         {Array.from({length:30}).map((_,i)=>(
-          <View key={i} style={[gs.grassBlade, {
-            left: `${(i/30)*100}%`,
-            height: 12 + (i%4)*5,
-            transform:[{rotate:`${-20 + (i%5)*10}deg`}]
-          }]} />
+          <View key={i} style={[gs.grassBlade, { left:`${(i/30)*100}%`, height:12+(i%4)*5, transform:[{rotate:`${-20+(i%5)*10}deg`}] }]} />
         ))}
       </View>
 
-      {/* 地面 */}
+      {/* 花朵圖鑑橫向滑動 */}
+      <View style={gs.encyclopediaWrap}>
+        <Text style={gs.encyclopediaTitle}>花朵圖鑑</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={gs.encyclopediaContent}>
+          {flowers.map((f, i) => {
+            const FlowerComp = FLOWER_COMPONENTS[i];
+            return (
+              <TouchableOpacity key={f.name}
+                style={[gs.encyclopediaCard, !f.unlocked && gs.encyclopediaCardLocked]}
+                onPress={() => onFlowerPress(f, i)} activeOpacity={0.8}>
+                {f.isNew && <View style={gs.newBadge}><Text style={gs.newBadgeTxt}>NEW</Text></View>}
+                <FlowerComp size={38} colored={f.unlocked} />
+                <Text style={gs.encyclopediaName}>{f.name}</Text>
+                <Text style={gs.encyclopediaLang} numberOfLines={1}>
+                  {f.unlocked ? f.language : '???'}
+                </Text>
+                {!f.unlocked && <Text style={gs.encyclopediaLock}>未解鎖</Text>}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <View style={gs.ground} />
     </View>
   );
 }
 
 // ── 解鎖動畫元件 ─────────────────────────────────────────
-function UnlockAnimation({ flower, index, onClose }) {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const opacAnim  = useRef(new Animated.Value(0)).current;
-  const petalAnims = useRef(Array.from({length:12}, ()=>new Animated.Value(0))).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(scaleAnim, { toValue:1, tension:60, friction:6, useNativeDriver:true }),
-        Animated.timing(opacAnim, { toValue:1, duration:300, useNativeDriver:true }),
-      ]),
-      Animated.stagger(50, petalAnims.map(a =>
-        Animated.timing(a, { toValue:1, duration:400, useNativeDriver:true })
-      )),
-    ]).start();
-  }, []);
-
-  const FlowerComp = FLOWER_COMPONENTS[index];
-
-  return (
-    <View style={ua.overlay}>
-      {/* 飄落花瓣 */}
-      {petalAnims.map((a, i) => {
-        const x = (i/12)*SW - 20;
-        const translateY = a.interpolate({ inputRange:[0,1], outputRange:[-20, SH*0.5] });
-        const opacity    = a.interpolate({ inputRange:[0,0.7,1], outputRange:[0,1,0] });
-        return (
-          <Animated.View key={i} style={[ua.petal, { left:x, transform:[{translateY}], opacity }]}>
-            <Svg width={14} height={14} viewBox="0 0 20 20">
-              <Ellipse cx="10" cy="10" rx="5" ry="8" fill={['#FF8FA3','#FFB7C5','#FFD700','#9370DB','#7EC860'][i%5]} />
-            </Svg>
-          </Animated.View>
-        );
-      })}
-
-      <Animated.View style={[ua.card, { transform:[{scale:scaleAnim}], opacity:opacAnim }]}>
-        <Text style={ua.newTxt}>新花朵解鎖</Text>
-        <Text style={ua.nameTxt}>{flower.name}</Text>
-        <View style={ua.flowerBig}>
-          <FlowerComp size={80} colored />
-        </View>
-        <View style={ua.langBox}>
-          <Text style={ua.langTitle}>花語</Text>
-          <Text style={ua.langWord}>{flower.language}</Text>
-        </View>
-        <Text style={ua.descTxt}>{flower.desc}</Text>
-        <TouchableOpacity style={ua.gardenBtn} onPress={onClose} activeOpacity={0.85}>
-          <Text style={ua.gardenBtnTxt}>插入花園欣賞</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  );
-}
 
 // ── 花語彈窗 ─────────────────────────────────────────────
 function FlowerInfoModal({ flower, index, onClose }) {
@@ -540,21 +514,16 @@ function FlowerInfoModal({ flower, index, onClose }) {
 // ── 主畫面 ───────────────────────────────────────────────
 export default function GardenScreen() {
   const { weekData, goalMl, totalMl } = useApp();
-
   const gardenDays   = ['done','done','done','today','empty'];
   const gardenStreak = 3;
   const [flowers, setFlowers] = useState(FLOWERS_INIT);
-
   const [showGarden,    setShowGarden]    = useState(false);
   const [showFlowerInfo,setShowFlowerInfo]= useState(false);
   const [showUnlock,    setShowUnlock]    = useState(false);
   const [selectedFlower,setSelectedFlower]= useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-
   const [showChat,  setShowChat]  = useState(false);
-  const [messages,  setMessages]  = useState([
-    { role:'assistant', content:'你好！我是你的補水 AI 助理，有任何補水問題都可以問我' }
-  ]);
+  const [messages,  setMessages]  = useState([{ role:'assistant', content:'你好！我是你的補水 AI 助理，有任何補水問題都可以問我' }]);
   const [input,   setInput]   = useState('');
   const [loading, setLoading] = useState(false);
   const [showWeekCompare, setShowWeekCompare] = useState(false);
@@ -568,57 +537,26 @@ export default function GardenScreen() {
   const isUp    = diffPct>=0;
   const maxV    = Math.max(...weekData.map(d=>d.ml), goalMl, 100);
   const doneCount     = gardenDays.filter(d=>d==='done').length;
-  const unlockedCount = flowers.filter(f=>f.unlocked).length;
   const todayPct      = Math.min(100, Math.round((totalMl/goalMl)*100));
 
-  function handleFlowerPress(flower, index) {
-    setSelectedFlower(flower);
-    setSelectedIndex(index);
-    setShowFlowerInfo(true);
-  }
-
-  function handleGardenFlowerPress(flower, index) {
-    setSelectedFlower(flower);
-    setSelectedIndex(index);
-    setShowFlowerInfo(true);
-  }
-
-  // 模擬解鎖（測試用）
-  function handleUnlockDemo() {
-    const nextLocked = flowers.findIndex(f=>!f.unlocked);
-    if(nextLocked === -1) return;
-    setSelectedFlower(flowers[nextLocked]);
-    setSelectedIndex(nextLocked);
-    setShowUnlock(true);
-    setFlowers(prev => prev.map((f,i) => i===nextLocked ? {...f, unlocked:true, isNew:true} : f));
-  }
+  function handleFlowerPress(flower, index) { setSelectedFlower(flower); setSelectedIndex(index); setShowFlowerInfo(true); }
+  function handleGardenFlowerPress(flower, index) { setSelectedFlower(flower); setSelectedIndex(index); setShowFlowerInfo(true); }
 
   async function sendMessage() {
     if(!input.trim()||loading) return;
     const userMsg = {role:'user', content:input.trim()};
     const newMsgs = [...messages, userMsg];
-    setMessages(newMsgs);
-    setInput('');
-    setLoading(true);
+    setMessages(newMsgs); setInput(''); setLoading(true);
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_API_KEY}`},
-        body: JSON.stringify({
-          model:'llama3-8b-8192',
-          messages:[
-            {role:'system',content:'你是一個專業的補水健康助理，用繁體中文回答，保持簡短友善，每次回答不超過100字。'},
-            ...newMsgs,
-          ],
-          max_tokens:300,
-        }),
+        body: JSON.stringify({ model:'llama3-8b-8192', messages:[{role:'system',content:'你是一個專業的補水健康助理，用繁體中文回答，保持簡短友善，每次回答不超過100字。'},...newMsgs], max_tokens:300 }),
       });
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content || '抱歉，我現在無法回答。';
       setMessages(prev=>[...prev,{role:'assistant',content:reply}]);
-    } catch {
-      setMessages(prev=>[...prev,{role:'assistant',content:'連線失敗，請稍後再試。'}]);
-    }
+    } catch { setMessages(prev=>[...prev,{role:'assistant',content:'連線失敗，請稍後再試。'}]); }
     setLoading(false);
   }
 
@@ -631,22 +569,20 @@ export default function GardenScreen() {
       <View style={s.head}>
         <View>
           <Text style={s.title}>我的花園</Text>
-          <Text style={s.subtitle}>連續 5 天達標，綻放一朵花！</Text>
+          <Text style={s.subtitle}>連續5天達成目標飲水量，就可以綻放一朵花！</Text>
         </View>
-        <View style={{flexDirection:'row',gap:8,alignItems:'center'}}>
-          <TouchableOpacity style={s.gardenEntryBtn} onPress={() => setShowGarden(true)} activeOpacity={0.85}>
-            <Text style={s.gardenEntryTxt}>花園</Text>
-          </TouchableOpacity>
-          <View style={s.streakBadge}>
-            <Text style={s.streakNum}>{gardenStreak}</Text>
-            <Text style={s.streakLbl}>連續天</Text>
-          </View>
-        </View>
+        <TouchableOpacity style={s.gardenEntryBtn} onPress={() => setShowGarden(true)} activeOpacity={0.85}>
+          <Svg width={44} height={44} viewBox="0 0 80 80">
+            {[0,60,120,180,240,300].map((a,i)=>(<Ellipse key={i} cx="40" cy="16" rx="7" ry="13" fill={i%2===0?'#ff9ab8':'#ffb4cc'} transform={`rotate(${a} 40 40)`} />))}
+            <Circle cx="40" cy="40" r="12" fill="#ffe066" />
+            <Circle cx="40" cy="40" r="8" fill="#ffd040" />
+          </Svg>
+          <Text style={s.gardenEntryTxt}>花園</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
 
-        {/* 本週成長進度 */}
         <View style={s.plantCard}>
           <View style={s.plantCardBg}/>
           <Text style={s.plantCardTitle}>本週成長進度</Text>
@@ -668,44 +604,33 @@ export default function GardenScreen() {
             <View style={s.daysLeft}>
               {doneCount>=5
                 ? <Text style={s.daysLeftTxt}>開花了！</Text>
-                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後{'\n'}開花</Text></>
+                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
               }
             </View>
             <View style={{flex:1}}>
-              <View style={s.progTopG}>
-                <Text style={s.progLblG}>今日水量</Text>
-                <Text style={s.progValG}>{totalMl}/{goalMl}ml</Text>
-              </View>
-              <View style={s.progBarG}>
-                <View style={[s.progFillG,{width:`${todayPct}%`}]}/>
-              </View>
+              <View style={s.progTopG}><Text style={s.progLblG}>今日水量</Text><Text style={s.progValG}>{totalMl}/{goalMl}ml</Text></View>
+              <View style={s.progBarG}><View style={[s.progFillG,{width:`${todayPct}%`}]}/></View>
             </View>
           </View>
         </View>
 
-        {/* 本週每日記錄 */}
         <View style={s.histCard}>
           <View style={s.histHeader}>
             <Text style={s.histTitle}>本週每日記錄</Text>
-            <TouchableOpacity style={[s.weekBtn,isUp?s.weekBtnUp:s.weekBtnDown]}
-              onPress={()=>setShowWeekCompare(true)} activeOpacity={0.8}>
-              <Text style={[s.weekBtnTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>
-                {isUp?'↑':'↓'} {Math.abs(diffPct)}% vs 上週
-              </Text>
-            </TouchableOpacity>
+            <View style={{flexDirection:'row', gap:8, alignItems:'center'}}>
+              <View style={s.streakBadge}><Text style={s.streakLbl}>已連續達標{gardenStreak}天！</Text></View>
+              <TouchableOpacity style={[s.weekBtn,isUp?s.weekBtnUp:s.weekBtnDown]} onPress={()=>setShowWeekCompare(true)} activeOpacity={0.8}>
+                <Text style={[s.weekBtnTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>{isUp?'↑':'↓'} {Math.abs(diffPct)}% vs 上週</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={s.histRow}>
             {weekData.map((d,i)=>{
-              const barH=Math.round((d.ml/maxV)*80);
-              const hit=d.ml>=goalMl;
+              const barH=Math.round((d.ml/maxV)*80), hit=d.ml>=goalMl;
               return(
                 <View key={d.day} style={s.histDay}>
-                  <View style={{width:20,height:20}}>
-                    {hit ? <Flower3 size={20} colored /> : <PlantSVG stage={d.ml>goalMl*0.5?2:1} colored={d.ml>0} />}
-                  </View>
-                  <View style={s.histBarWrap}>
-                    <View style={[s.histBarFill,{height:Math.max(barH,3),backgroundColor:hit?GREEN:'#f87171'}]}/>
-                  </View>
+                  <View style={{width:20,height:20}}>{hit ? <Flower3 size={20} colored /> : <PlantSVG stage={d.ml>goalMl*0.5?2:1} colored={d.ml>0} />}</View>
+                  <View style={s.histBarWrap}><View style={[s.histBarFill,{height:Math.max(barH,3),backgroundColor:hit?GREEN:'#f87171'}]}/></View>
                   <Text style={s.histDayLbl}>{d.day}</Text>
                   <Text style={s.histMl}>{d.ml>=1000?`${(d.ml/1000).toFixed(1)}k`:d.ml||'-'}</Text>
                 </View>
@@ -714,7 +639,6 @@ export default function GardenScreen() {
           </View>
         </View>
 
-        {/* AI 改善建議 */}
         <View style={s.aiCard}>
           <View style={s.aiHeader}>
             <Text style={s.aiTitle}>AI 改善建議</Text>
@@ -723,146 +647,62 @@ export default function GardenScreen() {
             </TouchableOpacity>
           </View>
           <Text style={s.aiText}>
-            {isUp
-              ? `你這週的補水表現進步了！平均 ${thisAvg}ml，比上週提升 ${Math.abs(diffPct)}%。`
-              : `這週補水量比上週減少了 ${Math.abs(diffPct)}%，平均 ${thisAvg}ml。`
-            }
-            {thisAvg<goalMl
-              ? `每天再多補充約 ${goalMl-thisAvg}ml 就能達標！建議在下午 2 點設個提醒。`
-              : `持續保持，你已經連續 ${gardenStreak} 天達標了！`
-            }
+            {isUp ? `你這週的補水表現進步了！平均 ${thisAvg}ml，比上週提升 ${Math.abs(diffPct)}%。` : `這週補水量比上週減少了 ${Math.abs(diffPct)}%，平均 ${thisAvg}ml。`}
+            {thisAvg<goalMl ? `每天再多補充約 ${goalMl-thisAvg}ml 就能達標！建議在下午 2 點設個提醒。` : `持續保持，你已經連續 ${gardenStreak} 天達標了！`}
           </Text>
-        </View>
-
-        {/* 花朵收藏 */}
-        <View style={s.collCard}>
-          <View style={s.collHeader}>
-            <Text style={s.collTitle}>花朵收藏</Text>
-            <Text style={s.collCount}>已收集 {unlockedCount} / {flowers.length}</Text>
-          </View>
-          <View style={s.flowerGrid}>
-            {flowers.map((f,i)=>{
-              const FlowerComp = FLOWER_COMPONENTS[i];
-              const isNext = !f.unlocked && i===flowers.findIndex(x=>!x.unlocked);
-              return(
-                <TouchableOpacity key={f.name}
-                  style={[s.flowerSlot, f.unlocked?s.flowerUnlocked:s.flowerLocked]}
-                  onPress={()=>handleFlowerPress(f,i)} activeOpacity={0.8}>
-                  {f.isNew && <View style={s.newBadge}><Text style={s.newBadgeTxt}>NEW</Text></View>}
-                  <FlowerComp size={34} colored={f.unlocked}/>
-                  <Text style={f.unlocked?s.flowerName:s.flowerLockTxt}>
-                    {f.unlocked ? f.name : isNext ? `再${5-doneCount}天` : ''}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
         </View>
 
         <View style={{height:20}}/>
       </ScrollView>
 
-      {/* 全螢幕花園 Modal */}
       <Modal visible={showGarden} animationType="slide">
-        <GardenScene
-          flowers={flowers}
-          onFlowerPress={handleGardenFlowerPress}
-          onClose={()=>setShowGarden(false)}
-        />
-        {/* 花語彈窗（在花園內） */}
+        <GardenScene flowers={flowers} onFlowerPress={handleGardenFlowerPress} onClose={()=>setShowGarden(false)} />
         {showFlowerInfo && selectedFlower && (
-          <FlowerInfoModal
-            flower={selectedFlower}
-            index={selectedIndex}
-            onClose={()=>setShowFlowerInfo(false)}
-          />
+          <FlowerInfoModal flower={selectedFlower} index={selectedIndex} onClose={()=>setShowFlowerInfo(false)} />
         )}
       </Modal>
 
-      {/* 花語彈窗（在收藏格點） */}
       {showFlowerInfo && !showGarden && selectedFlower && (
         <Modal visible transparent animationType="fade">
-          <FlowerInfoModal
-            flower={selectedFlower}
-            index={selectedIndex}
-            onClose={()=>setShowFlowerInfo(false)}
-          />
+          <FlowerInfoModal flower={selectedFlower} index={selectedIndex} onClose={()=>setShowFlowerInfo(false)} />
         </Modal>
       )}
 
-      {/* 解鎖動畫 */}
       {showUnlock && selectedFlower && (
         <Modal visible transparent animationType="fade">
-          <UnlockAnimation
-            flower={selectedFlower}
-            index={selectedIndex}
-            onClose={()=>{ setShowUnlock(false); setShowGarden(true); }}
-          />
+          <UnlockAnimation flower={selectedFlower} index={selectedIndex} onClose={()=>{ setShowUnlock(false); setShowGarden(true); }} />
         </Modal>
       )}
 
-      {/* 週比較 Modal */}
       <Modal visible={showWeekCompare} transparent animationType="fade">
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={()=>setShowWeekCompare(false)}>
           <View style={s.compareModal}>
             <Text style={s.compareModalTitle}>週平均比較</Text>
             <View style={s.compareRow}>
-              <View style={s.compareCol}>
-                <Text style={s.compareColLbl}>上週平均</Text>
-                <Text style={s.compareColVal}>{prevAvg}<Text style={s.compareColUnit}>ml</Text></Text>
-              </View>
-              <View style={s.compareArrow}>
-                <Text style={[s.compareArrowTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>
-                  {isUp?'↑':'↓'}{Math.abs(diffPct)}%
-                </Text>
-              </View>
-              <View style={s.compareCol}>
-                <Text style={s.compareColLbl}>本週平均</Text>
-                <Text style={[s.compareColVal,{color:isUp?'#16a34a':'#dc2626'}]}>
-                  {thisAvg}<Text style={s.compareColUnit}>ml</Text>
-                </Text>
-              </View>
+              <View style={s.compareCol}><Text style={s.compareColLbl}>上週平均</Text><Text style={s.compareColVal}>{prevAvg}<Text style={s.compareColUnit}>ml</Text></Text></View>
+              <View style={s.compareArrow}><Text style={[s.compareArrowTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>{isUp?'↑':'↓'}{Math.abs(diffPct)}%</Text></View>
+              <View style={s.compareCol}><Text style={s.compareColLbl}>本週平均</Text><Text style={[s.compareColVal,{color:isUp?'#16a34a':'#dc2626'}]}>{thisAvg}<Text style={s.compareColUnit}>ml</Text></Text></View>
             </View>
-            <Text style={s.compareDesc}>
-              {isUp
-                ? `你本週每天平均多喝了 ${thisAvg-prevAvg}ml，進步很多！`
-                : `你本週每天平均少喝了 ${prevAvg-thisAvg}ml，下週加油！`
-              }
-            </Text>
-            <TouchableOpacity style={s.compareClose} onPress={()=>setShowWeekCompare(false)}>
-              <Text style={s.compareCloseTxt}>關閉</Text>
-            </TouchableOpacity>
+            <Text style={s.compareDesc}>{isUp ? `你本週每天平均多喝了 ${thisAvg-prevAvg}ml，進步很多！` : `你本週每天平均少喝了 ${prevAvg-thisAvg}ml，下週加油！`}</Text>
+            <TouchableOpacity style={s.compareClose} onPress={()=>setShowWeekCompare(false)}><Text style={s.compareCloseTxt}>關閉</Text></TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Chatbot Modal */}
       <Modal visible={showChat} transparent animationType="slide">
         <View style={s.chatOverlay}>
           <View style={s.chatCard}>
             <View style={s.chatTopbar}>
               <Text style={s.chatTitle}>AI 補水助理</Text>
-              <TouchableOpacity onPress={()=>setShowChat(false)}>
-                <Text style={{fontSize:24,color:MUTED}}>×</Text>
-              </TouchableOpacity>
+              <TouchableOpacity onPress={()=>setShowChat(false)}><Text style={{fontSize:24,color:MUTED}}>×</Text></TouchableOpacity>
             </View>
-            <ScrollView ref={chatScrollRef} style={s.chatMsgs}
-              contentContainerStyle={{padding:16,gap:10}}
-              onContentSizeChange={()=>chatScrollRef.current?.scrollToEnd({animated:true})}>
-              {messages.map((m,i)=>(
-                <View key={i} style={[s.bubble,m.role==='user'?s.bubbleUser:s.bubbleAI]}>
-                  <Text style={[s.bubbleTxt,m.role==='user'?{color:'#fff'}:{color:TEXT}]}>{m.content}</Text>
-                </View>
-              ))}
+            <ScrollView ref={chatScrollRef} style={s.chatMsgs} contentContainerStyle={{padding:16,gap:10}} onContentSizeChange={()=>chatScrollRef.current?.scrollToEnd({animated:true})}>
+              {messages.map((m,i)=>(<View key={i} style={[s.bubble,m.role==='user'?s.bubbleUser:s.bubbleAI]}><Text style={[s.bubbleTxt,m.role==='user'?{color:'#fff'}:{color:TEXT}]}>{m.content}</Text></View>))}
               {loading && <View style={s.bubbleAI}><Text style={s.bubbleTxt}>思考中...</Text></View>}
             </ScrollView>
             <View style={s.chatInputRow}>
-              <TextInput style={s.chatInput} value={input} onChangeText={setInput}
-                placeholder="問我任何補水問題..." placeholderTextColor={MUTED}
-                returnKeyType="send" onSubmitEditing={sendMessage}/>
-              <TouchableOpacity style={s.sendBtn} onPress={sendMessage} activeOpacity={0.8}>
-                <Text style={s.sendBtnTxt}>送出</Text>
-              </TouchableOpacity>
+              <TextInput style={s.chatInput} value={input} onChangeText={setInput} placeholder="問我任何補水問題..." placeholderTextColor={MUTED} returnKeyType="send" onSubmitEditing={sendMessage}/>
+              <TouchableOpacity style={s.sendBtn} onPress={sendMessage} activeOpacity={0.8}><Text style={s.sendBtnTxt}>送出</Text></TouchableOpacity>
             </View>
           </View>
         </View>
@@ -875,18 +715,30 @@ export default function GardenScreen() {
 const gs = StyleSheet.create({
   container:  { flex:1, backgroundColor:'#87CEEB' },
   sky:        { flex:1, position:'relative' },
-  sun:        { position:'absolute', top:60, right:40, width:50, height:50, borderRadius:25, backgroundColor:'#FFD700' },
-  cloud:      { position:'absolute', backgroundColor:'#fff', borderRadius:20, opacity:0.88 },
-  titleBar:   { position:'absolute', top:50, left:0, right:0, flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingHorizontal:20 },
+  titleBar:   { position:'absolute', top:90, left:0, right:0, flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingHorizontal:20 },
   titleTxt:   { fontSize:20, fontWeight:'900', color:'#fff' },
+  titleSub:   { fontSize:11, color:'rgba(255,255,255,0.85)', fontWeight:'700', marginTop:2 },
   closeBtn:   { width:36, height:36, borderRadius:18, backgroundColor:'rgba(0,0,0,0.2)', alignItems:'center', justifyContent:'center' },
   closeTxt:   { fontSize:22, color:'#fff', lineHeight:28 },
-  flowerArea: { flexDirection:'row', justifyContent:'space-around', alignItems:'flex-end', paddingHorizontal:8, paddingBottom:0 },
+  flowerArea: { flexDirection:'row', justifyContent:'space-around', alignItems:'flex-end', paddingHorizontal:8 },
   flowerItem: { alignItems:'center', justifyContent:'flex-end' },
   stem:       { width:4, backgroundColor:'#4a8c3f', borderRadius:2 },
   grassWrap:  { height:24, backgroundColor:'#5DBB4A', flexDirection:'row', overflow:'hidden', position:'relative' },
   grassBlade: { position:'absolute', bottom:0, width:3, backgroundColor:'#4CAF50', borderRadius:2 },
-  ground:     { height:50, backgroundColor:'#6B4423' },
+
+  // 花朵圖鑑
+  encyclopediaWrap:    { backgroundColor:'rgba(30,60,20,0.75)', paddingTop:10, paddingBottom:6 },
+  encyclopediaTitle:   { fontSize:11, fontWeight:'900', color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:1, paddingHorizontal:14, marginBottom:6 },
+  encyclopediaContent: { paddingHorizontal:12, paddingBottom:4, gap:8, flexDirection:'row' },
+  encyclopediaCard:    { alignItems:'center', backgroundColor:'rgba(255,255,255,0.95)', borderRadius:16, paddingVertical:10, paddingHorizontal:10, width:82, gap:3, position:'relative' },
+  encyclopediaCardLocked: { backgroundColor:'rgba(240,240,240,0.85)' },
+  encyclopediaName:    { fontSize:11, fontWeight:'900', color:'#1a2a1e', textAlign:'center' },
+  encyclopediaLang:    { fontSize:9, color:'#5a8a6e', textAlign:'center', fontWeight:'700' },
+  encyclopediaLock:    { fontSize:9, color:'#aaa', fontWeight:'700' },
+  newBadge:    { position:'absolute', top:4, right:4, backgroundColor:'#ff6b35', borderRadius:5, paddingVertical:2, paddingHorizontal:3 },
+  newBadgeTxt: { fontSize:7, fontWeight:'900', color:'#fff' },
+
+  ground:     { height:40, backgroundColor:'#6B4423' },
 });
 
 const ua = StyleSheet.create({
@@ -929,11 +781,10 @@ const s = StyleSheet.create({
   head:     { flexDirection:'row', justifyContent:'space-between', alignItems:'flex-start', paddingHorizontal:20, paddingTop:56, paddingBottom:12 },
   title:    { fontSize:22, fontWeight:'900', color:'#1a2a1e' },
   subtitle: { fontSize:12, color:'#8aaa90', marginTop:3 },
-  gardenEntryBtn:{ backgroundColor:'#4a9e3f', borderRadius:12, paddingVertical:7, paddingHorizontal:14 },
-  gardenEntryTxt:{ fontSize:13, fontWeight:'900', color:'#fff' },
-  streakBadge:{ backgroundColor:'#ff6b35', borderRadius:12, paddingVertical:7, paddingHorizontal:12, alignItems:'center' },
-  streakNum:{ fontSize:20, fontWeight:'900', color:'#fff', lineHeight:22 },
-  streakLbl:{ fontSize:10, fontWeight:'800', color:'rgba(255,255,255,0.85)' },
+  gardenEntryBtn:{ alignItems:'center', gap:2 },
+  gardenEntryTxt:{ fontSize:11, fontWeight:'900', color:'#2d6a27' },
+  streakBadge: { borderRadius:20, paddingVertical:5, paddingHorizontal:12, borderWidth:1.5, backgroundColor:'#fff3e0', borderColor:'#ff9a3c' },
+  streakLbl:   { fontSize:10, fontWeight:'800', color:'#e65c00' },
   inner:    { padding:16, paddingBottom:32, gap:14 },
   plantCard:    { backgroundColor:CARD, borderRadius:24, padding:18, position:'relative', overflow:'hidden' },
   plantCardBg:  { position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:'#f0fff4', borderRadius:24 },
@@ -972,18 +823,6 @@ const s = StyleSheet.create({
   chatBtn:  { backgroundColor:BLUE, paddingVertical:6, paddingHorizontal:16, borderRadius:20 },
   chatBtnTxt:{ fontSize:13, fontWeight:'900', color:'#fff' },
   aiText:   { fontSize:13, color:'#4a6a84', lineHeight:20 },
-  collCard: { backgroundColor:CARD, borderRadius:22, padding:16 },
-  collHeader:{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:12 },
-  collTitle:{ fontSize:15, fontWeight:'900', color:TEXT },
-  collCount:{ fontSize:12, fontWeight:'800', color:GREEN },
-  flowerGrid:{ flexDirection:'row', flexWrap:'wrap', gap:8 },
-  flowerSlot:{ width:'22%', aspectRatio:1, borderRadius:16, alignItems:'center', justifyContent:'center', gap:3, position:'relative' },
-  flowerUnlocked:{ backgroundColor:'#f8fff8', borderWidth:2, borderColor:'#b8e8c0' },
-  flowerLocked:  { backgroundColor:'#f4f4f4', borderWidth:2, borderColor:'#e8e8e8' },
-  flowerName:    { fontSize:8, fontWeight:'800', color:'#6a8a6e', textAlign:'center' },
-  flowerLockTxt: { fontSize:8, fontWeight:'800', color:'#b0b0b0' },
-  newBadge:    { position:'absolute', top:3, right:3, backgroundColor:'#ff6b35', borderRadius:5, paddingVertical:2, paddingHorizontal:3 },
-  newBadgeTxt: { fontSize:7, fontWeight:'900', color:'#fff' },
   modalOverlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'center', alignItems:'center', padding:32 },
   compareModal:{ backgroundColor:CARD, borderRadius:24, padding:24, width:'100%', gap:16 },
   compareModalTitle:{ fontSize:18, fontWeight:'900', color:TEXT, textAlign:'center' },
