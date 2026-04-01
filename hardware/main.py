@@ -47,7 +47,7 @@ ble = BLEManager()
 storage = StorageManager()
 
 # 初始化尚未模組化的單一感測器
-button = Pin(BUTTON_PIN, Pin.IN, Pin.PULL_UP)
+# button = Pin(BUTTON_PIN, Pin.IN, Pin.PULL_UP)
 dht_sensor = dht.DHT11(Pin(DHT11_PIN))
 hx = HX711(Pin(HX711_SCK_PIN), Pin(HX711_DT_PIN))
 hx.set_scale(HX711_SCALE)
@@ -68,6 +68,12 @@ last_display_ticks = 0
 place_down_ticks = 0
 last_sync_attempt = 0  # 紀錄上次嘗試同步離線數據的時間
 
+# --- 重壓雙擊偵測狀態 ---
+# 狀態機: 'idle' -> 'pressed1' -> 'released1' -> 'pressed2' -> 觸發！
+press_state = 'idle'
+press_state_ticks = 0      # 進入目前狀態的時間戳
+is_currently_pressed = False  # 上一次迴圈是否處於重壓中
+
 # --- 3. 輔助函式 ---
 def get_average_weight(samples=15):
     """取得穩定的重量平均值"""
@@ -81,6 +87,67 @@ def get_average_weight(samples=15):
         utime.sleep_ms(10)
     if valid_count == 0: return 0
     return (total / valid_count - hx.OFFSET) / hx.SCALE
+
+def check_double_press(current_weight, current_ticks):
+    """
+    重壓雙擊偵測狀態機。
+    回傳 True 代表偵測到雙擊，應切換開關機。
+    
+    狀態轉移流程:
+    idle ──(重壓持續>debounce)──> pressed1
+    pressed1 ──(鬆開)──> released1
+    released1 ──(重壓持續>debounce, 且在window內)──> 觸發！回到 idle
+    released1 ──(超過window時間)──> idle (超時取消)
+    """
+    global press_state, press_state_ticks, is_currently_pressed
+    
+    heavy = current_weight > PRESS_WEIGHT_THRESHOLD
+    light = current_weight < PRESS_RELEASE_THRESHOLD
+    
+    if press_state == 'idle':
+        if heavy and not is_currently_pressed:
+            # 偵測到第一次重壓開始
+            press_state = 'pressing1'
+            press_state_ticks = current_ticks
+    
+    elif press_state == 'pressing1':
+        if not heavy:
+            # 還沒壓夠久就鬆開了，取消
+            press_state = 'idle'
+        elif utime.ticks_diff(current_ticks, press_state_ticks) > PRESS_DEBOUNCE_MS:
+            # 確認第一次重壓有效
+            press_state = 'pressed1'
+    
+    elif press_state == 'pressed1':
+        if light:
+            # 第一次鬆開
+            press_state = 'released1'
+            press_state_ticks = current_ticks
+    
+    elif press_state == 'released1':
+        # 檢查是否超時
+        if utime.ticks_diff(current_ticks, press_state_ticks) > DOUBLE_PRESS_WINDOW_MS:
+            press_state = 'idle'
+        elif heavy:
+            # 在時間窗口內偵測到第二次重壓
+            press_state = 'pressing2'
+            press_state_ticks = current_ticks
+    
+    elif press_state == 'pressing2':
+        if not heavy:
+            # 沒壓夠久就放開，回到等待狀態
+            press_state = 'released1'
+            # 注意：這裡不重設 press_state_ticks，保留原本的超時計算
+        elif utime.ticks_diff(current_ticks, press_state_ticks) > PRESS_DEBOUNCE_MS:
+            # 第二次重壓確認！觸發開關機
+            press_state = 'idle'
+            is_currently_pressed = heavy
+            print("✅ 偵測到雙擊重壓！")
+            return True
+    
+    is_currently_pressed = heavy
+    return False
+
 
 # --- 設定藍牙接收回呼函數 ---
 def handle_ble_rx(data):
@@ -102,9 +169,13 @@ def handle_ble_rx(data):
 # 將這個函數綁定給藍牙模組
 ble.on_rx = handle_ble_rx
 
-# --- 4. 啟動初始畫面 ---
+# --- 啟動初始畫面 ---
 display.show_init_screen()
 leds.turn_off()
+
+utime.sleep_ms(500)   # 等待感測器穩定
+hx.tare(15)           # 歸零，讓重壓偵測有正確的基準線
+print("HX711 歸零完成")
 
 # ==========================================
 # --- 5. 主迴圈開始 ---
@@ -112,30 +183,30 @@ leds.turn_off()
 while True:
     current_ticks = utime.ticks_ms()
 
-    # [區塊 A] 開關機偵測邏輯
-    if button.value() == 0:
-        utime.sleep_ms(20) # 防彈跳
-        if button.value() == 0:
-            system_active = not system_active
-            
-            if system_active:
-                display.show_booting()
-                hx.tare(15) # 重量歸零
-                last_stable_volume = 0
-                drink_amount = 0
-                last_interaction_time = current_ticks
-                print("系統已啟動")
-            else:
-                display.show_power_off()
-                leds.turn_off()
-                utime.sleep(1)
-                display.clear()
-                display.show()
-                print("系統進入休眠")
-            
-            # 等待按鈕放開
-            while button.value() == 0:
-                utime.sleep_ms(10)
+    raw_weight = hx.get_units()
+
+    if check_double_press(raw_weight, current_ticks):
+        system_active = not system_active
+
+        if system_active:
+            display.show_booting()
+            # 等待使用者手離開杯墊後再歸零
+            # print("等待鬆開...")
+            while hx.get_units() > PRESS_RELEASE_THRESHOLD:
+                utime.sleep_ms(50)
+            utime.sleep_ms(500)  # 額外等待穩定
+            hx.tare(15) # 重量歸零
+            last_stable_volume = 0
+            drink_amount = 0
+            last_interaction_time = utime.ticks_ms()
+            print("系統已啟動")
+        else:
+            display.show_power_off()
+            leds.turn_off()
+            utime.sleep(1)
+            display.clear()
+            display.show()
+            print("系統進入休眠")
 
     # [區塊 B] 系統運行中邏輯
     if system_active:
@@ -154,7 +225,7 @@ while True:
                     print("DHT11 讀取失敗:", e)
 
             # 2. 取得當前重量與計算超時狀態
-            current_weight = hx.get_units()
+            current_weight = raw_weight  # 複用迴圈開頭已讀取的重量，避免重複讀取
             time_passed = utime.ticks_diff(current_ticks, last_interaction_time)
             is_overdue = time_passed > REMINDER_MS
             data_changed = False
@@ -270,4 +341,5 @@ while True:
     
     # 避免迴圈跑太快佔用過多資源
     utime.sleep_ms(20)
+
 

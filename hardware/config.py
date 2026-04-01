@@ -40,3 +40,10 @@ DISPLAY_INTERVAL_MS = 500     # 螢幕刷新頻率 (0.5秒)
 BLE_DEVICE_NAME = "SmartCoaster"
 BLE_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
 BLE_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+
+# --- 5. 重壓開關設定 (Double Press) ---
+PRESS_WEIGHT_THRESHOLD = 150   # 判定為「重壓」的重量門檻 (g)，需遠大於正常水杯重量
+PRESS_RELEASE_THRESHOLD = 100  # 低於此值代表已「鬆開」(g)，介於杯子重量和重壓之間
+DOUBLE_PRESS_WINDOW_MS = 1000  # 兩次重壓之間的最大間隔 (ms)
+PRESS_DEBOUNCE_MS = 100        # 單次重壓的最短持續時間，防止誤觸 (ms)
+
