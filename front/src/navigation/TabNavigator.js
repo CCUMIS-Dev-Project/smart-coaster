@@ -83,18 +83,18 @@ function TabBar({ state, descriptors, navigation }) {
             label = '主頁';
             IconComponent = <HouseIcon color={iconColor} />;
             break;
-            case '週報':
-            label = '週報';
-            IconComponent = <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={iconColor} />;
-            break;
+            // case '週報':
+            // label = '週報';
+            // IconComponent = <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={iconColor} />;
+            // break;
             // case '提醒設定':
             // label = '提醒';
             // IconComponent = <Ionicons name={focused ? 'time' : 'time-outline'} size={24} color={iconColor} />;
             // break;
-            case '設定':
-            label = '設定';
-            IconComponent = <Ionicons name={focused ? 'settings-sharp' : 'settings-outline'} size={22} color={iconColor} />;
-            break;
+            // case '設定':
+            // label = '設定';
+            // IconComponent = <Ionicons name={focused ? 'settings-sharp' : 'settings-outline'} size={22} color={iconColor} />;
+            // break;
             case '個人':
             label = '個人';
             IconComponent = <CupIcon focused={focused} />;
@@ -138,11 +138,11 @@ const MainTabNavigator = () => {
         screenOptions={{ headerShown: false }}
         >
             <Tab.Screen name="主頁" component={MainScreen}/> 
-            <Tab.Screen name="週報" component={ReportScreen} />
+            {/* <Tab.Screen name="週報" component={ReportScreen} /> */}
             <Tab.Screen name="花園" component={GardenScreen} />
             {/* <Tab.Screen name="提醒設定" component={ReminderSettingScreen} /> */}
             <Tab.Screen name="個人" component={ProfileScreen} />
-            <Tab.Screen name="設定" component={SettingScreen} /> 
+            {/* <Tab.Screen name="設定" component={SettingScreen} />  */}
         </Tab.Navigator>
 
     );
