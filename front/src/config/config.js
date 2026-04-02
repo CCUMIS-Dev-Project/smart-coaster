@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001', //記得正式時改成我的render網址
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL, 
 
   ENDPOINTS: {
     HEALTH: '/health',

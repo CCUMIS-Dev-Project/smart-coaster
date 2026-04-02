@@ -11,8 +11,10 @@ app = FastAPI(
 
 # 設定允許存取的來源，在上去render前要改"*"!!
 origins = [
-    "http://localhost:8081", # Expo Web 的預設 Port
-    "http://127.0.0.1:8081",]
+    # "http://localhost:8081", # Expo Web 的預設 Port
+    # "http://127.0.0.1:8081",
+    "*"
+    ]
 
 # Enable CORS for frontend
 app.add_middleware(
