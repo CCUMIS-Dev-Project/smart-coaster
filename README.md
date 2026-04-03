@@ -142,6 +142,17 @@ smart-coaster/
 cd front
 npm install
 ```
+
+* **設定 API 連線位置（重要）**：
+    1. 複製範本：`cp front/.env.example front/.env`
+    2. 編輯 `front/.env`，將 IP 改為你電腦的區域網路 IP：
+    ```env
+    EXPO_PUBLIC_API_URL=http://192.168.x.x:5001
+    ```
+    > ⚠️ **注意**：`.env` 不支援行內註解，請勿在值的後面加 `//` 註解，否則 URL 會失效導致 Network Error。
+    >
+    > 查詢電腦 IP：Windows 執行 `ipconfig`，找「Wi-Fi」或「乙太網路」的 IPv4 位址。
+
 * 若只要測試前端介面，執行：
 ```
 npx expo start
