@@ -36,7 +36,7 @@ export default function App() {
         <StatusBar style="auto" />
         
         <Stack.Navigator 
-          initialRouteName="Login"
+          initialRouteName="MainTabs"  //* DEV: 開發時直接跳主頁，正式上線前改回 Login */
           screenOptions={{ headerShown: false }}
         >
           <Stack.Screen name="Login" component={LoginScreen} />
