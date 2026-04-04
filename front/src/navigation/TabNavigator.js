@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons'; // Expo 內建的圖示庫
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
 
 
@@ -68,8 +69,9 @@ function CupIcon({ focused }) {
 }
 
 function TabBar({ state, descriptors, navigation }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={s.tabBar}>
+    <View style={[s.tabBar, { paddingBottom: insets.bottom + 10 }]}>
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const iconColor = focused ? BLUE : MUTED;
@@ -149,7 +151,7 @@ const MainTabNavigator = () => {
 };
 
 const s = StyleSheet.create({
-  tabBar:        { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#c0cdd8', paddingBottom: 24, paddingTop: 10 },
+  tabBar:        { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#c0cdd8', paddingTop: 10 },
   tabItem:       { flex: 1, alignItems: 'center', gap: 3, position: 'relative' },
   tabLabel:      { fontSize: 11, fontWeight: '800', color: MUTED },
   tabLabelActive:{ color: BLUE },

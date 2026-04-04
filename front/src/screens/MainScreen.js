@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Image,
-  TouchableOpacity, SafeAreaView, Alert, Modal, TextInput,
+  View, Text, StyleSheet, Image, Pressable,
+  TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
   Animated, ScrollView, Dimensions, PanResponder
 } from 'react-native';
+//SafeAreaView from react-native 在 Android 上不處理 status bar。要換成react-native-safe-area-context（Expo 內建）
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import SettingScreen from '../screens/SettingScreen.js';
@@ -21,8 +23,10 @@ const CUP_WIDTH  = 200;
 const WATER_COLOR    = '#5ab4f5';
 const OTHER_COLOR    = '#c8a878';
 const CAFFEINE_COLOR = '#3b1f0a';
-const CIRCLE_SIZE    = 260;
-const CAFF_SIZE      = 110;
+const { width: SCREEN_W } = Dimensions.get('window');
+// 圓圈大小
+const CIRCLE_SIZE = Math.min(240, Math.floor(SCREEN_W * 0.56)); // 依螢幕寬度縮放，最大 240
+const CAFF_SIZE   = Math.min(100, Math.floor(SCREEN_W * 0.22)); // 咖啡因圓依比例縮
 const BASE_CAFFEINE = {
   '水':   0,
   '咖啡': 80,
@@ -47,6 +51,8 @@ const MainScreen = () => {
     } = useApp();
   
     const age = profile?.age || 25;
+    // ── 咖啡因每日建議上限（純前端醫學準則，不需後端 DB）──────────
+    // 12歲以下: 0mg｜12-17: 100mg｜18-64: 400mg｜65+: 300mg
     const MAX_CAFFEINE = age < 12 ? 0 : age < 18 ? 100 : age < 65 ? 400 : 300;
   
     const [drinkType, setDrinkType] = useState('水');
@@ -58,11 +64,13 @@ const MainScreen = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingLog, setEditingLog] = useState(null);
     const [editMl, setEditMl] = useState('');
+    const [editType, setEditType] = useState('水');
+    const insets = useSafeAreaInsets();
 
-    // ── 今日紀錄卡片可拉伸 ────────────────────────────────────────
+    // ── 今日紀錄卡片可拉伸 ──── (高度設定)
     const SCREEN_H = Dimensions.get('window').height;
-    const CARD_COLLAPSED = SCREEN_H * 0.33; // 正常顯示 1/3 頁面（約 5 筆）
-    const CARD_EXPANDED  = SCREEN_H * 0.67; // 展開最多 2/3 頁面
+    const CARD_COLLAPSED = SCREEN_H * 0.26;
+    const CARD_EXPANDED  = SCREEN_H * 0.74;
     const [logExpanded, setLogExpanded] = useState(false);
     const cardHeightAnim = useRef(new Animated.Value(CARD_COLLAPSED)).current;
     // 刪除確認 Modal（替代 Alert.alert，修正 Expo Web onPress 不觸發的 bug）
@@ -131,6 +139,7 @@ const MainScreen = () => {
 
     // 拖曳 handle：往上拖展開，往下拖收合
     const panResponder = useRef(PanResponder.create({
+      onStartShouldSetPanResponder: () => true, // 搶先接管觸控，避免被外層 Pressable 攔截
       onMoveShouldSetPanResponder: (_, { dy }) => Math.abs(dy) > 5,
       onPanResponderRelease: (_, { dy }) => {
         if (dy < -30) {
@@ -150,13 +159,14 @@ const MainScreen = () => {
     function openEdit(log) {
       setEditingLog(log);
       setEditMl(String(log.ml));
+      setEditType(log.type || '水');
       setShowEditModal(true);
     }
 
     function handleEdit() {
       const ml = parseInt(editMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
-      updateLog(editingLog.id, { ml, type: editingLog.type, emoji: '' });
+      updateLog(editingLog.id, { ml, type: editType, emoji: '' });
       setShowEditModal(false);
       setEditingLog(null);
     }
@@ -245,8 +255,8 @@ const MainScreen = () => {
 
 
   return (
-    <View style={s.background}>
-      <SafeAreaView style={[s.container, { paddingBottom: CARD_COLLAPSED }]}>
+    <Pressable style={s.background} onPress={() => setShowDrinkDropdown(false)}>
+      <SafeAreaView style={[s.container, { paddingBottom: CARD_COLLAPSED + 16 }]}>
 
         {/* 下拉選單+連接杯墊 */}
         <View style={s.header}>
@@ -288,7 +298,10 @@ const MainScreen = () => {
         </View>
         {/*下拉選單+連接杯墊區結束 */}
 
-        {/* 圓圈區 */}
+        {/* ── 圓圈區 ──────────────────────────────────────────────────
+             flex:1 讓圓圈群組垂直置中於 header 與 quickGrid 之間的剩餘空間
+             CIRCLE_SIZE / CAFF_SIZE 已依 SCREEN_W 響應式縮放（見頂部常數區） */}
+        <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 12 }}>
         <View style={s.mainRow}>
           <View style={s.waterWrap}>
             <View style={s.circle}>
@@ -311,13 +324,10 @@ const MainScreen = () => {
                 <Text style={s.progressMl}>{totalMl}/{goalMl}ml</Text>
               </View>
             </View>
-            <View style={s.legendRow}>
-              <View style={s.legendItem}><View style={[s.legendDot, { backgroundColor: WATER_COLOR }]} /><Text style={s.legendTxt}>水</Text></View>
-              <View style={s.legendItem}><View style={[s.legendDot, { backgroundColor: OTHER_COLOR }]} /><Text style={s.legendTxt}>其他飲品</Text></View>
-            </View>
           </View>
 
           <View style={s.caffWrap}>
+            {/* 咖啡因小圓圈：液面高度由 Animated 控制 */}
             <View style={s.caffCircle}>
               <Animated.View style={[s.caffLiquid, { height: caffHeight, backgroundColor: CAFFEINE_COLOR }]} />
               <View style={s.caffContent} pointerEvents="none">
@@ -325,15 +335,17 @@ const MainScreen = () => {
                 <Text style={s.caffUnit}>mg</Text>
               </View>
             </View>
-            <Text style={s.caffTitle}>咖啡因</Text>
-<View style={[s.caffStatusBadge, { backgroundColor: caffStatusColor }]}>
-  <Text style={s.caffStatusBadgeTxt}>{caffStatus}</Text>
-</View>
-<Text style={s.caffMax}>上限 {MAX_CAFFEINE}mg</Text>
-</View>
+            {/* 動態攝取狀態 badge（先顯示），再顯示「咖啡因」標題 */}
+            <View style={[s.caffStatusBadge, { backgroundColor: caffStatusColor }]}>
+              <Text style={s.caffStatusBadgeTxt}>{caffStatus}</Text>
+            </View>
+            <Text style={s.caffMax}>咖啡因・上限 {MAX_CAFFEINE}mg</Text>
+          </View>
         </View>
 
-        {/* 快速記錄：點擊自動帶入目前 drinkType，activeOpacity 提供按壓回饋 */}
+        </View>{/* 垂直置中 wrapper 結束 */}
+
+        {/* 快速記錄：SafeAreaView 底部，paddingBottom 確保不被 logCard 遮住 */}
         <View style={s.quickGrid}>
           <TouchableOpacity style={s.qBtn} onPress={() => quickLog(30)} activeOpacity={0.6}>
             <Text style={s.qBtnName}>一口</Text>
@@ -392,8 +404,9 @@ const MainScreen = () => {
 
         <ScrollView style={s.logScroll} showsVerticalScrollIndicator={false}>
           {logs.length === 0 && <Text style={s.emptyTxt}>還沒有記錄，喝水吧！</Text>}
-          {logs.map((log) => (
-            <TouchableOpacity key={log.id}
+          {/* key 用 `id-idx` 組合，防止後端回傳重複 id 時觸發 duplicate key 警告 */}
+          {logs.map((log, idx) => (
+            <TouchableOpacity key={`${log.id}-${idx}`}
               style={[s.logItem, selMode && selected.includes(log.id) && s.logItemSel]}
               onPress={() => selMode ? toggleSelect(log.id) : openEdit(log)}
               onLongPress={() => { setSelMode(true); toggleSelect(log.id); }}
@@ -415,7 +428,7 @@ const MainScreen = () => {
 
       {/* 刪除確認 Modal（修正 Expo Web Alert.alert onPress bug） */}
       <Modal visible={showDeleteConfirm} transparent animationType="fade">
-        <View style={s.modalOverlay}>
+        <View style={[s.modalOverlay, { justifyContent: 'center' }]}>
           <View style={s.confirmCard}>
             <Text style={s.confirmTitle}>確認刪除？</Text>
             <Text style={s.confirmMsg}>將刪除 {selected.length} 筆紀錄，此操作無法復原。</Text>
@@ -437,8 +450,12 @@ const MainScreen = () => {
 
       {/* 新增飲水 Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
         <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
+          <View style={[s.modalCard, { paddingBottom: insets.bottom + 24 }]}>
             <Text style={s.modalTitle}>新增飲水紀錄</Text>
             <Text style={s.modalLbl}>飲品類型</Text>
             <View style={s.drinkTypeRow}>
@@ -468,28 +485,51 @@ const MainScreen = () => {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* 編輯 Modal */}
       <Modal visible={showEditModal} transparent animationType="slide">
-        <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>編輯紀錄</Text>
-            <Text style={s.modalLbl}>毫升數</Text>
-            <TextInput style={s.modalInp} keyboardType="numeric" value={editMl} onChangeText={setEditMl} />
-            <View style={s.modalBtns}>
-              <TouchableOpacity style={s.modalCancel} onPress={() => setShowEditModal(false)}>
-                <Text style={s.modalCancelTxt}>取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.modalConfirm} onPress={handleEdit}>
-                <Text style={s.modalConfirmTxt}>儲存</Text>
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={s.modalOverlay}>
+            <View style={[s.modalCard, { paddingBottom: insets.bottom + 24 }]}>
+              <Text style={s.modalTitle}>編輯紀錄</Text>
+              <Text style={s.modalLbl}>飲品類型</Text>
+              <View style={s.drinkTypeRow}>
+                {['水', '咖啡', '茶'].map(d => (
+                  <TouchableOpacity key={d}
+                    style={[s.drinkChip, editType === d && s.drinkChipSel]}
+                    onPress={() => setEditType(d)} activeOpacity={0.75}>
+                    <View style={[s.chipDot, { backgroundColor: DRINK_COLORS[d] }]} />
+                    <Text style={[s.drinkChipTxt, editType === d && { color: '#3498db' }]}>{d}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={s.modalLbl}>毫升數</Text>
+              <TextInput
+                style={s.modalInp}
+                keyboardType="numeric"
+                value={editMl}
+                onChangeText={setEditMl}
+                autoFocus
+              />
+              <View style={s.modalBtns}>
+                <TouchableOpacity style={s.modalCancel} onPress={() => setShowEditModal(false)}>
+                  <Text style={s.modalCancelTxt}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.modalConfirm} onPress={handleEdit}>
+                  <Text style={s.modalConfirmTxt}>儲存</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
-    </View>
+    </Pressable>
   );
 }
 
@@ -567,7 +607,7 @@ const s = StyleSheet.create({
   liquidContainer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   liquidLayer:     { width: '100%' },
   circleContent:   { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' },
-  cupImage:        { width: 100, height: 100, marginBottom: 2 },
+  cupImage:        { width: CIRCLE_SIZE * 0.4, height: CIRCLE_SIZE * 0.4, marginBottom: 2 },
   progressPct:     { fontSize: 30, fontWeight: '900', color: '#333' },
   progressMl:      { fontSize: 11, color: '#666', fontWeight: '700' },
   legendRow:  { flexDirection: 'row', gap: 16 },
@@ -585,7 +625,7 @@ const s = StyleSheet.create({
   caffStatusBadgeTxt: { fontSize: 11, fontWeight: '900', color: '#fff' },
   caffMax:     { fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: '700' },
   // ── 快速記錄按鈕區（主畫面中間三個快速記錄鍵）──────────────────
-  quickGrid: { flexDirection: 'row', gap: 12, marginBottom: 10, justifyContent: 'center', alignItems: 'center' },
+  quickGrid: { flexDirection: 'row', gap: 12, paddingVertical: 10, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' },
   // 一口 / 一大口：白底圓角方框按鈕，固定寬度不撐滿
   qBtn:     { width: 95, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: '#E1E8EE' },
   qBtnName: { fontSize: 12, fontWeight: '800', color: '#333' },
@@ -593,9 +633,9 @@ const s = StyleSheet.create({
   // ＋ 手動新增：獨立圓圈樣式，不繼承 qBtn，自然寬度
   qBtnPlus: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   // 今日紀錄卡片：高度由 Animated 控制，不用 flex:1
-  logCard:  { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.95)', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 14, overflow: 'hidden', zIndex: 10 },
-  // 拖曳 handle
-  dragHandleWrap: { alignItems: 'center', paddingBottom: 8 },
+  logCard:  { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.95)', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 14, paddingTop: 8, zIndex: 10 },
+  // 拖曳 handle：paddingVertical 放大可點選面積，移除 overflow:hidden 避免向上拖時手勢被截斷
+  dragHandleWrap: { alignItems: 'center', paddingVertical: 14 },
   dragHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#ccc' },
   // 展開時暗化背景（overlay）
   logOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)', zIndex: 6 },
