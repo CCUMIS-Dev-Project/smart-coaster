@@ -162,6 +162,57 @@ const apiService = {
   },
 
 
+  // ── 飲水紀錄 CRUD ────────────────────────────────────────────
+
+  // GET /logs?date=YYYY-MM-DD
+  getLogs: async (date, token) => {
+    try {
+      const response = await apiClient.get('/logs', {
+        params: { date },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // POST /logs
+  postLog: async (payload, token) => {
+    try {
+      const response = await apiClient.post('/logs', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // PATCH /logs/{log_id}
+  patchLog: async (logId, payload, token) => {
+    try {
+      const response = await apiClient.patch(`/logs/${logId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // DELETE /logs/{log_id}
+  deleteLog: async (logId, token) => {
+    try {
+      const response = await apiClient.delete(`/logs/${logId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
   // 獲取 AI 週報
   getWeeklyReport: async (userId) => {
     try {

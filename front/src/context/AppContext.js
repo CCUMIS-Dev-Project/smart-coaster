@@ -47,7 +47,8 @@ export function AppProvider({ children }) {
   });
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
-  const totalMl = logs.reduce((sum, log) => sum + log.ml, 0);
+  // log 欄位對齊後端：{ log_id, type_id, d_volume, record_at, type_name }
+  const totalMl = logs.reduce((sum, log) => sum + (log.d_volume ?? 0), 0);
 
   function completeSetup(data) {
     setProfile(prev => ({ ...prev, ...data }));
@@ -58,32 +59,37 @@ export function AppProvider({ children }) {
     setProfile(prev => ({ ...prev, ...data }));
   }
 
-  function addLog(ml, type, emoji) {
-    const now = new Date();
-    const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-    setLogs(prev => [...prev, { id: Date.now().toString(), time, ml, type, emoji }]);
+  // 樂觀更新：直接插入 local state（Phase B 的 API 呼叫在 MainScreen 做）
+  function addLog(logData) {
+    setLogs(prev => [logData, ...prev]);
   }
 
-  function updateLog(id, updates) {
-    setLogs(prev => prev.map(log => log.id === id ? { ...log, ...updates } : log));
+  function updateLog(logId, updates) {
+    setLogs(prev => prev.map(log => log.log_id === logId ? { ...log, ...updates } : log));
   }
 
-  function deleteLog(id) {
-    setLogs(prev => prev.filter(log => log.id !== id));
+  function deleteLog(logId) {
+    setLogs(prev => prev.filter(log => log.log_id !== logId));
   }
 
-  function deleteLogs(ids) {
-    setLogs(prev => prev.filter(log => !ids.includes(log.id)));
+  function deleteLogs(logIds) {
+    setLogs(prev => prev.filter(log => !logIds.includes(log.log_id)));
   }
 
-  // 當硬體傳來新的喝水量時，計算增量並新增一筆紀錄
+  // 當硬體傳來新的喝水量時，計算增量並新增一筆紀錄（type_id 1 = water）
   function syncHardwareDrink(currentTotal) {
     if (currentTotal > lastHardwareAmount) {
       const diff = currentTotal - lastHardwareAmount;
-      addLog(Math.round(diff), '白開水', ''); // 自動新增紀錄
+      addLog({
+        log_id: `hw-${Date.now()}`,
+        type_id: 1,
+        type_name: 'water',
+        d_volume: Math.round(diff),
+        record_at: new Date().toISOString(),
+        is_auto: true,
+      });
       setLastHardwareAmount(currentTotal);
     } else if (currentTotal < lastHardwareAmount) {
-      // 如果硬體重置了（重開機），同步重置 App 的基準值
       setLastHardwareAmount(currentTotal);
     }
   }

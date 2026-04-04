@@ -12,7 +12,7 @@ import SettingScreen from '../screens/SettingScreen.js';
 import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
 import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
-import { colors, DRINK_TYPES } from '../constants/theme';
+import { colors, DRINK_TYPES, DRINK_BY_ID } from '../constants/theme';
 
 const { blue: BLUE, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
 
@@ -21,28 +21,18 @@ const CUP_HEIGHT = 260;
 const CUP_WIDTH  = 200;
 
 const WATER_COLOR    = '#5ab4f5';
-const OTHER_COLOR    = '#c8a878';
 const CAFFEINE_COLOR = '#3b1f0a';
 const { width: SCREEN_W } = Dimensions.get('window');
 // 圓圈大小
 const CIRCLE_SIZE = Math.min(240, Math.floor(SCREEN_W * 0.56)); // 依螢幕寬度縮放，最大 240
 const CAFF_SIZE   = Math.min(100, Math.floor(SCREEN_W * 0.22)); // 咖啡因圓依比例縮
-const BASE_CAFFEINE = {
-  '水':   0,
-  '咖啡': 80,
-  '茶':   30,
-};
-
-const DRINK_COLORS = {
-  '水':   '#a8d8f0',
-  '咖啡': '#c8a878',
-  '茶':   '#c8e6a0',
-};
 // 常數區 / 顏色 結束
 
 const MainScreen = () => {
-  const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2IiwiZXhwIjoxNzc0ODQ1MjAyfQ.sg3hv2Et8wdUt5FEAthgw9lhluIg0455kibOyd9AvV0"; // 先寫死access_token，待改！！
-  const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken); // 先用testToken，待改！！
+  // TODO [串接 auth flow 時刪除] 改成從 AppContext 或 SecureStore 拿真實 JWT
+  const testToken = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
+  //console.log('[debug] testToken:', testToken ? testToken.slice(0, 20) + '...' : '(empty)');
+  const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken);
 
   const {
       profile, goalMl, totalMl, logs,
@@ -55,7 +45,7 @@ const MainScreen = () => {
     // 12歲以下: 0mg｜12-17: 100mg｜18-64: 400mg｜65+: 300mg
     const MAX_CAFFEINE = age < 12 ? 0 : age < 18 ? 100 : age < 65 ? 400 : 300;
   
-    const [drinkType, setDrinkType] = useState('水');
+    const [drinkType, setDrinkType] = useState(1); // type_id，預設水
     const [showDrinkDropdown, setShowDrinkDropdown] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [addMl, setAddMl] = useState('250');
@@ -64,7 +54,7 @@ const MainScreen = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingLog, setEditingLog] = useState(null);
     const [editMl, setEditMl] = useState('');
-    const [editType, setEditType] = useState('水');
+    const [editType, setEditType] = useState(1); // type_id
     const insets = useSafeAreaInsets();
 
     // ── 今日紀錄卡片可拉伸 ──── (高度設定)
@@ -82,13 +72,13 @@ const MainScreen = () => {
     // const pct = totalMl / Math.max(goalMl, 1);
     const pct = Math.min(totalMl / Math.max(goalMl, 1), 1);
   
-    // 計算咖啡因的函數
-    function getCaffeineMg(type, ml) {
-      const per100 = BASE_CAFFEINE[type] ?? 0;
+    // 計算咖啡因的函數（用 type_id 查 DRINK_BY_ID）
+    function getCaffeineMg(typeId, ml) {
+      const per100 = DRINK_BY_ID[typeId]?.caffeinePer100 ?? 0;
       return Math.round((per100 * ml) / 100);
     }
     // 計算總咖啡因
-    const totalCaffeine = logs.reduce((sum, log) => sum + getCaffeineMg(log.type, log.ml), 0);
+    const totalCaffeine = logs.reduce((sum, log) => sum + getCaffeineMg(log.type_id, log.d_volume), 0);
     const caffPct = MAX_CAFFEINE > 0 ? Math.min(totalCaffeine / MAX_CAFFEINE, 1) : 0;
     const caffAnim = useRef(new Animated.Value(0)).current;
   
@@ -99,9 +89,9 @@ const MainScreen = () => {
     const caffHeight = caffAnim.interpolate({ inputRange: [0, 1], outputRange: [0, CAFF_SIZE] });
   
     const segments = [...logs].reverse().map(log => ({
-      id: log.id,
-      height: Math.max((log.ml / Math.max(goalMl, 1)) * CIRCLE_SIZE, 2),
-      color: DRINK_COLORS[log.type] || WATER_COLOR,
+      id: log.log_id,
+      height: Math.max((log.d_volume / Math.max(goalMl, 1)) * CIRCLE_SIZE, 2),
+      color: DRINK_BY_ID[log.type_id]?.color ?? WATER_COLOR,
     }));
 
     //藍牙區
@@ -119,14 +109,52 @@ const MainScreen = () => {
     };
     //藍牙區結束
 
-    function quickLog(ml) { addLog(ml, drinkType, ''); }
+    // ── Phase C：App 啟動時載入今日紀錄 ──────────────────────
+    useEffect(() => {
+      const today = new Date().toISOString().split('T')[0];
+      apiService.getLogs(today, testToken).then(res => {
+        if (res.success) {
+          // 用 setLogs 直接整批設定（AppContext 的 addLog 是單筆插入，這裡直接呼叫 context setter）
+          res.data.forEach(log => addLog(log)); // 暫用 forEach，Phase C 完整版再優化
+        } else {
+          console.warn('[MainScreen] 載入今日紀錄失敗:', res.error);
+        }
+      });
+    }, []); // 只在 mount 時執行一次
 
-    function handleAddCustom() {
+    // ── Phase B：新增紀錄 ──────────────────────────────────────
+    async function quickLog(ml) {
+      const payload = {
+        type_id: drinkType,
+        d_volume: ml,
+        record_at: new Date().toISOString(),
+        is_auto: false,
+      };
+      const res = await apiService.postLog(payload, testToken);
+      if (res.success) {
+        addLog(res.data);
+      } else {
+        Alert.alert('新增失敗', res.error);
+      }
+    }
+
+    async function handleAddCustom() {
       const ml = parseInt(addMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
-      addLog(ml, drinkType, '');
-      setShowAddModal(false);
-      setAddMl('250');
+      const payload = {
+        type_id: drinkType,
+        d_volume: ml,
+        record_at: new Date().toISOString(),
+        is_auto: false,
+      };
+      const res = await apiService.postLog(payload, testToken);
+      if (res.success) {
+        addLog(res.data);
+        setShowAddModal(false);
+        setAddMl('250');
+      } else {
+        Alert.alert('新增失敗', res.error);
+      }
     }
 
     
@@ -158,22 +186,28 @@ const MainScreen = () => {
 
     function openEdit(log) {
       setEditingLog(log);
-      setEditMl(String(log.ml));
-      setEditType(log.type || '水');
+      setEditMl(String(log.d_volume));
+      setEditType(log.type_id ?? 1);
       setShowEditModal(true);
     }
 
-    function handleEdit() {
+    // Phase E：PATCH /logs/{log_id}
+    async function handleEdit() {
       const ml = parseInt(editMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
-      updateLog(editingLog.id, { ml, type: editType, emoji: '' });
+      const res = await apiService.patchLog(editingLog.log_id, { d_volume: ml, type_id: editType }, testToken);
+      if (res.success) {
+        updateLog(editingLog.log_id, { d_volume: res.data.d_volume, type_id: res.data.type_id, type_name: res.data.type_name });
+      } else {
+        Alert.alert('修改失敗', res.error);
+      }
       setShowEditModal(false);
       setEditingLog(null);
     }
 
 
     const cupImage = profile?.selectedCup?.image || require('../assets/cup_main.png');
-    const dotColor = DRINK_COLORS[drinkType] || WATER_COLOR;
+    const dotColor = DRINK_BY_ID[drinkType]?.color ?? WATER_COLOR;
 
     const caffStatus = totalCaffeine === 0 ? '無攝取'
       : totalCaffeine < MAX_CAFFEINE * 0.5 ? '安全範圍'
@@ -266,25 +300,21 @@ const MainScreen = () => {
               {/*<Text style={s.drinkLabel}>飲品</Text>*/}
               <View style={s.drinkRow}>
                 <View style={[s.drinkDot, { backgroundColor: dotColor }]} />
-                <Text style={s.drinkName}>{drinkType}</Text>
+                <Text style={s.drinkName}>{DRINK_BY_ID[drinkType]?.label ?? '水'}</Text>
                 <Ionicons name={showDrinkDropdown ? "chevron-up" : "chevron-down"} size={18} color="#3498db" style={{ marginLeft: 5 }} />
               </View>
             </TouchableOpacity>
 
             {showDrinkDropdown && (
               <View style={s.dropdown}>
-                {['水', '咖啡', '茶'].map(d => (
-                  <TouchableOpacity key={d} style={s.dropdownItem}
-                    onPress={() => { setDrinkType(d); setShowDrinkDropdown(false); }}>
-                    <View style={[s.drinkDot, { backgroundColor: DRINK_COLORS[d] }]} />
-                    <Text style={[s.dropdownTxt, drinkType === d && s.dropdownTxtSel]}>{d}</Text>
-                    {drinkType === d && <Ionicons name="checkmark" size={15} color="#3498db" />}
+                {DRINK_TYPES.map(d => (
+                  <TouchableOpacity key={d.type_id} style={s.dropdownItem}
+                    onPress={() => { setDrinkType(d.type_id); setShowDrinkDropdown(false); }}>
+                    <View style={[s.drinkDot, { backgroundColor: d.color }]} />
+                    <Text style={[s.dropdownTxt, drinkType === d.type_id && s.dropdownTxtSel]}>{d.label}</Text>
+                    {drinkType === d.type_id && <Ionicons name="checkmark" size={15} color="#3498db" />}
                   </TouchableOpacity>
                 ))}
-                <TouchableOpacity style={[s.dropdownItem, s.dropdownItemPlus]}
-                  onPress={() => setShowDrinkDropdown(false)}>
-                  <Text style={s.dropdownPlus}>＋</Text>
-                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -387,7 +417,7 @@ const MainScreen = () => {
               <>
                 <TouchableOpacity onPress={() => {
                   if (logs.length > 0 && selected.length === logs.length) setSelected([]);
-                  else setSelected(logs.map(l => l.id));
+                  else setSelected(logs.map(l => l.log_id));
                 }}>
                   <Text style={s.logAction}>{logs.length > 0 && selected.length === logs.length ? '取消全選' : '全選'}</Text>
                 </TouchableOpacity>
@@ -405,24 +435,30 @@ const MainScreen = () => {
         <ScrollView style={s.logScroll} showsVerticalScrollIndicator={false}>
           {logs.length === 0 && <Text style={s.emptyTxt}>還沒有記錄，喝水吧！</Text>}
           {/* key 用 `id-idx` 組合，防止後端回傳重複 id 時觸發 duplicate key 警告 */}
-          {logs.map((log, idx) => (
-            <TouchableOpacity key={`${log.id}-${idx}`}
-              style={[s.logItem, selMode && selected.includes(log.id) && s.logItemSel]}
-              onPress={() => selMode ? toggleSelect(log.id) : openEdit(log)}
-              onLongPress={() => { setSelMode(true); toggleSelect(log.id); }}
-              activeOpacity={0.75}>
-              {selMode && (
-                <View style={[s.checkbox, selected.includes(log.id) && s.checkboxSel]}>
-                  {selected.includes(log.id) && <Text style={{ color: '#fff', fontSize: 12 }}>✓</Text>}
+          {logs.map((log, idx) => {
+            const drinkInfo = DRINK_BY_ID[log.type_id];
+            const logTime = log.record_at
+              ? new Date(log.record_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })
+              : '--:--';
+            return (
+              <TouchableOpacity key={`${log.log_id}-${idx}`}
+                style={[s.logItem, selMode && selected.includes(log.log_id) && s.logItemSel]}
+                onPress={() => selMode ? toggleSelect(log.log_id) : openEdit(log)}
+                onLongPress={() => { setSelMode(true); toggleSelect(log.log_id); }}
+                activeOpacity={0.75}>
+                {selMode && (
+                  <View style={[s.checkbox, selected.includes(log.log_id) && s.checkboxSel]}>
+                    {selected.includes(log.log_id) && <Text style={{ color: '#fff', fontSize: 12 }}>✓</Text>}
+                  </View>
+                )}
+                <View style={[s.logDot, { backgroundColor: drinkInfo?.color ?? WATER_COLOR }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.logAmt}>{log.d_volume} ml · {drinkInfo?.label ?? log.type_name}</Text>
+                  <Text style={s.logMeta}>{logTime} · {getCaffeineMg(log.type_id, log.d_volume)}mg 咖啡因</Text>
                 </View>
-              )}
-              <View style={[s.logDot, { backgroundColor: DRINK_COLORS[log.type] || '#5ab4f5' }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.logAmt}>{log.ml} ml · {log.type}</Text>
-                <Text style={s.logMeta}>{log.time} · {getCaffeineMg(log.type, log.ml)}mg 咖啡因</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </Animated.View>
 
@@ -437,8 +473,17 @@ const MainScreen = () => {
                 <Text style={s.modalCancelTxt}>取消</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.modalConfirm, { backgroundColor: '#f87171' }]}
-                onPress={() => {
-                  deleteLogs(selected);
+                onPress={async () => {
+                  // Phase D：逐一打 DELETE API，全部完成後再更新 state
+                  const results = await Promise.all(
+                    selected.map(id => apiService.deleteLog(id, testToken))
+                  );
+                  const failed = results.filter(r => !r.success);
+                  if (failed.length > 0) {
+                    Alert.alert('刪除失敗', `${failed.length} 筆刪除失敗，請重試`);
+                  }
+                  const succeeded = selected.filter((_, i) => results[i].success);
+                  deleteLogs(succeeded);
                   setSelected([]); setSelMode(false); setShowDeleteConfirm(false);
                 }}>
                 <Text style={s.modalConfirmTxt}>刪除</Text>
@@ -459,10 +504,10 @@ const MainScreen = () => {
             <Text style={s.modalTitle}>新增飲水紀錄</Text>
             <Text style={s.modalLbl}>飲品類型</Text>
             <View style={s.drinkTypeRow}>
-              {['水', '咖啡', '茶'].map(d => (
-                <TouchableOpacity key={d} style={[s.drinkChip, drinkType === d && s.drinkChipSel]} onPress={() => setDrinkType(d)} activeOpacity={0.75}>
-                  <View style={[s.chipDot, { backgroundColor: DRINK_COLORS[d] }]} />
-                  <Text style={[s.drinkChipTxt, drinkType === d && { color: '#3498db' }]}>{d}</Text>
+              {DRINK_TYPES.map(d => (
+                <TouchableOpacity key={d.type_id} style={[s.drinkChip, drinkType === d.type_id && s.drinkChipSel]} onPress={() => setDrinkType(d.type_id)} activeOpacity={0.75}>
+                  <View style={[s.chipDot, { backgroundColor: d.color }]} />
+                  <Text style={[s.drinkChipTxt, drinkType === d.type_id && { color: '#3498db' }]}>{d.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -499,12 +544,12 @@ const MainScreen = () => {
               <Text style={s.modalTitle}>編輯紀錄</Text>
               <Text style={s.modalLbl}>飲品類型</Text>
               <View style={s.drinkTypeRow}>
-                {['水', '咖啡', '茶'].map(d => (
-                  <TouchableOpacity key={d}
-                    style={[s.drinkChip, editType === d && s.drinkChipSel]}
-                    onPress={() => setEditType(d)} activeOpacity={0.75}>
-                    <View style={[s.chipDot, { backgroundColor: DRINK_COLORS[d] }]} />
-                    <Text style={[s.drinkChipTxt, editType === d && { color: '#3498db' }]}>{d}</Text>
+                {DRINK_TYPES.map(d => (
+                  <TouchableOpacity key={d.type_id}
+                    style={[s.drinkChip, editType === d.type_id && s.drinkChipSel]}
+                    onPress={() => setEditType(d.type_id)} activeOpacity={0.75}>
+                    <View style={[s.chipDot, { backgroundColor: d.color }]} />
+                    <Text style={[s.drinkChipTxt, editType === d.type_id && { color: '#3498db' }]}>{d.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

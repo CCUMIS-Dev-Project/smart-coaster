@@ -14,14 +14,16 @@ export const colors = {
     border: '#e2eaf2',
   };
   
+  // 對齊後端 drinks 表（type_id, type_name, caff_per_100ml）
   export const DRINK_TYPES = [
-    { label: '白開水', emoji: '💧' },
-    { label: '茶',     emoji: '🍵' },
-    { label: '咖啡',   emoji: '☕' },
-    { label: '果汁',   emoji: '🥤' },
-    { label: '手搖',   emoji: '🧋' },
-    { label: '其他',   emoji: '🧃' },
+    { type_id: 1, key: 'water',  label: '水',   emoji: '💧', color: '#a8d8f0', caffeinePer100: 0  },
+    { type_id: 2, key: 'coffee', label: '咖啡', emoji: '☕', color: '#c8a878', caffeinePer100: 40 },
+    { type_id: 3, key: 'tea',    label: '茶',   emoji: '🍵', color: '#c8e6a0', caffeinePer100: 20 },
   ];
+  // type_id → DRINK_TYPE 物件
+  export const DRINK_BY_ID  = Object.fromEntries(DRINK_TYPES.map(d => [d.type_id, d]));
+  // DB type_name（英文）→ DRINK_TYPE 物件
+  export const DRINK_BY_KEY = Object.fromEntries(DRINK_TYPES.map(d => [d.key, d]));
   
   export const ACTIVITY_LEVELS = [
     { label: '久坐',   key: 'sedentary', rate: 0 },
