@@ -1,8 +1,8 @@
 // src/screens/ReportScreen.js
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Modal, TextInput, Dimensions, KeyboardAvoidingView, Platform
+  SafeAreaView, Modal, TextInput, Dimensions, Keyboard
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -80,6 +80,7 @@ function PlantSVG({ stage, colored }) {
 
 // ── Pie Chart（react-native-svg，互動式——點選扇形或標籤顯示 %）──
 const SW = Dimensions.get('window').width;
+const SH = Dimensions.get('window').height;
 // s.inner padding 16*2=32, statsRow gap 12, 兩卡各佔一半
 const CARD_W   = Math.floor((SW - 32 - 12) / 2);   // 每張卡片精確像素寬
 // 圓餅尺寸：卡片內寬（扣 padding 14*2=28）的 52%
@@ -148,6 +149,12 @@ export default function ReportScreen() {
   const { weekData, goalMl, totalMl } = useApp();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', e => setKbHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // 暫時 hardcode，日後接後端
   const gardenDays   = ['done', 'done', 'done', 'today', 'empty'];
@@ -336,11 +343,11 @@ export default function ReportScreen() {
 
       {/* AI 對話 Modal */}
       <Modal visible={showChat} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={s.chatOverlay}
-          behavior="padding"
-        >
-          <View style={s.chatCard}>
+        <View style={s.chatOverlay}>
+          <View style={[s.chatCard, kbHeight > 0 && {
+            marginBottom: kbHeight,
+            height: SH - kbHeight - (insets.top || 40) - 16,
+          }]}>
             <View style={s.chatTopbar}>
               <Text style={s.chatTitle}>AI 補水助理</Text>
               <TouchableOpacity onPress={() => setShowChat(false)}><Text style={{ fontSize: 24, color: MUTED }}>×</Text></TouchableOpacity>
@@ -358,12 +365,13 @@ export default function ReportScreen() {
               <TouchableOpacity style={s.sendBtn} onPress={sendMessage} activeOpacity={0.8}><Text style={s.sendBtnTxt}>送出</Text></TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
 }
 
+//style
 const s = StyleSheet.create({
   safe:     { flex: 1, backgroundColor: '#f0f7f2' },
   inner:    { padding: 16, paddingTop: 35, paddingBottom: 32, gap: 14 },
