@@ -1,13 +1,14 @@
 // src/screens/GardenScreen.js
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, Modal, TextInput, Animated, Dimensions
 } from 'react-native';
 import Svg, { Rect, Circle, Path, Ellipse, G, Line, Polygon } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors } from '../constants/theme';
+import apiService from '../services/api';
 
 const BLUE = colors.blue, TEXT = colors.text, MUTED = colors.muted;
 const BORDER = colors.border, CARD = colors.card;
@@ -461,10 +462,40 @@ function FlowerInfoModal({ flower, index, onClose }) {
 // ── 主畫面（花園視圖） ───────────────────────────────────
 export default function GardenScreen() {
   const navigation = useNavigation();
-  const [flowers, setFlowers] = useState(FLOWERS_INIT);
+  const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? ''; // TODO [串接 auth flow 時刪除]
+
+  const [flowers, setFlowers]           = useState(FLOWERS_INIT);
+  const [streakCount, setStreakCount]   = useState(0);
   const [showFlowerInfo, setShowFlowerInfo] = useState(false);
   const [selectedFlower, setSelectedFlower] = useState(null);
   const [selectedIndex,  setSelectedIndex]  = useState(0);
+
+  // ── Phase C：每次切換到此頁重新載入 ─────────────────────────
+  useFocusEffect(useCallback(() => {
+    // 取得已解鎖花朵
+    apiService.getGarden(token).then(r => {
+      if (!r.success) { console.warn('[Garden] garden:', r.error); return; }
+      const unlockedIds = new Set(r.data.map(f => f.flower_id));
+      // 找最新解鎖的 flower_id（unlocked_at 最大）
+      const newestId = r.data.reduce((latest, f) =>
+        !latest || f.unlocked_at > latest.unlocked_at ? f : latest, null
+      )?.flower_id;
+
+      setFlowers(FLOWER_DATA.map((f, i) => {
+        const fid = i + 1; // flower_id 從 1 開始
+        return {
+          ...f,
+          unlocked: unlockedIds.has(fid),
+          isNew:    fid === newestId,
+        };
+      }));
+    });
+
+    // 取得 streak 數
+    apiService.getStreaks(token).then(r => {
+      if (r.success) setStreakCount(r.data.current_streak);
+    });
+  }, []));  // ← useCallback 的 [], 再加 ) 關閉 useFocusEffect
 
   function handleGardenFlowerPress(flower, index) {
     setSelectedFlower(flower);
@@ -478,7 +509,7 @@ export default function GardenScreen() {
         flowers={flowers}
         onFlowerPress={handleGardenFlowerPress}
         onClose={() => navigation.navigate('週報')}
-        streak={3}
+        streak={streakCount}
       />
       {showFlowerInfo && selectedFlower && (
         <Modal visible transparent animationType="fade">

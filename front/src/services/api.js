@@ -213,6 +213,56 @@ const apiService = {
     }
   },
 
+  // ── Stats & Rewards ──────────────────────────────────────────
+
+  // GET /stats/weekly
+  getWeeklyStat: async (token) => {
+    try {
+      const response = await apiClient.get('/stats/weekly', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // GET /stats/daily
+  getDailyStat: async (token) => {
+    try {
+      const response = await apiClient.get('/stats/daily', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // GET /rewards/streaks
+  getStreaks: async (token) => {
+    try {
+      const response = await apiClient.get('/rewards/streaks', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // GET /rewards/garden
+  getGarden: async (token) => {
+    try {
+      const response = await apiClient.get('/rewards/garden', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
   // 獲取 AI 週報
   getWeeklyReport: async (userId) => {
     try {

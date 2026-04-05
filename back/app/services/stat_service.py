@@ -6,16 +6,6 @@ from app.schemas.stat import DailyStatResponse, DrinkTypeVolume, DayStat, Weekly
 
 TZ = pytz.timezone("Asia/Taipei")
 
-# 從資料庫拉資料到.py計算(目前一個禮拜資料量不大)
-# 取得當前時間（用最新紀錄錨定）
-def _get_now_anchored(user_id: int) -> datetime:
-    """Return 'now' anchored to the latest log record to avoid timezone drift."""
-    res = supabase.table("drinking_logs").select("record_at").eq("user_id", user_id).order("record_at", desc=True).limit(1).execute()
-    if res.data:
-        latest = res.data[0]["record_at"]
-        return datetime.fromisoformat(latest.replace("Z", "+00:00")).astimezone(TZ)
-    return datetime.now(TZ)
-
 # 通用的飲品分組邏輯
 def _group_by_type(logs: list) -> tuple[list[DrinkTypeVolume], float]:
     """
@@ -38,7 +28,7 @@ def _group_by_type(logs: list) -> tuple[list[DrinkTypeVolume], float]:
 
 # 今日統計
 def get_daily_stat(user_id: int) -> DailyStatResponse:
-    now = _get_now_anchored(user_id)
+    now = datetime.now(TZ)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     goal = get_goal(user_id)
@@ -78,7 +68,7 @@ def get_daily_stat(user_id: int) -> DailyStatResponse:
 
 # 本周統計
 def get_weekly_stat(user_id: int) -> WeeklyStatResponse:
-    now = _get_now_anchored(user_id)
+    now = datetime.now(TZ)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # 找本周日（Python weekday: 週一=0, 週日=6）

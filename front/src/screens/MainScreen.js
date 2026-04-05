@@ -111,7 +111,8 @@ const MainScreen = () => {
 
     // ── Phase C：App 啟動時載入今日紀錄 ──────────────────────
     useEffect(() => {
-      const today = new Date().toISOString().split('T')[0];
+      const _d = new Date();
+      const today = [_d.getFullYear(), String(_d.getMonth()+1).padStart(2,'0'), String(_d.getDate()).padStart(2,'0')].join('-');
       apiService.getLogs(today, testToken).then(res => {
         if (res.success) {
           // 用 setLogs 直接整批設定（AppContext 的 addLog 是單筆插入，這裡直接呼叫 context setter）

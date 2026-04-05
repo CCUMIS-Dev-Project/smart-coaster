@@ -1,13 +1,14 @@
 // src/screens/ReportScreen.js
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, Modal, TextInput, Dimensions, Keyboard
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
-import { colors } from '../constants/theme';
+import { colors, DRINK_BY_ID } from '../constants/theme';
+import apiService from '../services/api';
 import Svg, { Rect, Circle, Path, Ellipse } from 'react-native-svg';
 
 const BLUE = colors.blue, TEXT = colors.text, MUTED = colors.muted;
@@ -146,20 +147,12 @@ function PieChart({ data }) {
 }
 
 export default function ReportScreen() {
-  const { weekData, goalMl, totalMl } = useApp();
+  const { goalMl, totalMl } = useApp();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? ''; // TODO [串接 auth flow 時刪除]
+
   const [kbHeight, setKbHeight] = useState(0);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', e => setKbHeight(e.endCoordinates.height));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
-
-  // 暫時 hardcode，日後接後端
-  const gardenDays   = ['done', 'done', 'done', 'today', 'empty'];
-  const gardenStreak = 3;
-
   const [showWeekCompare, setShowWeekCompare] = useState(false);
   const [showChat,  setShowChat]  = useState(false);
   const [messages,  setMessages]  = useState([{ role: 'assistant', content: '你好！我是你的補水 AI 助理，有任何補水問題都可以問我' }]);
@@ -167,27 +160,87 @@ export default function ReportScreen() {
   const [loading, setLoading] = useState(false);
   const chatScrollRef = useRef(null);
 
-  const prevWeek = [1400, 1600, 1200, 1800, 1500, 2000, 1700];
-  const thisWeekMl = weekData.map(d => d.ml);
-  const prevAvg = Math.round(prevWeek.reduce((a, b) => a + b, 0) / prevWeek.length);
-  const thisAvg = Math.round(thisWeekMl.reduce((a, b) => a + b, 0) / thisWeekMl.length);
-  const diffPct = prevAvg > 0 ? Math.round(((thisAvg - prevAvg) / prevAvg) * 100) : 0;
-  const isUp    = diffPct >= 0;
-  const maxV    = Math.max(...weekData.map(d => d.ml), goalMl, 100);
+  // ── API 資料 state ───────────────────────────────────────────
+  const [weeklyStat, setWeeklyStat]   = useState(null);
+  const [dailyStat,  setDailyStat]    = useState(null);
+  const [streak,     setStreak]       = useState(null);
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', e => setKbHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
+  // ── Phase A/B：每次切換到此頁重新載入 ───────────────────────
+  useFocusEffect(useCallback(() => {
+    apiService.getWeeklyStat(token).then(r => { if (r.success) setWeeklyStat(r.data); else console.warn('[Report] weekly:', r.error); });
+    apiService.getDailyStat(token).then(r => { if (r.success) setDailyStat(r.data); else console.warn('[Report] daily:', r.error); });
+    apiService.getStreaks(token).then(r => { if (r.success) setStreak(r.data); else console.warn('[Report] streak:', r.error); });
+  }, []));
+
+  // ── 衍生資料（API 回來後計算）────────────────────────────────
+  const DAY_ZH = ['日', '一', '二', '三', '四', '五', '六'];
+  // 用 device 本地時間（非 UTC），避免和後端台北時間的日期對不上
+  const _now = new Date();
+  const todayStr = [
+    _now.getFullYear(),
+    String(_now.getMonth() + 1).padStart(2, '0'),
+    String(_now.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  // 直方圖資料：7天，未來顯示 null
+  const barData = weeklyStat?.days?.map(d => ({
+    day: DAY_ZH[new Date(d.date + 'T12:00:00').getDay()],
+    ml:  d.date > todayStr ? null : d.total_ml,
+    hit: d.total_ml >= (dailyStat?.daily_target ?? goalMl),
+  })) ?? [];
+
+  const thisAvg  = Math.round(weeklyStat?.avg_this_week ?? 0);
+  const prevAvg  = Math.round(weeklyStat?.avg_last_week ?? 0);
+  const diffPct  = weeklyStat?.change_pct ?? 0;
+  const isUp     = diffPct >= 0;
+  const maxV     = Math.max(...barData.map(d => d.ml ?? 0), dailyStat?.daily_target ?? goalMl, 100);
+
+  // 圓餅圖：by_type → label + color（用 DRINK_BY_ID mapping）
+  const drinkBreakdown = (weeklyStat?.by_type ?? []).map(t => ({
+    label: DRINK_BY_ID[t.type_id]?.label ?? t.type_name,
+    value: t.volume_ml,
+    color: DRINK_BY_ID[t.type_id]?.color ?? '#aaa',
+  }));
+
+  // 本週日平均咖啡因：只除「到今天為止」的天數，不除未來天
+  const pastDaysCount = Math.max(1, (weeklyStat?.days ?? []).filter(d => d.date <= todayStr).length);
+  const weekCaffeineMg = Math.round(
+    (weeklyStat?.by_type ?? []).reduce((sum, t) => {
+      const per100 = DRINK_BY_ID[t.type_id]?.caffeinePer100 ?? 0;
+      return sum + (t.volume_ml * per100 / 100);
+    }, 0) / pastDaysCount
+  );
+  const caffeineLimitMg = 400;
+
+  // 今日進度（優先用 dailyStat，fallback AppContext）
+  const todayTotal  = dailyStat?.total_ml  ?? totalMl;
+  const todayTarget = dailyStat?.daily_target ?? goalMl;
+  const todayPct    = Math.min(100, Math.round((todayTotal / Math.max(todayTarget, 1)) * 100));
+
+  // ── Phase B：streak → gardenDays ─────────────────────────────
+  const gardenStreak = streak?.current_streak ?? 0;
+  const gardenDays = (() => {
+    if (!streak) return Array(5).fill('empty');
+    const achievedToday = streak.last_achieved === todayStr;
+    const posInCycle = gardenStreak % 5;
+    return Array(5).fill('empty').map((_, i) => {
+      if (achievedToday) {
+        const done = posInCycle === 0 ? 5 : posInCycle;
+        return i < done ? 'done' : 'empty';
+      } else {
+        if (i < posInCycle) return 'done';
+        if (i === posInCycle) return 'today';
+        return 'empty';
+      }
+    });
+  })();
   const doneCount = gardenDays.filter(d => d === 'done').length;
-  const todayPct  = Math.min(100, Math.round((totalMl / goalMl) * 100));
-
-  // TODO: 接後端 GET /api/weekly-drinks → [{ type:'水'|'咖啡'|'茶', ml:number }]
-  const drinkBreakdown = [
-    { label: '水',   value: 9800, color: '#5ab4f5' },
-    { label: '咖啡', value: 2100, color: '#c97b3a' },
-    { label: '茶',   value: 1400, color: '#7bc47b' },
-  ];
-  const drinkTotal = drinkBreakdown.reduce((a, b) => a + b.value, 0);
-
-  // TODO: 接後端 GET /api/weekly-caffeine → { totalMg:number }
-  const weekCaffeineMg  = 285;  // 本週日平均咖啡因 mg
-  const caffeineLimitMg = 400;  // 成人每日建議上限（醫學準則）
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -233,7 +286,7 @@ export default function ReportScreen() {
           {/* gardenDays 'done'/'today'/'empty' 決定 colored（彩色/灰色） */}
           <View style={s.stagesRow}>
             {gardenDays.map((status, i) => {
-              const colored = status === 'done' || status === 'today';
+              const colored = status === 'done'; // 只有達標才彩色，today 未達標前維持灰色
               return (
                 <View key={i} style={s.stage}>
                   <PlantSVG stage={i + 1} colored={colored} />
@@ -249,11 +302,11 @@ export default function ReportScreen() {
             <View style={s.daysLeft}>
               {doneCount >= 5
                 ? <Text style={s.daysLeftTxt}>開花了！</Text>
-                : <><Text style={s.daysLeftNum}>{5 - doneCount}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
+                : <><Text style={s.daysLeftNum}>{streak?.days_until_next_flower ?? 5}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
               }
             </View>
             <View style={{ flex: 1 }}>
-              <View style={s.progTopG}><Text style={s.progLblG}>今日水量</Text><Text style={s.progValG}>{totalMl}/{goalMl}ml</Text></View>
+              <View style={s.progTopG}><Text style={s.progLblG}>今日水量</Text><Text style={s.progValG}>{todayTotal}/{todayTarget}ml</Text></View>
               <View style={s.progBarG}><View style={[s.progFillG, { width: `${todayPct}%` }]} /></View>
             </View>
           </View>
@@ -268,13 +321,16 @@ export default function ReportScreen() {
             </TouchableOpacity>
           </View>
           <View style={s.histRow}>
-            {weekData.map((d, i) => {
-              const barH = Math.round((d.ml / maxV) * 80), hit = d.ml >= goalMl;
+            {barData.map((d, i) => {
+              const ml = d.ml;
+              const barH = ml != null ? Math.round((ml / maxV) * 80) : 0;
               return (
-                <View key={d.day} style={s.histDay}>
-                  <View style={s.histBarWrap}><View style={[s.histBarFill, { height: Math.max(barH, 3), backgroundColor: hit ? GREEN : '#f87171' }]} /></View>
+                <View key={i} style={s.histDay}>
+                  <View style={s.histBarWrap}>
+                    {ml != null && <View style={[s.histBarFill, { height: Math.max(barH, 3), backgroundColor: d.hit ? GREEN : '#f87171' }]} />}
+                  </View>
                   <Text style={s.histDayLbl}>{d.day}</Text>
-                  <Text style={s.histMl}>{d.ml >= 1000 ? `${(d.ml / 1000).toFixed(1)}k` : d.ml || '-'}</Text>
+                  <Text style={s.histMl}>{ml == null ? '-' : ml >= 1000 ? `${(ml / 1000).toFixed(1)}k` : ml || '-'}</Text>
                 </View>
               );
             })}
@@ -316,7 +372,7 @@ export default function ReportScreen() {
           </View>
           <Text style={s.aiText}>
             {isUp ? `你這週的補水表現進步了！平均 ${thisAvg}ml，比上週提升 ${Math.abs(diffPct)}%。` : `這週補水量比上週減少了 ${Math.abs(diffPct)}%，平均 ${thisAvg}ml。`}
-            {thisAvg < goalMl ? `每天再多補充約 ${goalMl - thisAvg}ml 就能達標！建議在下午 2 點設個提醒。` : `持續保持，你已經連續 ${gardenStreak} 天達標了！`}
+            {thisAvg < (todayTarget) ? `每天再多補充約 ${todayTarget - thisAvg}ml 就能達標！建議在下午 2 點設個提醒。` : `持續保持，你已經連續 ${gardenStreak} 天達標了！`}
           </Text>
         </View>
 
@@ -434,10 +490,10 @@ const s = StyleSheet.create({
   compareRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   compareCol:   { flex: 1, alignItems: 'center', gap: 4 },
   compareColLbl: { fontSize: 12, color: MUTED, fontWeight: '800' },
-  compareColVal: { fontSize: 28, fontWeight: '900', color: TEXT },
-  compareColUnit: { fontSize: 14, color: MUTED },
-  compareArrow:  { paddingHorizontal: 12 },
-  compareArrowTxt: { fontSize: 22, fontWeight: '900' },
+  compareColVal: { fontSize: 22, fontWeight: '900', color: TEXT },
+  compareColUnit: { fontSize: 13, color: MUTED },
+  compareArrow:  { width: 90, alignItems: 'center' },
+  compareArrowTxt: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
   compareDesc:   { fontSize: 13, color: '#4a6a84', textAlign: 'left', lineHeight: 20 },
   compareClose:  { backgroundColor: BLUE, paddingVertical: 13, borderRadius: 14, alignItems: 'center' },
   compareCloseTxt: { color: '#fff', fontWeight: '900', fontSize: 15 },
