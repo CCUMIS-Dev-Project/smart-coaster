@@ -1,6 +1,9 @@
 from app.services.supabase_service import supabase
 from postgrest.exceptions import APIError
 from datetime import datetime, timezone, date, timedelta
+import pytz
+
+TZ = pytz.timezone("Asia/Taipei")
 
 TABLE = "drinking_logs"
 
@@ -59,9 +62,10 @@ def get_logs(user_id: int, date_filter: date | None = None) -> list:
         .order("record_at", desc=True)
     )
     if date_filter:
-        day_start = f"{date_filter}T00:00:00+00:00"
-        day_end = f"{date_filter + timedelta(days=1)}T00:00:00+00:00"
-        query = query.gte("record_at", day_start).lt("record_at", day_end)
+        # 用台北時區邊界，避免 UTC 邊界造成凌晨 0~8 點紀錄漏查
+        day_start = TZ.localize(datetime(date_filter.year, date_filter.month, date_filter.day, 0, 0, 0))
+        day_end = day_start + timedelta(days=1)
+        query = query.gte("record_at", day_start.isoformat()).lt("record_at", day_end.isoformat())
     results= query.execute().data
     # 巢狀攤平，{ "drinks": { "type_name": "水" } }
     for row in results:
