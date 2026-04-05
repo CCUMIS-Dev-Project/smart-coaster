@@ -5,6 +5,7 @@ import {
   SafeAreaView, Modal, TextInput, Animated, Dimensions
 } from 'react-native';
 import Svg, { Rect, Circle, Path, Ellipse, G, Line, Polygon } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors } from '../constants/theme';
 
@@ -125,7 +126,7 @@ function Flower2({ size = 40, colored }) {
 }
 
 // 櫻花：五片心形缺口花瓣
-function Flower3({ size = 40, colored }) {
+export function Flower3({ size = 40, colored }) {
   const c = colored;
   return (
     <Svg width={size} height={size} viewBox="0 0 80 80">
@@ -321,90 +322,32 @@ function Flower8({ size = 40, colored }) {
 const FLOWER_COMPONENTS = [Flower1,Flower2,Flower3,Flower4,Flower5,Flower6,Flower7,Flower8];
 const FLOWERS_INIT = FLOWER_DATA.map((f,i)=>({ ...f, unlocked: i<2, isNew: i===1 }));
 
-// ── 植物 SVG ────────────────────────────────────────────
-function PlantSVG({ stage, colored }) {
-  const c = colored;
-  const green1 = c?'#7ec860':'#ccc', green2=c?'#9adc78':'#ddd', green3=c?'#6bb850':'#bbb';
-  const floral=c?'#f4a0c0':'#ddd', stem=c?'#5a9e50':'#aaa';
-  if(stage===1) return(
-    <Svg width={24} height={28} viewBox="0 0 28 32">
-      <Ellipse cx="14" cy="28" rx="8" ry="3" fill="#8B6914" opacity={0.2}/>
-      <Rect x="12.5" y="14" width="3" height="14" rx="1.5" fill={stem}/>
-      <Ellipse cx="14" cy="12" rx="6" ry="6" fill={green1}/>
-    </Svg>
-  );
-  if(stage===2) return(
-    <Svg width={29} height={40} viewBox="0 0 34 46">
-      <Ellipse cx="17" cy="43" rx="10" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="15.5" y="18" width="3" height="25" rx="1.5" fill={stem}/>
-      <Ellipse cx="17" cy="15" rx="7" ry="7" fill={green2}/>
-    </Svg>
-  );
-  if(stage===3) return(
-    <Svg width={33} height={52} viewBox="0 0 38 58">
-      <Ellipse cx="19" cy="55" rx="11" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="17.5" y="24" width="3" height="31" rx="1.5" fill={stem}/>
-      <Path d="M19 50 C8 45 5 34 15 36 C20 37 19 50 19 50Z" fill={green3}/>
-      <Path d="M19 50 C30 45 33 34 23 36 C18 37 19 50 19 50Z" fill={green1}/>
-      <Ellipse cx="19" cy="20" rx="8" ry="8" fill={green2}/>
-    </Svg>
-  );
-  if(stage===4) return(
-    <Svg width={37} height={62} viewBox="0 0 42 70">
-      <Ellipse cx="21" cy="67" rx="12" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="19.5" y="30" width="3" height="37" rx="1.5" fill={stem}/>
-      <Path d="M21 56 C10 51 8 41 17 42 C21 43 21 56 21 56Z" fill={green3}/>
-      <Path d="M21 56 C32 51 34 41 25 42 C21 43 21 56 21 56Z" fill={green1}/>
-      <Rect x="19" y="16" width="4" height="12" rx="2" fill={stem}/>
-      <Ellipse cx="21" cy="16" rx="6" ry="9" fill={floral}/>
-    </Svg>
-  );
-  return(
-    <Svg width={42} height={72} viewBox="0 0 48 80">
-      <Ellipse cx="24" cy="77" rx="13" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="22.5" y="38" width="3" height="39" rx="1.5" fill={stem}/>
-      <Path d="M24 64 C12 59 10 48 20 49 C24 50 24 64 24 64Z" fill={green3}/>
-      <Path d="M24 64 C36 59 38 48 28 49 C24 50 24 64 24 64Z" fill={green1}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" fill={c?'#ff9ab8':'#ddd'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(60 24 24)" fill={c?'#ffb4cc':'#eee'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(120 24 24)" fill={c?'#ff9ab8':'#ddd'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(180 24 24)" fill={c?'#ffb4cc':'#eee'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(240 24 24)" fill={c?'#ff9ab8':'#ddd'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(300 24 24)" fill={c?'#ffb4cc':'#eee'}/>
-      <Circle cx="24" cy="24" r="8" fill={c?'#ffe066':'#eee'}/>
-      <Circle cx="24" cy="24" r="5" fill={c?'#ffd040':'#e0e0e0'}/>
-      <Circle cx="22" cy="23" r="1.2" fill="#7a4a10"/>
-      <Circle cx="26" cy="23" r="1.2" fill="#7a4a10"/>
-      <Path d="M21.5 25.5 Q24 28 26.5 25.5" stroke="#7a4a10" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-    </Svg>
-  );
-}
 
 // ── 全螢幕花園場景 ────────────────────────────────────────
-function GardenScene({ flowers, onFlowerPress, onClose }) {
+function GardenScene({ flowers, onFlowerPress, onClose, streak = 0 }) {
   const stemHeights = [90, 110, 80, 100, 95, 115, 85, 105];
   const unlockedCount = flowers.filter(f=>f.unlocked).length;
 
   return (
     <View style={gs.container}>
       <View style={gs.sky}>
-      <Svg width={120} height={120} style={{ position:'absolute', top:24, right:6 }}>
+      <Svg width={120} height={120} style={{ position:'absolute', top:72, right:6 }}>
       {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i)=>{
   const rad = a * Math.PI / 180;
-  return <Line key={i} 
+  return <Line key={i}
   x1={60+26*Math.cos(rad)} y1={60+26*Math.sin(rad)}
   x2={60+42*Math.cos(rad)} y2={60+42*Math.sin(rad)}
     stroke="#FFD700" strokeWidth="3.5" strokeLinecap="round" />;
 })}
 <Circle cx="60" cy="60" r="24" fill="#FFD700" />
 </Svg>
-<Svg width={90} height={40} style={{ position:'absolute', top:36, left:30 }}>
+<Svg width={90} height={40} style={{ position:'absolute', top:96, left:30 }}>
   <Circle cx="20" cy="28" r="14" fill="#fff" opacity={0.92}/>
   <Circle cx="40" cy="20" r="18" fill="#fff" opacity={0.92}/>
   <Circle cx="62" cy="26" r="14" fill="#fff" opacity={0.92}/>
   <Circle cx="76" cy="30" r="10" fill="#fff" opacity={0.92}/>
 </Svg>
-<Svg width={80} height={36} style={{ position:'absolute', top:70, right:160 }}>
+<Svg width={80} height={36} style={{ position:'absolute', top:126, right:160 }}>
   <Circle cx="16" cy="22" r="12" fill="#fff" opacity={0.88}/>
   <Circle cx="32" cy="16" r="15" fill="#fff" opacity={0.88}/>
   <Circle cx="52" cy="20" r="12" fill="#fff" opacity={0.88}/>
@@ -412,11 +355,15 @@ function GardenScene({ flowers, onFlowerPress, onClose }) {
         <View style={gs.titleBar}>
           <View>
             <Text style={gs.titleTxt}>我的花園</Text>
-            <Text style={gs.titleSub}>已收集 {unlockedCount} / {flowers.length} 朵</Text>
+            <View style={gs.streakBadge}>
+              <Text style={gs.streakBadgeTxt}>已連續達標 {streak} 天！</Text>
+            </View>
           </View>
-          <TouchableOpacity onPress={onClose} style={gs.closeBtn}>
-            <Text style={gs.closeTxt}>×</Text>
-          </TouchableOpacity>
+          {onClose != null && (
+            <TouchableOpacity onPress={onClose} style={gs.closeBtn}>
+              <Text style={gs.closeTxt}>×</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -445,7 +392,7 @@ function GardenScene({ flowers, onFlowerPress, onClose }) {
 
       {/* 花朵圖鑑橫向滑動 */}
       <View style={gs.encyclopediaWrap}>
-        <Text style={gs.encyclopediaTitle}>花朵圖鑑</Text>
+        <Text style={gs.encyclopediaTitle}>花朵圖鑑 ({unlockedCount}/{flowers.length}朵)</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={gs.encyclopediaContent}>
           {flowers.map((f, i) => {
@@ -511,203 +458,34 @@ function FlowerInfoModal({ flower, index, onClose }) {
   );
 }
 
-// ── 主畫面 ───────────────────────────────────────────────
+// ── 主畫面（花園視圖） ───────────────────────────────────
 export default function GardenScreen() {
-  const { weekData, goalMl, totalMl } = useApp();
-  const gardenDays   = ['done','done','done','today','empty'];
-  const gardenStreak = 3;
+  const navigation = useNavigation();
   const [flowers, setFlowers] = useState(FLOWERS_INIT);
-  const [showGarden,    setShowGarden]    = useState(false);
-  const [showFlowerInfo,setShowFlowerInfo]= useState(false);
-  const [showUnlock,    setShowUnlock]    = useState(false);
-  const [selectedFlower,setSelectedFlower]= useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [showChat,  setShowChat]  = useState(false);
-  const [messages,  setMessages]  = useState([{ role:'assistant', content:'你好！我是你的補水 AI 助理，有任何補水問題都可以問我' }]);
-  const [input,   setInput]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showWeekCompare, setShowWeekCompare] = useState(false);
-  const chatScrollRef = useRef(null);
+  const [showFlowerInfo, setShowFlowerInfo] = useState(false);
+  const [selectedFlower, setSelectedFlower] = useState(null);
+  const [selectedIndex,  setSelectedIndex]  = useState(0);
 
-  const prevWeek = [1400,1600,1200,1800,1500,2000,1700];
-  const thisWeekMl = weekData.map(d=>d.ml);
-  const prevAvg = Math.round(prevWeek.reduce((a,b)=>a+b,0)/prevWeek.length);
-  const thisAvg = Math.round(thisWeekMl.reduce((a,b)=>a+b,0)/thisWeekMl.length);
-  const diffPct = prevAvg>0 ? Math.round(((thisAvg-prevAvg)/prevAvg)*100) : 0;
-  const isUp    = diffPct>=0;
-  const maxV    = Math.max(...weekData.map(d=>d.ml), goalMl, 100);
-  const doneCount     = gardenDays.filter(d=>d==='done').length;
-  const todayPct      = Math.min(100, Math.round((totalMl/goalMl)*100));
-
-  function handleFlowerPress(flower, index) { setSelectedFlower(flower); setSelectedIndex(index); setShowFlowerInfo(true); }
-  function handleGardenFlowerPress(flower, index) { setSelectedFlower(flower); setSelectedIndex(index); setShowFlowerInfo(true); }
-
-  async function sendMessage() {
-    if(!input.trim()||loading) return;
-    const userMsg = {role:'user', content:input.trim()};
-    const newMsgs = [...messages, userMsg];
-    setMessages(newMsgs); setInput(''); setLoading(true);
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_API_KEY}`},
-        body: JSON.stringify({ model:'llama3-8b-8192', messages:[{role:'system',content:'你是一個專業的補水健康助理，用繁體中文回答，保持簡短友善，每次回答不超過100字。'},...newMsgs], max_tokens:300 }),
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || '抱歉，我現在無法回答。';
-      setMessages(prev=>[...prev,{role:'assistant',content:reply}]);
-    } catch { setMessages(prev=>[...prev,{role:'assistant',content:'連線失敗，請稍後再試。'}]); }
-    setLoading(false);
+  function handleGardenFlowerPress(flower, index) {
+    setSelectedFlower(flower);
+    setSelectedIndex(index);
+    setShowFlowerInfo(true);
   }
 
-  const DAY_LABELS = ['第1天','第2天','第3天','第4天','第5天'];
-  const DOT_COLOR  = {done:'#5ecb6b',today:BLUE,fail:'#f87171',empty:'#dde8de'};
-  const DOT_LABEL  = {done:'✓',today:'▶',fail:'✕',empty:''};
-
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.head}>
-        <View>
-          <Text style={s.title}>我的花園</Text>
-          <Text style={s.subtitle}>連續5天達成目標飲水量，就可以綻放一朵花！</Text>
-        </View>
-        <TouchableOpacity style={s.gardenEntryBtn} onPress={() => setShowGarden(true)} activeOpacity={0.85}>
-          <Svg width={44} height={44} viewBox="0 0 80 80">
-            {[0,60,120,180,240,300].map((a,i)=>(<Ellipse key={i} cx="40" cy="16" rx="7" ry="13" fill={i%2===0?'#ff9ab8':'#ffb4cc'} transform={`rotate(${a} 40 40)`} />))}
-            <Circle cx="40" cy="40" r="12" fill="#ffe066" />
-            <Circle cx="40" cy="40" r="8" fill="#ffd040" />
-          </Svg>
-          <Text style={s.gardenEntryTxt}>花園</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
-
-        <View style={s.plantCard}>
-          <View style={s.plantCardBg}/>
-          <Text style={s.plantCardTitle}>本週成長進度</Text>
-          <View style={s.stagesRow}>
-            {gardenDays.map((status,i)=>{
-              const colored = status==='done'||status==='today';
-              return(
-                <View key={i} style={s.stage}>
-                  <PlantSVG stage={i+1} colored={colored}/>
-                  <View style={[s.stageDot,{backgroundColor:DOT_COLOR[status]||'#dde8de'}]}>
-                    <Text style={s.stageDotTxt}>{DOT_LABEL[status]}</Text>
-                  </View>
-                  <Text style={s.stageDay}>{DAY_LABELS[i]}</Text>
-                </View>
-              );
-            })}
-          </View>
-          <View style={s.progInfo}>
-            <View style={s.daysLeft}>
-              {doneCount>=5
-                ? <Text style={s.daysLeftTxt}>開花了！</Text>
-                : <><Text style={s.daysLeftNum}>{5-doneCount}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
-              }
-            </View>
-            <View style={{flex:1}}>
-              <View style={s.progTopG}><Text style={s.progLblG}>今日水量</Text><Text style={s.progValG}>{totalMl}/{goalMl}ml</Text></View>
-              <View style={s.progBarG}><View style={[s.progFillG,{width:`${todayPct}%`}]}/></View>
-            </View>
-          </View>
-        </View>
-
-        <View style={s.histCard}>
-          <View style={s.histHeader}>
-            <Text style={s.histTitle}>本週每日記錄</Text>
-            <View style={{flexDirection:'row', gap:8, alignItems:'center'}}>
-              <View style={s.streakBadge}><Text style={s.streakLbl}>已連續達標{gardenStreak}天！</Text></View>
-              <TouchableOpacity style={[s.weekBtn,isUp?s.weekBtnUp:s.weekBtnDown]} onPress={()=>setShowWeekCompare(true)} activeOpacity={0.8}>
-                <Text style={[s.weekBtnTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>{isUp?'↑':'↓'} {Math.abs(diffPct)}% vs 上週</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={s.histRow}>
-            {weekData.map((d,i)=>{
-              const barH=Math.round((d.ml/maxV)*80), hit=d.ml>=goalMl;
-              return(
-                <View key={d.day} style={s.histDay}>
-                  <View style={{width:20,height:20}}>{hit ? <Flower3 size={20} colored /> : <PlantSVG stage={d.ml>goalMl*0.5?2:1} colored={d.ml>0} />}</View>
-                  <View style={s.histBarWrap}><View style={[s.histBarFill,{height:Math.max(barH,3),backgroundColor:hit?GREEN:'#f87171'}]}/></View>
-                  <Text style={s.histDayLbl}>{d.day}</Text>
-                  <Text style={s.histMl}>{d.ml>=1000?`${(d.ml/1000).toFixed(1)}k`:d.ml||'-'}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={s.aiCard}>
-          <View style={s.aiHeader}>
-            <Text style={s.aiTitle}>AI 改善建議</Text>
-            <TouchableOpacity style={s.chatBtn} onPress={()=>setShowChat(true)} activeOpacity={0.8}>
-              <Text style={s.chatBtnTxt}>對話</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={s.aiText}>
-            {isUp ? `你這週的補水表現進步了！平均 ${thisAvg}ml，比上週提升 ${Math.abs(diffPct)}%。` : `這週補水量比上週減少了 ${Math.abs(diffPct)}%，平均 ${thisAvg}ml。`}
-            {thisAvg<goalMl ? `每天再多補充約 ${goalMl-thisAvg}ml 就能達標！建議在下午 2 點設個提醒。` : `持續保持，你已經連續 ${gardenStreak} 天達標了！`}
-          </Text>
-        </View>
-
-        <View style={{height:20}}/>
-      </ScrollView>
-
-      <Modal visible={showGarden} animationType="slide">
-        <GardenScene flowers={flowers} onFlowerPress={handleGardenFlowerPress} onClose={()=>setShowGarden(false)} />
-        {showFlowerInfo && selectedFlower && (
-          <FlowerInfoModal flower={selectedFlower} index={selectedIndex} onClose={()=>setShowFlowerInfo(false)} />
-        )}
-      </Modal>
-
-      {showFlowerInfo && !showGarden && selectedFlower && (
+    <View style={{ flex: 1 }}>
+      <GardenScene
+        flowers={flowers}
+        onFlowerPress={handleGardenFlowerPress}
+        onClose={() => navigation.navigate('週報')}
+        streak={3}
+      />
+      {showFlowerInfo && selectedFlower && (
         <Modal visible transparent animationType="fade">
-          <FlowerInfoModal flower={selectedFlower} index={selectedIndex} onClose={()=>setShowFlowerInfo(false)} />
+          <FlowerInfoModal flower={selectedFlower} index={selectedIndex} onClose={() => setShowFlowerInfo(false)} />
         </Modal>
       )}
-
-      {showUnlock && selectedFlower && (
-        <Modal visible transparent animationType="fade">
-          <UnlockAnimation flower={selectedFlower} index={selectedIndex} onClose={()=>{ setShowUnlock(false); setShowGarden(true); }} />
-        </Modal>
-      )}
-
-      <Modal visible={showWeekCompare} transparent animationType="fade">
-        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={()=>setShowWeekCompare(false)}>
-          <View style={s.compareModal}>
-            <Text style={s.compareModalTitle}>週平均比較</Text>
-            <View style={s.compareRow}>
-              <View style={s.compareCol}><Text style={s.compareColLbl}>上週平均</Text><Text style={s.compareColVal}>{prevAvg}<Text style={s.compareColUnit}>ml</Text></Text></View>
-              <View style={s.compareArrow}><Text style={[s.compareArrowTxt,isUp?{color:'#16a34a'}:{color:'#dc2626'}]}>{isUp?'↑':'↓'}{Math.abs(diffPct)}%</Text></View>
-              <View style={s.compareCol}><Text style={s.compareColLbl}>本週平均</Text><Text style={[s.compareColVal,{color:isUp?'#16a34a':'#dc2626'}]}>{thisAvg}<Text style={s.compareColUnit}>ml</Text></Text></View>
-            </View>
-            <Text style={s.compareDesc}>{isUp ? `你本週每天平均多喝了 ${thisAvg-prevAvg}ml，進步很多！` : `你本週每天平均少喝了 ${prevAvg-thisAvg}ml，下週加油！`}</Text>
-            <TouchableOpacity style={s.compareClose} onPress={()=>setShowWeekCompare(false)}><Text style={s.compareCloseTxt}>關閉</Text></TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      <Modal visible={showChat} transparent animationType="slide">
-        <View style={s.chatOverlay}>
-          <View style={s.chatCard}>
-            <View style={s.chatTopbar}>
-              <Text style={s.chatTitle}>AI 補水助理</Text>
-              <TouchableOpacity onPress={()=>setShowChat(false)}><Text style={{fontSize:24,color:MUTED}}>×</Text></TouchableOpacity>
-            </View>
-            <ScrollView ref={chatScrollRef} style={s.chatMsgs} contentContainerStyle={{padding:16,gap:10}} onContentSizeChange={()=>chatScrollRef.current?.scrollToEnd({animated:true})}>
-              {messages.map((m,i)=>(<View key={i} style={[s.bubble,m.role==='user'?s.bubbleUser:s.bubbleAI]}><Text style={[s.bubbleTxt,m.role==='user'?{color:'#fff'}:{color:TEXT}]}>{m.content}</Text></View>))}
-              {loading && <View style={s.bubbleAI}><Text style={s.bubbleTxt}>思考中...</Text></View>}
-            </ScrollView>
-            <View style={s.chatInputRow}>
-              <TextInput style={s.chatInput} value={input} onChangeText={setInput} placeholder="問我任何補水問題..." placeholderTextColor={MUTED} returnKeyType="send" onSubmitEditing={sendMessage}/>
-              <TouchableOpacity style={s.sendBtn} onPress={sendMessage} activeOpacity={0.8}><Text style={s.sendBtnTxt}>送出</Text></TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -715,11 +493,13 @@ export default function GardenScreen() {
 const gs = StyleSheet.create({
   container:  { flex:1, backgroundColor:'#87CEEB' },
   sky:        { flex:1, position:'relative' },
-  titleBar:   { position:'absolute', top:90, left:0, right:0, flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingHorizontal:20 },
+  titleBar:   { position:'absolute', top:35, left:0, right:0, flexDirection:'row', justifyContent:'space-between', alignItems:'flex-start', paddingHorizontal:20 },
   titleTxt:   { fontSize:20, fontWeight:'900', color:'#fff' },
   titleSub:   { fontSize:11, color:'rgba(255,255,255,0.85)', fontWeight:'700', marginTop:2 },
   closeBtn:   { width:36, height:36, borderRadius:18, backgroundColor:'rgba(0,0,0,0.2)', alignItems:'center', justifyContent:'center' },
   closeTxt:   { fontSize:22, color:'#fff', lineHeight:28 },
+  streakBadge:    { marginTop:5, alignSelf:'flex-start', backgroundColor:'rgba(255,248,180,0.88)', borderRadius:12, paddingVertical:3, paddingHorizontal:9, borderWidth:1, borderColor:'rgba(230,200,50,0.5)' },
+  streakBadgeTxt: { fontSize:11, fontWeight:'800', color:'#7a5a00' },
   flowerArea: { flexDirection:'row', justifyContent:'space-around', alignItems:'flex-end', paddingHorizontal:8 },
   flowerItem: { alignItems:'center', justifyContent:'flex-end' },
   stem:       { width:4, backgroundColor:'#4a8c3f', borderRadius:2 },

@@ -73,6 +73,9 @@ function TabBar({ state, descriptors, navigation }) {
   return (
     <View style={[s.tabBar, { paddingBottom: insets.bottom + 10 }]}>
       {state.routes.map((route, index) => {
+        // 花園不顯示在 tab bar（由報表頁的按鈕進入）
+        if (route.name === '花園') return null;
+
         const focused = state.index === index;
         const iconColor = focused ? BLUE : MUTED;
 
@@ -85,10 +88,10 @@ function TabBar({ state, descriptors, navigation }) {
             label = '主頁';
             IconComponent = <HouseIcon color={iconColor} />;
             break;
-            // case '週報':
-            // label = '週報';
-            // IconComponent = <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={iconColor} />;
-            // break;
+            case '週報':
+            label = '週報';
+            IconComponent = <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={iconColor} />;
+            break;
             // case '提醒設定':
             // label = '提醒';
             // IconComponent = <Ionicons name={focused ? 'time' : 'time-outline'} size={24} color={iconColor} />;
@@ -140,7 +143,7 @@ const MainTabNavigator = () => {
         screenOptions={{ headerShown: false }}
         >
             <Tab.Screen name="主頁" component={MainScreen}/> 
-            {/* <Tab.Screen name="週報" component={ReportScreen} /> */}
+            <Tab.Screen name="週報" component={ReportScreen} />
             <Tab.Screen name="花園" component={GardenScreen} />
             {/* <Tab.Screen name="提醒設定" component={ReminderSettingScreen} /> */}
             <Tab.Screen name="個人" component={ProfileScreen} />
