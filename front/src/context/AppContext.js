@@ -1,6 +1,7 @@
 // src/context/AppContext.js
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { calcWaterGoal } from '../constants/theme';
+import apiService from '../services/api';
 
 const AppContext = createContext(null);
 
@@ -47,6 +48,15 @@ export function AppProvider({ children }) {
   });
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
+
+  useEffect(() => {
+    const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
+    apiService.getGoal(token).then(res => {
+      if (res.success) {
+        setProfile(prev => ({ ...prev, goalMl: res.data.daily_target, customGoal: true }));
+      }
+    });
+  }, []);
   // log 欄位對齊後端：{ log_id, type_id, d_volume, record_at, type_name }
   const totalMl = logs.reduce((sum, log) => sum + (log.d_volume ?? 0), 0);
 
@@ -76,6 +86,10 @@ export function AppProvider({ children }) {
     setLogs(prev => prev.filter(log => !logIds.includes(log.log_id)));
   }
 
+  function replaceLogs(newLogs) {
+    setLogs(newLogs);
+  }
+
   // 當硬體傳來新的喝水量時，計算增量並新增一筆紀錄（type_id 1 = water）
   function syncHardwareDrink(currentTotal) {
     if (currentTotal > lastHardwareAmount) {
@@ -99,7 +113,7 @@ export function AppProvider({ children }) {
       isSetupDone, completeSetup,
       profile, updateProfile,
       goalMl, totalMl,
-      logs, addLog, updateLog, deleteLog, deleteLogs,
+      logs, addLog, updateLog, deleteLog, deleteLogs, replaceLogs,
       isRecording, setIsRecording,
       weekData,
       sensorData, setSensorData,

@@ -35,7 +35,7 @@ const MainScreen = () => {
   const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken);
 
   const {
-      profile, goalMl, totalMl, logs,
+      profile, goalMl, totalMl, logs, replaceLogs,
       addLog, updateLog, deleteLog, deleteLogs,
       sensorData, setSensorData, syncHardwareDrink,
     } = useApp();
@@ -80,15 +80,21 @@ const MainScreen = () => {
     // 計算總咖啡因
     const totalCaffeine = logs.reduce((sum, log) => sum + getCaffeineMg(log.type_id, log.d_volume), 0);
     const caffPct = MAX_CAFFEINE > 0 ? Math.min(totalCaffeine / MAX_CAFFEINE, 1) : 0;
-    const caffAnim = useRef(new Animated.Value(0)).current;
-  
+    const caffAnim   = useRef(new Animated.Value(0)).current;
+    const circleAnim = useRef(new Animated.Value(0)).current;
+
     useEffect(() => {
       Animated.timing(caffAnim, { toValue: caffPct, duration: 600, useNativeDriver: false }).start();
     }, [caffPct]);
+
+    useEffect(() => {
+      Animated.timing(circleAnim, { toValue: pct, duration: 800, useNativeDriver: false }).start();
+    }, [pct]);
+
+    const caffHeight   = caffAnim.interpolate({ inputRange: [0, 1], outputRange: [0, CAFF_SIZE] });
+    const circleHeight = circleAnim.interpolate({ inputRange: [0, 1], outputRange: [0, CIRCLE_SIZE] });
   
-    const caffHeight = caffAnim.interpolate({ inputRange: [0, 1], outputRange: [0, CAFF_SIZE] });
-  
-    const segments = [...logs].reverse().map(log => ({
+    const segments = logs.map(log => ({
       id: log.log_id,
       height: Math.max((log.d_volume / Math.max(goalMl, 1)) * CIRCLE_SIZE, 2),
       color: DRINK_BY_ID[log.type_id]?.color ?? WATER_COLOR,
@@ -116,7 +122,7 @@ const MainScreen = () => {
       apiService.getLogs(today, testToken).then(res => {
         if (res.success) {
           // 用 setLogs 直接整批設定（AppContext 的 addLog 是單筆插入，這裡直接呼叫 context setter）
-          res.data.forEach(log => addLog(log)); // 暫用 forEach，Phase C 完整版再優化
+          replaceLogs(res.data);
         } else {
           console.warn('[MainScreen] 載入今日紀錄失敗:', res.error);
         }
@@ -336,19 +342,21 @@ const MainScreen = () => {
         <View style={s.mainRow}>
           <View style={s.waterWrap}>
             <View style={s.circle}>
-              <View style={s.liquidContainer}>
-                {(() => {
-                  const merged = segments.reduce((acc, seg) => {
-                    const last = acc[acc.length - 1];
-                    if (last && last.color === seg.color) { last.height += seg.height; }
-                    else { acc.push({ ...seg }); }
-                    return acc;
-                  }, []);
-                  return merged.map((seg, i) => (
-                    <View key={i} style={[s.liquidLayer, { height: seg.height, backgroundColor: seg.color, opacity: 0.82 }]} />
-                  ));
-                })()}
-              </View>
+              <Animated.View style={[s.liquidContainer, { height: circleHeight, overflow: 'hidden' }]}>
+                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+                  {(() => {
+                    const merged = segments.reduce((acc, seg) => {
+                      const last = acc[acc.length - 1];
+                      if (last && last.color === seg.color) { last.height += seg.height; }
+                      else { acc.push({ ...seg }); }
+                      return acc;
+                    }, []);
+                    return merged.map((seg, i) => (
+                      <View key={i} style={[s.liquidLayer, { height: seg.height, backgroundColor: seg.color, opacity: 0.82 }]} />
+                    ));
+                  })()}
+                </View>
+              </Animated.View>
               <View style={s.circleContent} pointerEvents="none">
                 <Image source={cupImage} style={s.cupImage} resizeMode="contain" />
                 <Text style={s.progressPct}>{Math.round(pct * 100)}%</Text>

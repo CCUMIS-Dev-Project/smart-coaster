@@ -162,6 +162,20 @@ const apiService = {
   },
 
 
+  // ── 目標 ────────────────────────────────────────────────────
+
+  // GET /goals
+  getGoal: async (token) => {
+    try {
+      const response = await apiClient.get('/goals', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
   // ── 飲水紀錄 CRUD ────────────────────────────────────────────
 
   // GET /logs?date=YYYY-MM-DD

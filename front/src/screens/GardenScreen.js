@@ -2,8 +2,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Modal, TextInput, Animated, Dimensions
+  Modal, TextInput, Animated, Dimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Circle, Path, Ellipse, G, Line, Polygon } from 'react-native-svg';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
@@ -462,6 +463,7 @@ function FlowerInfoModal({ flower, index, onClose }) {
 // ── 主畫面（花園視圖） ───────────────────────────────────
 export default function GardenScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? ''; // TODO [串接 auth flow 時刪除]
 
   const [flowers, setFlowers]           = useState(FLOWERS_INIT);
@@ -504,7 +506,7 @@ export default function GardenScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, paddingTop: insets.top }}>
       <GardenScene
         flowers={flowers}
         onFlowerPress={handleGardenFlowerPress}
