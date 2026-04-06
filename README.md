@@ -153,40 +153,27 @@ npm install
     >
     > 查詢電腦 IP：Windows 執行 `ipconfig`，找「Wi-Fi」或「乙太網路」的 IPv4 位址。
 
-* 若只要測試前端介面，執行：
-```
-npx expo start
-```
-
 * 若要測試藍牙功能需要執行以下指令：
 ```
 # 安裝 BLE 與開發客戶端相關套件
 npx expo install react-native-ble-plx expo-dev-client base-64
-
 ```
 
+* 執行：
+```
+npx expo start
+```
+* **按S切換為 development build** (注意： Expo Go 模式下不能測試藍芽)
 
-* **手機權限 (Android 11 重要)**：
-* 務必開啟手機的 **藍牙 (Bluetooth)** 與 **定位 (GPS)**。
-* 進入手機設定，手動確認該 App 已獲取「位置」權限。
+* 使用手機 App 內的 QR 掃描器掃描電腦畫面。
 
-
-* **建立開發版 (EAS Build)**：
+---
+**建立開發版 (EAS Build)**：
 若修改了 `app.json` 權限，需重新編譯：
 ```bash
 eas build --profile development --platform android
 
 ```
-
-
-* **啟動開發伺服器**：
-```bash
-npx expo start --dev-client
-
-```
-
-
-* 使用手機 App 內的 QR 掃描器掃描電腦畫面。
 
 ---
 ### 4. 前後端串接
