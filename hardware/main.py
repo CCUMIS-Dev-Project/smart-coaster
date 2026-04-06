@@ -238,7 +238,7 @@ while True:
                         is_waiting_for_stable = True
                         place_down_ticks = current_ticks
                         leds.turn_off()
-                        display.update_main_screen(drink_amount, 0, syncing=True)
+                        # display.update_main_screen(drink_amount, 0, syncing=True)
                         print("檢測到放下，啟動 3 秒穩定計時")
 
                     # 已經等滿了 3 秒，進行水量結算
@@ -250,7 +250,7 @@ while True:
                         utime.sleep(1) 
                         
                         if diff > 5:
-                            drink_amount = diff
+                            drink_amount += diff
                             last_interaction_time = current_ticks # 喝水了，重設計時器
                             is_overdue = False
                             # 【離線儲存邏輯】
@@ -302,8 +302,10 @@ while True:
                     
             # --- 3. 數據發送邏輯 ---
             if data_changed:
-                ble.send_water_status(system_active, is_on_coaster, drink_amount)
-                drink_amount = 0
+                ble.send_water_status(system_active, is_on_coaster, diff)
+                # drink_amount = 0
+                diff = 0
+
                 data_changed = False
                 
             # --- 4. 歷史離線數據同步邏輯 ---
