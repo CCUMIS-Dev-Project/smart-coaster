@@ -327,7 +327,7 @@ export default function ReportScreen() {
               return (
                 <View key={i} style={s.histDay}>
                   <View style={s.histBarWrap}>
-                    {ml != null && <View style={[s.histBarFill, { height: Math.max(barH, 3), backgroundColor: d.hit ? GREEN : '#f87171' }]} />}
+                    {ml > 0 && <View style={[s.histBarFill, { height: Math.max(barH, 3), backgroundColor: d.hit ? GREEN : '#f87171' }]} />}
                   </View>
                   <Text style={s.histDayLbl}>{d.day}</Text>
                   <Text style={s.histMl}>{ml == null ? '-' : ml >= 1000 ? `${(ml / 1000).toFixed(1)}k` : ml || '-'}</Text>

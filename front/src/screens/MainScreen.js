@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Image, Pressable,
+  View, Text, StyleSheet, Image, Pressable, ImageBackground,
   TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
   Animated, ScrollView, Dimensions, PanResponder
 } from 'react-native';
@@ -296,7 +296,12 @@ const MainScreen = () => {
 
 
   return (
-    <Pressable style={s.background} onPress={() => setShowDrinkDropdown(false)}>
+    <ImageBackground
+      source={require('../assets/background.png')}
+      style={s.background}
+      resizeMode="cover"
+    >
+      <Pressable style={{ flex: 1 }} onPress={() => setShowDrinkDropdown(false)}>
       <SafeAreaView style={[s.container, { paddingBottom: CARD_COLLAPSED + 16 }]}>
 
         {/* 下拉選單+連接杯墊 */}
@@ -583,7 +588,8 @@ const MainScreen = () => {
         </KeyboardAvoidingView>
       </Modal>
 
-    </Pressable>
+      </Pressable>
+    </ImageBackground>
   );
 }
 
