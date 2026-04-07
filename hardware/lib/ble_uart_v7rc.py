@@ -1,6 +1,6 @@
 import bluetooth
-from ble_advertising import advertising_payload
-from ble_advertising import advertising_resp_payload
+from hardware.lib.ble_advertising import advertising_payload
+from hardware.lib.ble_advertising import advertising_resp_payload
 from micropython import const
 
 _FLAG_WRITE = const(0x0008)

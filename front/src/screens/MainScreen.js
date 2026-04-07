@@ -1,135 +1,179 @@
+/**
+ * MainScreen.js
+ * 應用程式主畫面
+ *
+ * 功能：
+ *  - 顯示今日飲水進度圓圈（水量 % + ml）
+ *  - 顯示今日咖啡因攝取小圓圈與狀態 badge
+ *  - 快速記錄飲水（一口 30ml、一大口 60ml、自訂新增）
+ *  - 今日紀錄卡片（底部可上下拖曳展開/收合）
+ *  - 藍牙連線杯墊、接收感測器數據並自動同步飲水紀錄
+ *  - 編輯 / 刪除飲水紀錄
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, Pressable, ImageBackground,
   TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
   Animated, ScrollView, Dimensions, PanResponder
 } from 'react-native';
-//SafeAreaView from react-native 在 Android 上不處理 status bar。要換成react-native-safe-area-context（Expo 內建）
+// SafeAreaView from react-native 在 Android 上不處理 status bar。
+// 改用 react-native-safe-area-context（Expo 內建）以正確處理瀏海 / 狀態列
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
-import SettingScreen from '../screens/SettingScreen.js';
-import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
+// import SettingScreen from '../screens/SettingScreen.js';
+// import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
 import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
 import { colors, DRINK_TYPES, DRINK_BY_ID } from '../constants/theme';
 
+// 解構顏色 token，方便後續 StyleSheet 引用
 const { blue: BLUE, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
 
-//常數區 / 顏色
-const CUP_HEIGHT = 260;
-const CUP_WIDTH  = 200;
+// ─────────────────────────────────────────────────────────────────────────────
+// 常數區：尺寸 & 顏色
+// ─────────────────────────────────────────────────────────────────────────────
+const CUP_HEIGHT = 260;   // 杯子圖示高度（目前僅供舊版 cup StyleSheet 使用）
+const CUP_WIDTH  = 200;   // 杯子圖示寬度
 
-const WATER_COLOR    = '#5ab4f5';
-const CAFFEINE_COLOR = '#3b1f0a';
+const WATER_COLOR    = '#5ab4f5'; // 純水的預設液面顏色
+const CAFFEINE_COLOR = '#3b1f0a'; // 咖啡因液面顏色（深咖啡色）
+
 const { width: SCREEN_W } = Dimensions.get('window');
-// 圓圈大小
-const CIRCLE_SIZE = Math.min(240, Math.floor(SCREEN_W * 0.56)); // 依螢幕寬度縮放，最大 240
-const CAFF_SIZE   = Math.min(100, Math.floor(SCREEN_W * 0.22)); // 咖啡因圓依比例縮
-// 常數區 / 顏色 結束
+
+// 主圓圈 & 咖啡因小圓皆依螢幕寬度自動縮放，確保小螢幕不爆版
+const CIRCLE_SIZE = Math.min(240, Math.floor(SCREEN_W * 0.56)); // 主圓圈直徑，最大 240
+const CAFF_SIZE   = Math.min(100, Math.floor(SCREEN_W * 0.22)); // 咖啡因小圓直徑，最大 100
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MainScreen = () => {
   // TODO [串接 auth flow 時刪除] 改成從 AppContext 或 SecureStore 拿真實 JWT
   const testToken = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
   //console.log('[debug] testToken:', testToken ? testToken.slice(0, 20) + '...' : '(empty)');
+
+  // useBLE：負責藍牙掃描、連線、收發資料
   const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken);
 
+  // useApp：全域狀態，包含使用者設定、飲水目標、今日紀錄、感測器資料
   const {
       profile, goalMl, totalMl, logs, replaceLogs,
       addLog, updateLog, deleteLog, deleteLogs,
       sensorData, setSensorData, syncHardwareDrink,
     } = useApp();
-  
+
     const age = profile?.age || 25;
     // ── 咖啡因每日建議上限（純前端醫學準則，不需後端 DB）──────────
     // 12歲以下: 0mg｜12-17: 100mg｜18-64: 400mg｜65+: 300mg
     const MAX_CAFFEINE = age < 12 ? 0 : age < 18 ? 100 : age < 65 ? 400 : 300;
   
-    const [drinkType, setDrinkType] = useState(1); // type_id，預設水
-    const [showDrinkDropdown, setShowDrinkDropdown] = useState(false);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [addMl, setAddMl] = useState('250');
-    const [selMode, setSelMode] = useState(false);
-    const [selected, setSelected] = useState([]);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingLog, setEditingLog] = useState(null);
-    const [editMl, setEditMl] = useState('');
-    const [editType, setEditType] = useState(1); // type_id
-    const insets = useSafeAreaInsets();
+    // ── UI 狀態：飲品選擇 ──────────────────────────────────────────
+    const [drinkType, setDrinkType] = useState(1);          // 目前選中的飲品 type_id（預設 1 = 水）
+    const [showDrinkDropdown, setShowDrinkDropdown] = useState(false); // 飲品下拉選單是否展開
 
-    // ── 今日紀錄卡片可拉伸 ──── (高度設定)
+    // ── UI 狀態：新增飲水 Modal ───────────────────────────────────
+    const [showAddModal, setShowAddModal] = useState(false); // 新增 Modal 顯示狀態
+    const [addMl, setAddMl] = useState('250');               // 新增 Modal 中輸入的毫升數
+
+    // ── UI 狀態：紀錄多選 / 刪除 ─────────────────────────────────
+    const [selMode, setSelMode] = useState(false);           // 是否進入多選模式
+    const [selected, setSelected] = useState([]);            // 已勾選的 log_id 陣列
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // 刪除確認 Modal（替代 Alert.alert，修正 Expo Web onPress 不觸發的 bug）
+
+    // ── UI 狀態：編輯 Modal ───────────────────────────────────────
+    const [showEditModal, setShowEditModal] = useState(false); // 編輯 Modal 顯示狀態
+    const [editingLog, setEditingLog] = useState(null);        // 正在編輯的紀錄物件
+    const [editMl, setEditMl] = useState('');                  // 編輯 Modal 中的毫升數
+    const [editType, setEditType] = useState(1);               // 編輯 Modal 中的飲品 type_id
+
+    const insets = useSafeAreaInsets(); // 取得螢幕安全區域 insets（瀏海、Home 條等）
+
+    // ── 底部紀錄卡片：可拖曳上下展開 ────────────────────────────
     const SCREEN_H = Dimensions.get('window').height;
-    const CARD_COLLAPSED = SCREEN_H * 0.26;
-    const CARD_EXPANDED  = SCREEN_H * 0.74;
-    const [logExpanded, setLogExpanded] = useState(false);
-    const cardHeightAnim = useRef(new Animated.Value(CARD_COLLAPSED)).current;
-    // 刪除確認 Modal（替代 Alert.alert，修正 Expo Web onPress 不觸發的 bug）
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const CARD_COLLAPSED = SCREEN_H * 0.26; // 收合高度（26% 螢幕高度）
+    const CARD_EXPANDED  = SCREEN_H * 0.74; // 展開高度（74% 螢幕高度）
+    const [logExpanded, setLogExpanded] = useState(false);                          // 卡片是否展開
+    const cardHeightAnim = useRef(new Animated.Value(CARD_COLLAPSED)).current;     // 卡片高度動畫值
   
-    const isConnected = sensorData.connected;
-    // ⚠️ Math.min(..., 1) 讓進度最多顯示 100%，超過目標也不會超過圓圈
-    // 若想讓超喝也繼續計算（例如顯示 120%），把 Math.min 的第二個參數拿掉即可：
-    // const pct = totalMl / Math.max(goalMl, 1);
+    const isConnected = sensorData.connected; // 藍牙是否已連線（由 sensorData 狀態驅動）
+
+    // ── 飲水進度計算 ──────────────────────────────────────────────
+    // Math.min(..., 1)：讓進度上限為 100%，超過目標不會溢出圓圈
+    // 若需顯示 >100%，可改為：const pct = totalMl / Math.max(goalMl, 1);
     const pct = Math.min(totalMl / Math.max(goalMl, 1), 1);
-  
-    // 計算咖啡因的函數（用 type_id 查 DRINK_BY_ID）
+
+    // 根據飲品 type_id 及毫升數，計算該筆紀錄的咖啡因含量（mg）
     function getCaffeineMg(typeId, ml) {
-      const per100 = DRINK_BY_ID[typeId]?.caffeinePer100 ?? 0;
+      const per100 = DRINK_BY_ID[typeId]?.caffeinePer100 ?? 0; // 每 100ml 的咖啡因 mg
       return Math.round((per100 * ml) / 100);
     }
-    // 計算總咖啡因
-    const totalCaffeine = logs.reduce((sum, log) => sum + getCaffeineMg(log.type_id, log.d_volume), 0);
-    const caffPct = MAX_CAFFEINE > 0 ? Math.min(totalCaffeine / MAX_CAFFEINE, 1) : 0;
-    const caffAnim   = useRef(new Animated.Value(0)).current;
-    const circleAnim = useRef(new Animated.Value(0)).current;
 
+    // ── 咖啡因統計 ────────────────────────────────────────────────
+    const totalCaffeine = logs.reduce((sum, log) => sum + getCaffeineMg(log.type_id, log.d_volume), 0);
+    const caffPct = MAX_CAFFEINE > 0 ? Math.min(totalCaffeine / MAX_CAFFEINE, 1) : 0; // 咖啡因進度 0~1
+
+    // ── 動畫值（Animated.Value） ──────────────────────────────────
+    const caffAnim   = useRef(new Animated.Value(0)).current; // 咖啡因液面高度動畫（0→caffPct）
+    const circleAnim = useRef(new Animated.Value(0)).current; // 主圓圈液面高度動畫（0→pct）
+
+    // 咖啡因進度變化時，驅動液面動畫（600ms）
     useEffect(() => {
       Animated.timing(caffAnim, { toValue: caffPct, duration: 600, useNativeDriver: false }).start();
     }, [caffPct]);
 
+    // 飲水進度變化時，驅動主圓圈液面動畫（800ms）
     useEffect(() => {
       Animated.timing(circleAnim, { toValue: pct, duration: 800, useNativeDriver: false }).start();
     }, [pct]);
 
+    // 將動畫進度值（0~1）映射為實際像素高度
     const caffHeight   = caffAnim.interpolate({ inputRange: [0, 1], outputRange: [0, CAFF_SIZE] });
     const circleHeight = circleAnim.interpolate({ inputRange: [0, 1], outputRange: [0, CIRCLE_SIZE] });
   
+    // ── 主圓圈液面分段（每筆紀錄對應一個色塊）──────────────────
+    // 每筆 log 轉換為高度（px）與顏色，渲染時由下往上堆疊
+    // Math.max(..., 2) 確保即使量很少也有最低 2px 高度，視覺上可見
     const segments = logs.map(log => ({
       id: log.log_id,
       height: Math.max((log.d_volume / Math.max(goalMl, 1)) * CIRCLE_SIZE, 2),
       color: DRINK_BY_ID[log.type_id]?.color ?? WATER_COLOR,
     }));
 
-    //藍牙區
+    // ── 藍牙：連接杯墊 ───────────────────────────────────────────
+    // 點擊頁首「杯墊」按鈕時觸發，呼叫 useBLE 的 scanAndConnect
     const handleConnect = async () => {
-      // 顯示掃描中的提示
       Alert.alert('連接杯墊', '正在掃描附近的智慧杯墊...');
-      
       try {
-        await scanAndConnect(); 
-        // scanAndConnect 是從 useBLE() 拿出來的
+        await scanAndConnect();
       } catch (error) {
         console.error(error);
         Alert.alert('連線失敗', '請確認藍牙已開啟');
       }
     };
-    //藍牙區結束
+    // ── 藍牙區結束 ────────────────────────────────────────────────
 
-    // ── Phase C：App 啟動時載入今日紀錄 ──────────────────────
+    // ── Phase C：App 啟動時載入今日紀錄 ──────────────────────────
+    // 元件掛載後向後端拉取今日所有紀錄，用 replaceLogs 整批寫入 AppContext
+    // （不用 addLog 是因為那是單筆插入，這裡需要完整覆蓋）
     useEffect(() => {
       const _d = new Date();
       const today = [_d.getFullYear(), String(_d.getMonth()+1).padStart(2,'0'), String(_d.getDate()).padStart(2,'0')].join('-');
       apiService.getLogs(today, testToken).then(res => {
         if (res.success) {
-          // 用 setLogs 直接整批設定（AppContext 的 addLog 是單筆插入，這裡直接呼叫 context setter）
           replaceLogs(res.data);
+          if (connectedDevice && writeToDevice) {
+            const newTotal = res.data.reduce((s, l) => s + (l.d_volume ?? 0), 0);
+            writeToDevice(`S|${newTotal}`);
+          }
         } else {
           console.warn('[MainScreen] 載入今日紀錄失敗:', res.error);
         }
       });
-    }, []); // 只在 mount 時執行一次
+    }, []); // 空陣列：只在 mount 時執行一次
 
-    // ── Phase B：新增紀錄 ──────────────────────────────────────
+    // ── Phase B：新增飲水紀錄 ────────────────────────────────────
+
+    // quickLog：快速記錄固定量（一口 30ml、一大口 60ml）
+    // 直接 POST 至後端，成功後更新 AppContext 的 logs
     async function quickLog(ml) {
       const payload = {
         type_id: drinkType,
@@ -140,11 +184,16 @@ const MainScreen = () => {
       const res = await apiService.postLog(payload, testToken);
       if (res.success) {
         addLog(res.data);
+        if (connectedDevice && writeToDevice) {
+          writeToDevice(`S|${totalMl + addedMl}`);  // totalMl 尚未更新，需加上新增量
+        }
       } else {
         Alert.alert('新增失敗', res.error);
       }
     }
 
+    // handleAddCustom：新增 Modal 中的「新增」按鈕回呼
+    // 解析輸入的毫升數後 POST，成功關閉 Modal 並重置輸入欄
     async function handleAddCustom() {
       const ml = parseInt(addMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
@@ -158,7 +207,10 @@ const MainScreen = () => {
       if (res.success) {
         addLog(res.data);
         setShowAddModal(false);
-        setAddMl('250');
+        setAddMl('250'); // 重置為預設值
+        if (connectedDevice && writeToDevice) {
+          writeToDevice(`S|${totalMl + addedMl}`);  // totalMl 尚未更新，需加上新增量
+        }
       } else {
         Alert.alert('新增失敗', res.error);
       }
@@ -172,9 +224,11 @@ const MainScreen = () => {
       setShowDeleteConfirm(true);
     }
 
-    // 拖曳 handle：往上拖展開，往下拖收合
+    // ── 底部紀錄卡片：拖曳手勢 ───────────────────────────────────
+    // 向上拖 >30px → 展開；向下拖 >30px → 收合
+    // onStartShouldSetPanResponder: true 搶先接管觸控，避免被外層 Pressable 攔截
     const panResponder = useRef(PanResponder.create({
-      onStartShouldSetPanResponder: () => true, // 搶先接管觸控，避免被外層 Pressable 攔截
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, { dy }) => Math.abs(dy) > 5,
       onPanResponderRelease: (_, { dy }) => {
         if (dy < -30) {
@@ -187,10 +241,12 @@ const MainScreen = () => {
       },
     })).current;
 
+    // toggleSelect：切換指定 log_id 的勾選狀態（多選模式用）
     function toggleSelect(id) {
       setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     }
 
+    // openEdit：點擊某筆紀錄時，帶入現有資料並開啟編輯 Modal
     function openEdit(log) {
       setEditingLog(log);
       setEditMl(String(log.d_volume));
@@ -198,7 +254,8 @@ const MainScreen = () => {
       setShowEditModal(true);
     }
 
-    // Phase E：PATCH /logs/{log_id}
+    // ── Phase E：編輯紀錄（PATCH /logs/{log_id}）────────────────
+    // 送出修改後更新 AppContext 中對應的那筆紀錄，並關閉 Modal
     async function handleEdit() {
       const ml = parseInt(editMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
@@ -243,6 +300,11 @@ const MainScreen = () => {
           isOnCoaster: isOnCoaster 
         }));
 
+        // 水杯放回杯墊時，將 APP 的當日累計量同步給硬體顯示
+        if (isOnCoaster && writeToDevice) {
+          writeToDevice(`S|${totalMl}`);
+        }
+
         // 同步喝水量到 App 紀錄中
         syncHardwareDrink(drinkAmount);
 
@@ -273,7 +335,7 @@ const MainScreen = () => {
     // 記得在 Dependency Array 加入 drinkType 和 addLog
     }, [bleData]);
 
-    // 更新連線狀態並執行 RTC 校時
+    // 更新連線狀態並執行 RTC 校時 + 同步當日總飲水量
     useEffect(() => {
       setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
 
@@ -288,8 +350,9 @@ const MainScreen = () => {
         // 呼叫從 useBLE 拿到的寫入函數
         if (writeToDevice) {
             writeToDevice(timeCmd);
+            writeToDevice(`S|${totalMl}`);
         } else {
-            console.warn("useBLE 中沒有找到寫入函數，無法執行校時！");
+            console.warn("useBLE 中沒有找到寫入函數，無法執行！");
         }
       }
     }, [connectedDevice]);

@@ -2,7 +2,7 @@
 # 智慧杯墊 - 藍牙通訊模組 (ble_manager.py)
 # ==========================================
 import bluetooth
-from ble_advertising import advertising_payload
+from hardware.lib.ble_advertising import advertising_payload
 from config import * # 匯入 UUID 與設備名稱等設定
 
 # BLE 事件常數

@@ -23,6 +23,11 @@
 #   - 溫度: float (單位: °C)
 #   - 濕度: float (單位: %)
 #   - 提醒間隔: int (單位: 分鐘)
+
+# 3. APP 傳送當日累計飲水量給硬體
+# 'S' = Sync Total (APP 傳送當日累計飲水量給硬體)
+# 格式: "S|{累計毫升}"
+# 範例: "S|650.0"
 # =================================================================
 import utime
 import math
@@ -148,9 +153,9 @@ def check_double_press(current_weight, current_ticks):
     is_currently_pressed = heavy
     return False
 
-
-# --- 設定藍牙接收回呼函數 ---
+# --- 藍牙接收 APP 回呼函數 ---
 def handle_ble_rx(data):
+    global drink_amount
     print(f"收到 APP 指令: {data}")
     if data.startswith('T|'):
         try:
@@ -165,6 +170,13 @@ def handle_ble_rx(data):
             print(f"✅ 系統 RTC 校時成功: {y}/{m:02d}/{d:02d} {h:02d}:{mns:02d}:{s:02d}")
         except Exception as e:
             print("❌ RTC 校時失敗:", e)
+    elif data.startswith('S|'):
+        try:
+            synced_amount = float(data.split('|')[1])
+            drink_amount = synced_amount
+            print(f"✅ 飲水同步成功: {synced_amount:.1f} ml")
+        except Exception as e:
+            print("❌ 飲水同步失敗:", e)
 
 # 將這個函數綁定給藍牙模組
 ble.on_rx = handle_ble_rx
