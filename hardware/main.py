@@ -223,7 +223,7 @@ while True:
     # [區塊 B] 系統運行中邏輯
     if system_active:
         try:
-            # 1. 定期讀取溫溼度 (每 10 秒)
+            # 1. 定期讀取溫溼度
             if utime.ticks_diff(current_ticks, last_sensor_ticks) > SENSOR_INTERVAL_MS:
                 try:
                     dht_sensor.measure()

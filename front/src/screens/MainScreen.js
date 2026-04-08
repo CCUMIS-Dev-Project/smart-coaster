@@ -357,7 +357,7 @@ const MainScreen = () => {
       }
     }, [connectedDevice]);
 
-
+  // 介面顯示
   return (
     <ImageBackground
       source={require('../assets/background.png')}
@@ -367,15 +367,16 @@ const MainScreen = () => {
       <Pressable style={{ flex: 1 }} onPress={() => setShowDrinkDropdown(false)}>
       <SafeAreaView style={[s.container, { paddingBottom: CARD_COLLAPSED + 16 }]}>
 
-        {/* 下拉選單+連接杯墊 */}
+        {/* header */}
         <View style={s.header}>
+          {/* 選擇飲品下拉選單 */}
           <View style={s.drinkDropdownWrap}>
             
             <TouchableOpacity style={s.PickerButton} onPress={() => setShowDrinkDropdown(v => !v)}>
-              {/*<Text style={s.drinkLabel}>飲品</Text>*/}
+              {/* <Text style={s.drinkLabel}>飲品</Text> */}
               <View style={s.drinkRow}>
                 <View style={[s.drinkDot, { backgroundColor: dotColor }]} />
-                <Text style={s.drinkName}>{DRINK_BY_ID[drinkType]?.label ?? '水'}</Text>
+                <Text style={[s.drinkName]}>{DRINK_BY_ID[drinkType]?.label ?? '水'}</Text>
                 <Ionicons name={showDrinkDropdown ? "chevron-up" : "chevron-down"} size={18} color="#3498db" style={{ marginLeft: 5 }} />
               </View>
             </TouchableOpacity>
@@ -393,10 +394,21 @@ const MainScreen = () => {
               </View>
             )}
           </View>
+          
+          {/* 環境數據 */}
+          <View style={{ alignItems: 'center', backgroundColor: 'transparent' }}>
+            <Text style={{ fontSize: 15, color: '#fff' }}>
+              溫度:{sensorData.temperature != null ? `${sensorData.temperature}°C` : '--°C'}
+            </Text>
+            <Text style={{ fontSize: 15, color: '#fff' }}>
+              濕度:{sensorData.humidity != null ? `${sensorData.humidity}%` : '--%'}
+            </Text>
+          </View>
 
-          <TouchableOpacity style={s.PickerButton} onPress={handleConnect}>
-            <Text style={s.drinkLabel}>杯墊</Text>
-            <Text style={[s.drinkName, { fontSize: 14, color: isConnected ? '#4ade80' : '#f87171' }]}>
+          {/* 杯墊連線按鈕 */}
+          <TouchableOpacity style={[s.PickerButton]} onPress={handleConnect}>
+            {/* <Text style={s.drinkLabel}>杯墊</Text> */}
+            <Text style={[s.drinkName, { fontSize: 15, color: isConnected ? '#4ade80' : '#f87171' }]}>
               {isConnected ? '已連線' : '未連線'}
             </Text>
           </TouchableOpacity>
@@ -712,7 +724,7 @@ const s = StyleSheet.create({
   background: { flex: 1, width: '100%' },
   container:  { flex: 1, paddingHorizontal: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginHorizontal: 4, zIndex: 100 },
-  PickerButton: { backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8EE' },
+  PickerButton: { backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8EE' , alignItems: 'center',width:100 ,height:50},
   drinkDropdownWrap: { position: 'relative', zIndex: 100, width: 110 },
   dropdown: { position: 'absolute', top: 70, left: 0, zIndex: 200, backgroundColor: 'rgba(255,255,255,0.97)', borderRadius: 16, borderWidth: 1.5, borderColor: '#E1E8EE', minWidth: 140, paddingVertical: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 16 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 16 },
@@ -723,7 +735,7 @@ const s = StyleSheet.create({
   drinkLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
   drinkRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
   drinkDot:   { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  drinkName:  { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  drinkName:  { fontSize: 20, fontWeight: 'bold', color: '#333' ,alignItems:'center'},
   mainRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, paddingVertical: 8, zIndex: 1 },
   waterWrap: { alignItems: 'center', gap: 8 },
   circle: { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2, backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 8, borderColor: '#AEE2FF', overflow: 'hidden' },
