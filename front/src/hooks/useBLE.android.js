@@ -109,6 +109,12 @@ export default function useBLE(userToken) {
       const deviceConnection = await device.connect();
       await deviceConnection.discoverAllServicesAndCharacteristics();
       setConnectedDevice(deviceConnection);
+
+      // 監聽裝置斷線事件
+      deviceConnection.onDisconnected((error, device) => {
+        console.log('⚠️ 裝置已斷線:', device?.id);
+        setConnectedDevice(null);
+      });
       
       console.log('✅ 連線成功，開始監聽數據...');
       deviceConnection.monitorCharacteristicForService(
@@ -161,5 +167,10 @@ export default function useBLE(userToken) {
     }
   };
 
-  return { scanAndConnect, connectedDevice, bleData, writeToDevice };
+  // 5. 停止掃描
+  const stopScan = () => {
+    bleManager.stopDeviceScan();
+  };
+
+  return { scanAndConnect, connectedDevice, bleData, writeToDevice, stopScan };
 }

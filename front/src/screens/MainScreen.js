@@ -14,7 +14,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, Pressable, ImageBackground,
   TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
-  Animated, ScrollView, Dimensions, PanResponder
+  Animated, ScrollView, Dimensions, PanResponder,ActivityIndicator
 } from 'react-native';
 // SafeAreaView from react-native 在 Android 上不處理 status bar。
 // 改用 react-native-safe-area-context（Expo 內建）以正確處理瀏海 / 狀態列
@@ -52,7 +52,13 @@ const MainScreen = () => {
   //console.log('[debug] testToken:', testToken ? testToken.slice(0, 20) + '...' : '(empty)');
 
   // useBLE：負責藍牙掃描、連線、收發資料
-  const { scanAndConnect, connectedDevice, bleData ,writeToDevice} = useBLE(testToken);
+  const { scanAndConnect, stopScan, connectedDevice, bleData ,writeToDevice} = useBLE(testToken);
+
+  // 紀錄杯墊連線狀態
+  const [isScanning, setIsScanning] = useState(false);
+
+  // 已連線提示 Modal
+  const [showConnectedAlert, setShowConnectedAlert] = useState(false);
 
   // useApp：全域狀態，包含使用者設定、飲水目標、今日紀錄、感測器資料
   const {
@@ -139,15 +145,28 @@ const MainScreen = () => {
     }));
 
     // ── 藍牙：連接杯墊 ───────────────────────────────────────────
-    // 點擊頁首「杯墊」按鈕時觸發，呼叫 useBLE 的 scanAndConnect
+    // 點擊頁首「杯墊連線按鈕」時觸發
+    // 若已連線：顯示「已連線」提示 Modal
+    // 若未連線：呼叫 useBLE 的 scanAndConnect 並顯示掃描中 Modal
     const handleConnect = async () => {
-      Alert.alert('連接杯墊', '正在掃描附近的智慧杯墊...');
+      // 已連線時，顯示提示而不重新掃描
+      if (isConnected) {
+        setShowConnectedAlert(true);
+        return;
+      }
+ 
+      setIsScanning(true);
       try {
         await scanAndConnect();
       } catch (error) {
         console.error(error);
+        setIsScanning(false);
         Alert.alert('連線失敗', '請確認藍牙已開啟');
       }
+    };
+    const handleCancelScan = () => {
+      stopScan();
+      setIsScanning(false);
     };
     // ── 藍牙區結束 ────────────────────────────────────────────────
 
@@ -345,6 +364,7 @@ const MainScreen = () => {
 
       // 當裝置成功連線時
       if (connectedDevice) {
+        setIsScanning(false);
         const now = new Date();
         // 組合時間指令格式: T|YYYY|MM|DD|HH|MM|SS
         const timeCmd = `T|${now.getFullYear()}|${now.getMonth() + 1}|${now.getDate()}|${now.getHours()}|${now.getMinutes()}|${now.getSeconds()}`;
@@ -554,6 +574,43 @@ const MainScreen = () => {
           })}
         </ScrollView>
       </Animated.View>
+      
+      {/* 掃描杯墊model */}
+      <Modal visible={isScanning} transparent animationType="fade">
+        <Pressable style={[s.modalOverlay, { justifyContent: 'center' }]} onPress={handleCancelScan}>
+          <Pressable>
+            <View style={s.confirmCard}>
+              <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>連接杯墊</Text>
+              <ActivityIndicator size="small" color="#60a5fa" style={{ marginBottom: 8 }} />
+              <Text style={{ color: '#555' }}>正在掃描附近的智慧杯墊...</Text>
+              <Pressable onPress={handleCancelScan} style={{ marginTop: 16, alignItems: 'center' }}>
+                <Text style={{ color: '#60a5fa', fontWeight: '600' }}>取消</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* 已連線提示 Modal */}
+      <Modal visible={showConnectedAlert} transparent animationType="fade">
+        <View style={[s.modalOverlay, { justifyContent: 'center' }]}>
+          <View style={s.confirmCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="checkmark-circle" size={22} color="#4ade80" style={{ marginRight: 6 }} />
+              <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#333' }}>已連線</Text>
+            </View>
+            <Text style={{ color: '#555', marginBottom: 16 }}>智慧杯墊已成功連接,可以開始使用。</Text>
+            <View style={s.modalBtns}>
+              <TouchableOpacity
+                style={[s.modalConfirm, { backgroundColor: '#4ade80' }]}
+                onPress={() => setShowConnectedAlert(false)}
+              >
+                <Text style={s.modalConfirmTxt}>確定</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* 刪除確認 Modal（修正 Expo Web Alert.alert onPress bug） */}
       <Modal visible={showDeleteConfirm} transparent animationType="fade">
@@ -813,7 +870,7 @@ const s = StyleSheet.create({
   modalCancel:    { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 2, borderColor: '#E1E8EE' },
   modalCancelTxt: { fontSize: 15, fontWeight: '800', color: '#999' },
   modalConfirm:   { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', backgroundColor: '#3498db' },
-  modalConfirmTxt:{ fontSize: 15, fontWeight: '900', color: '#fff' },
+  modalConfirmTxt:{ fontSize: 15, fontWeight: '900', color: '#fff' ,alignItems:'center'},
 });
 
 export default MainScreen;
