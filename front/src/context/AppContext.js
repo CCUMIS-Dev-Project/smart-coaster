@@ -41,8 +41,8 @@ export function AppProvider({ children }) {
   const [lastHardwareAmount, setLastHardwareAmount] = useState(0);
 
   const [sensorData, setSensorData] = useState({
-    temperature: 28,
-    humidity: 72,
+    temperature: "--",
+    humidity: "--",
     connected: false,
     isOnCoaster: false,
   });

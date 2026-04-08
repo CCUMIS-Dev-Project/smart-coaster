@@ -318,7 +318,11 @@ const MainScreen = () => {
           temperature: temp, 
           humidity: hum,
           connected: true
+
+          
         }));
+        // 上傳至後端 Supabase
+        apiService.postEnvLog(temp, hum, testToken);
       }else if (type === 'O') {
         // O | 2024/03/24 15:30:00 | diffAmount
         const offlineTime = parts[1]; // 取出杯墊記錄的真實時間

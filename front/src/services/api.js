@@ -126,6 +126,19 @@ const apiService = {
     }
   },
 
+  // POST /env - 上傳環境感測數據
+  postEnvLog: async (temp, humidity, token) => {
+    try {
+      const response = await apiClient.post('/env', { temp, humidity }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('env log 上傳失敗:', error.response?.data || error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
 
   // ── 目標 ────────────────────────────────────────────────────
 
