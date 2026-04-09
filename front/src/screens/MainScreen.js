@@ -21,8 +21,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
-// import SettingScreen from '../screens/SettingScreen.js';
-// import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
 import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
 import { colors, DRINK_TYPES, DRINK_BY_ID } from '../constants/theme';
@@ -432,7 +430,7 @@ const MainScreen = () => {
           {/* 杯墊連線按鈕 */}
           <TouchableOpacity style={[s.PickerButton]} onPress={handleConnect}>
             {/* <Text style={s.drinkLabel}>杯墊</Text> */}
-            <Text style={[s.drinkName, { fontSize: 15, color: isConnected ? '#4ade80' : '#f87171' }]}>
+            <Text style={[s.drinkName, { fontSize: 20, color: isConnected ? '#4ade80' : '#f87171' }]}>
               {isConnected ? '已連線' : '未連線'}
             </Text>
           </TouchableOpacity>
@@ -794,7 +792,7 @@ const s = StyleSheet.create({
   dropdownTxtSel: { color: '#3498db' },
   dropdownPlus: { fontSize: 18, fontWeight: '900', color: '#3498db' },
   drinkLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
-  drinkRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
+  drinkRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 2 },
   drinkDot:   { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   drinkName:  { fontSize: 20, fontWeight: 'bold', color: '#333' ,alignItems:'center'},
   mainRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, paddingVertical: 8, zIndex: 1 },

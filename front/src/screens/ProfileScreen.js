@@ -50,6 +50,49 @@ function RippleRing({ delay }) {
   return <Animated.View style={[s.rippleRing, { transform: [{ scale }], opacity }]} />;
 }
 
+// 自訂 Switch：thumb 永遠白色，跨平台一致（RN Web 的 thumbColor 無效）
+function CustomSwitch({ value, onValueChange, disabled }) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => !disabled && onValueChange && onValueChange(!value)}
+      style={{
+        width: 50, height: 28, borderRadius: 14,
+        backgroundColor: value ? BLUE : '#cdd8e3',
+        justifyContent: 'center', paddingHorizontal: 2,
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <View style={{
+        width: 24, height: 24, borderRadius: 12,
+        backgroundColor: '#fff',
+        alignSelf: value ? 'flex-end' : 'flex-start',
+        elevation: 3,
+      }} />
+    </TouchableOpacity>
+  );
+}
+
+// 時間輸入：HH 與 MM 分開，中間 ":" 固定不可刪
+function TimeInput({ value, onChange, style }) {
+  const parts = (value).split(':');
+  const hh = parts[0] ;
+  const mm = parts[1] ;
+  const onH = v => onChange(`${v.replace(/\D/g, '').slice(0, 2) }:${mm}`);
+  const onM = v => onChange(`${hh}:${v.replace(/\D/g, '').slice(0, 2)}`);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}>
+      <TextInput style={[style, { width: 54, textAlign: 'center' }]}
+        value={hh} onChangeText={onH} keyboardType="numeric" maxLength={2}
+        placeholder="hh" placeholderTextColor={MUTED} />  
+      <Text style={{ fontSize: 22, fontWeight: '900', color: '#4a6a84', marginHorizontal: 4 }}>:</Text>
+      <TextInput style={[style, { width: 54, textAlign: 'center' }]}
+         value={mm} onChangeText={onM} keyboardType="numeric" maxLength={2} 
+         placeholder="mm" placeholderTextColor={MUTED} /> 
+    </View>
+  );
+}
+
 // 可點擊編輯的資料列
 function EditableRow({ label, value, onEdit }) {
   return (
@@ -71,6 +114,7 @@ const ProfileScreen = () => {
   // 個別編輯 modal 狀態
   const [editField, setEditField] = useState(null); // 'name'|'gender'|'weight'|'age'|'activity'|'goal'|'reminder'|'coaster'
   const [tempVal, setTempVal] = useState('');
+  const [fieldError, setFieldError] = useState(''); // inline 驗證錯誤訊息
   const [tempGender, setTempGender] = useState(profile.gender);
   const [tempActivity, setTempActivity] = useState(profile.activity);
   const [tempCustomGoal, setTempCustomGoal] = useState(profile.customGoal);
@@ -88,6 +132,7 @@ const ProfileScreen = () => {
   });
 
   function openEdit(field) {
+    setFieldError(''); // 開新欄位時清除上一次錯誤
     setEditField(field);
     if (field === 'name') setTempVal(profile.name || '');
     if (field === 'weight') setTempVal(String(profile.weight));
@@ -102,20 +147,47 @@ const ProfileScreen = () => {
     if (field === 'coaster') {
       setTempHasCoaster(profile.hasCoaster);
       setTempAutoMode(profile.autoMode);
-      setTempAutoStart(profile.autoStart);
-      setTempAutoEnd(profile.autoEnd);
+      setTempAutoStart(profile.autoStart || '08:00');
+      setTempAutoEnd(profile.autoEnd || '22:00');
     }
   }
 
   function saveField() {
     let update = {};
+    // ── 姓名：不可空白 ──────────────────────────────────────────────
     if (editField === 'name') {
-      if (!tempVal.trim()) { Alert.alert('請輸入姓名'); return; }
+      if (!tempVal.trim()) {
+        setFieldError('姓名不可為空，請輸入你的姓名或暱稱');
+        return;
+      }
       update = { name: tempVal.trim() };
     }
-    if (editField === 'weight') update = { weight: parseFloat(tempVal) || profile.weight };
-    if (editField === 'age') update = { age: parseFloat(tempVal) || profile.age };
-    if (editField === 'reminder') update = { reminderInterval: parseInt(tempVal) || profile.reminderInterval };
+    // ── 體重：15–150 kg，超出範圍建議就醫 ──────────────────────────
+    if (editField === 'weight') {
+      const w = parseFloat(tempVal);
+      if (!w || w < 15 || w > 150) {
+        setFieldError('體重需介於 15–150 kg，若您輸入數值正確請諮詢醫生');
+        return;
+      }
+      update = { weight: w };
+    }
+    // ── 年齡：10–100 歲，超出範圍建議就醫 ──────────────────────────
+    if (editField === 'age') {
+      const a = parseFloat(tempVal);
+      if (!a || a < 10 || a > 100) {
+        setFieldError('年齡超出使用建議之 10–100 歲');
+        return;
+      }
+      update = { age: a };
+    }
+    if (editField === 'reminder') {
+      const r = parseInt(tempVal);
+      if (!r || r < 1 || r > 120) {
+        setFieldError('喝水習慣應少量多次！建議提醒間距為 1–120 分鐘');
+        return;
+      }
+      update = { reminderInterval: r };
+    }
     if (editField === 'gender') update = { gender: tempGender };
     if (editField === 'activity') update = { activity: tempActivity };
     if (editField === 'goal') {
@@ -127,12 +199,25 @@ const ProfileScreen = () => {
       };
     }
     if (editField === 'coaster') {
-      update = {
-        hasCoaster: tempHasCoaster,
-        autoMode: tempAutoMode,
-        autoStart: tempAutoStart,
-        autoEnd: tempAutoEnd,
-      };
+      if (tempHasCoaster) {
+        const toMin = t => {
+          const parts = (t || '').split(':');
+          const h = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+          return h * 60 + m;
+        };
+        const startMin = toMin(tempAutoStart);
+        const endMin   = toMin(tempAutoEnd);
+        if (startMin === null || endMin === null) {
+          setFieldError('時間無效：小時需為 00–23，分鐘需為 00–59');
+          return;
+        }
+        if (startMin >= endMin) {
+          setFieldError('結束時間必須晚於開始時間');
+          return;
+        }
+      }
     }
     updateProfile(update);
     setEditField(null);
@@ -166,7 +251,7 @@ const ProfileScreen = () => {
     if (editField === 'name') {
       title = '編輯姓名';
       content = (
-        <TextInput style={s.inp} value={tempVal} onChangeText={setTempVal}
+        <TextInput style={s.inp} value={tempVal} onChangeText={v => { setTempVal(v); setFieldError(''); }}
           placeholder="輸入姓名/暱稱" placeholderTextColor={MUTED} autoFocus />
       );
     }
@@ -174,7 +259,7 @@ const ProfileScreen = () => {
       title = '編輯體重';
       content = (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={setTempVal}
+          <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={v => { setTempVal(v); setFieldError(''); }}
             keyboardType="numeric" autoFocus />
           <Text style={{ color: MUTED, fontWeight: '800', fontSize: 16 }}>kg</Text>
         </View>
@@ -184,7 +269,7 @@ const ProfileScreen = () => {
       title = '編輯年齡';
       content = (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={setTempVal}
+          <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={v => { setTempVal(v); setFieldError(''); }}
             keyboardType="numeric" autoFocus />
           <Text style={{ color: MUTED, fontWeight: '800', fontSize: 16 }}>歲</Text>
         </View>
@@ -198,13 +283,13 @@ const ProfileScreen = () => {
             {['30','45','60','90'].map(v => (
               <TouchableOpacity key={v}
                 style={[s.seg, tempVal === v && s.segSel]}
-                onPress={() => setTempVal(v)} activeOpacity={0.75}>
+                onPress={() => { setTempVal(v); setFieldError(''); }} activeOpacity={0.75}>
                 <Text style={[s.segTxt, tempVal === v && s.segTxtSel]}>{v}分</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={setTempVal}
+            <TextInput style={[s.inp, { flex: 1 }]} value={tempVal} onChangeText={v => { setTempVal(v); setFieldError(''); }}
               keyboardType="numeric" placeholder="自訂" placeholderTextColor={MUTED} />
             <Text style={{ color: MUTED, fontWeight: '800' }}>分鐘</Text>
           </View>
@@ -248,32 +333,36 @@ const ProfileScreen = () => {
       title = '每日飲水目標';
       content = (
         <View style={s.goalBox}>
-          <View style={s.goalHeader}>
-            <View>
-              <Text style={s.goalTitle}>建議值</Text>
-              <Text style={s.goalSub}>{suggestedGoal} ml</Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: MUTED }}>自訂</Text>
-              <Switch value={tempCustomGoal} onValueChange={setTempCustomGoal} trackColor={{ true: BLUE }} />
-            </View>
+          {/* row 1：建議值 ↔ Switch */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={s.goalTitle}>建議值</Text>
+            <CustomSwitch value={tempCustomGoal} onValueChange={setTempCustomGoal} />
           </View>
-          {tempCustomGoal ? (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
-                  value={tempCustomGoalMl} onChangeText={setTempCustomGoalMl} />
-                <Text style={{ color: MUTED, fontWeight: '800' }}>ml</Text>
-              </View>
-              {!!tempCustomGoalMl && parseInt(tempCustomGoalMl) < suggestedGoal && (
-                <Text style={{ fontSize: 11, color: '#f87171', fontWeight: '700' }}>
-                  最低目標為建議值 {suggestedGoal} ml
-                </Text>
-              )}
-            </>
-          ) : (
-            <Text style={s.goalFinal}>{suggestedGoal} ml</Text>
-          )}
+          {/* row 2：ml 數字 ↔ 自訂文字（同行對齊） */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={s.goalSub}>{suggestedGoal} ml</Text>
+            <Text style={{ fontSize: 11, color: tempCustomGoal ? BLUE_DARK : MUTED, fontWeight: '800' }}>
+              自訂
+            </Text>
+          </View>
+          <View style={{ minHeight: 72, justifyContent: 'center' }}>
+            {tempCustomGoal ? (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
+                    value={tempCustomGoalMl} onChangeText={setTempCustomGoalMl} />
+                  <Text style={{ color: MUTED, fontWeight: '800' }}>ml</Text>
+                </View>
+                {!!tempCustomGoalMl && parseInt(tempCustomGoalMl) < suggestedGoal && (
+                  <Text style={{ fontSize: 11, color: '#f87171', fontWeight: '700', marginTop: 4 }}>
+                    最低目標為建議值 {suggestedGoal} ml
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text style={s.goalFinal}>{suggestedGoal} ml</Text>
+            )}
+          </View>
         </View>
       );
     }
@@ -282,27 +371,24 @@ const ProfileScreen = () => {
       content = (
         <View style={{ gap: 12 }}>
           <View style={s.switchRow}>
-            <Text style={s.switchTitle}>我有智慧杯墊</Text>
-            <Switch value={tempHasCoaster} onValueChange={setTempHasCoaster} trackColor={{ true: BLUE }} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={s.switchTitle}>智慧杯墊自動記錄</Text>
+              <Text style={{ fontSize: 11, color: MUTED }}>開啟後由杯墊感測喝水量，並設定記錄時段</Text>
+            </View>
+            <CustomSwitch value={tempHasCoaster} onValueChange={setTempHasCoaster} />
           </View>
-          <View style={[s.switchRow, !tempHasCoaster && { opacity: 0.45 }]}>
-            <Text style={s.switchTitle}>自動記錄模式</Text>
-            <Switch value={tempAutoMode && tempHasCoaster}
-              onValueChange={tempHasCoaster ? setTempAutoMode : null}
-              disabled={!tempHasCoaster} trackColor={{ true: BLUE }} />
-          </View>
-          {tempAutoMode && tempHasCoaster && (
+          {tempHasCoaster && (
             <View style={s.timeBox}>
               <Text style={s.lbl}>自動記錄時段</Text>
               <View style={s.timeRow}>
                 <View style={s.timeItem}>
+                  <TimeInput value={tempAutoStart} onChange={setTempAutoStart} style={s.timeInp} />
                   <Text style={s.timeLbl}>開始</Text>
-                  <TextInput style={s.timeInp} value={tempAutoStart} onChangeText={setTempAutoStart} />
                 </View>
                 <Text style={s.timeSep}>—</Text>
                 <View style={s.timeItem}>
+                  <TimeInput value={tempAutoEnd} onChange={setTempAutoEnd} style={s.timeInp} />
                   <Text style={s.timeLbl}>結束</Text>
-                  <TextInput style={s.timeInp} value={tempAutoEnd} onChangeText={setTempAutoEnd} />
                 </View>
               </View>
             </View>
@@ -322,6 +408,12 @@ const ProfileScreen = () => {
               </TouchableOpacity>
             </View>
             {content}
+            {/* inline 驗證錯誤，Alert 在 Modal 內無法顯示，改為內嵌紅字 */}
+            {!!fieldError && (
+              <Text style={{ fontSize: 12, color: '#f87171', fontWeight: '700', marginTop: 6 }}>
+                ⚠ {fieldError}
+              </Text>
+            )}
             <TouchableOpacity style={s.saveBtn} onPress={saveField} activeOpacity={0.85}>
               <Text style={s.saveBtnTxt}>儲存</Text>
             </TouchableOpacity>
@@ -359,7 +451,12 @@ const ProfileScreen = () => {
             <RippleRing delay={0} />
             <RippleRing delay={800} />
             <RippleRing delay={1600} />
-            <Image source={profile.selectedCup?.image} style={{ width: 80, height: 80 }} resizeMode="contain" />
+            {/* 頭像：有自訂杯子圖片用杯子圖，否則預設 icon.png */}
+            <Image
+              source={profile.selectedCup?.image ?? require('../assets/icon.png')}
+              style={{ width: 120, height: 120 }}
+              resizeMode="contain"
+            />
           </View>
           {profile.name
             ? <Text style={s.userName}>{profile.name}</Text>
@@ -433,7 +530,7 @@ const s = StyleSheet.create({
   editChip:   { backgroundColor: '#eaf3fc', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10 },
   editChipTxt:{ fontSize: 12, fontWeight: '900', color: BLUE },
 
-  urineCard:     { backgroundColor: CARD, borderRadius: 20, padding: 16, gap: 8 },
+  urineCard:     { backgroundColor: CARD, borderRadius: 20, padding: 16, gap: 6 },
   urineTitle:    { fontSize: 14, fontWeight: '900', color: TEXT },
   urineSub:      { fontSize: 12, color: MUTED },
   urineScale:    { flexDirection: 'row', gap: 5 },
@@ -461,7 +558,7 @@ const s = StyleSheet.create({
   segTxtSel: { color: BLUE_DARK },
 
   goalBox:    { backgroundColor: '#eaf6ff', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: '#bde0f8', gap: 10 },
-  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   goalTitle:  { fontSize: 15, fontWeight: '900', color: TEXT },
   goalSub:    { fontSize: 12, color: MUTED },
   goalFinal:  { fontSize: 28, fontWeight: '900', color: BLUE, textAlign: 'center' },
@@ -472,7 +569,7 @@ const s = StyleSheet.create({
   timeBox:  { backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER, gap: 10 },
   timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
   timeItem: { flex: 1, gap: 4 },
-  timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800' },
+  timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800', textAlign: 'left', paddingLeft: '4' },
   timeInp:  { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 18, fontWeight: '900', color: TEXT, textAlign: 'center', backgroundColor: '#fff' },
   timeSep:  { fontSize: 20, color: MUTED, fontWeight: '900' },
 

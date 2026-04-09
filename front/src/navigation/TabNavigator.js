@@ -9,8 +9,6 @@ import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
 import ReportScreen from '../screens/ReportScreen'; 
 import ProfileScreen from '../screens/ProfileScreen';
 import MainScreen from '../screens/MainScreen.js';
-import SettingScreen from '../screens/SettingScreen.js';
-import ReminderSettingScreen from '../screens/ReminderSettingScreen.js';
 import { colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import GardenScreen  from '../screens/GardenScreen';
@@ -145,9 +143,7 @@ const MainTabNavigator = () => {
             <Tab.Screen name="主頁" component={MainScreen}/> 
             <Tab.Screen name="週報" component={ReportScreen} />
             <Tab.Screen name="花園" component={GardenScreen} />
-            {/* <Tab.Screen name="提醒設定" component={ReminderSettingScreen} /> */}
             <Tab.Screen name="個人" component={ProfileScreen} />
-            {/* <Tab.Screen name="設定" component={SettingScreen} />  */}
         </Tab.Navigator>
 
     );
