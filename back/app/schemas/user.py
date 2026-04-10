@@ -40,7 +40,8 @@ class UserProfileResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = None
     gender: Optional[str] = None
     weight: Optional[float] = None
     levelid: Optional[int] = None
-    age:int
+    age: Optional[int] = None

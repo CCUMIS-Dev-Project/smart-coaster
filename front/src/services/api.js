@@ -181,6 +181,40 @@ const apiService = {
     }
   },
 
+  // GET /users/me
+  getMe: async (token) => {
+    try {
+      const response = await apiClient.get('/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // GET /users/exercise-levels
+  getExerciseLevels: async () => {
+    try {
+      const response = await apiClient.get('/users/exercise-levels');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
+  // PATCH /goals
+  patchGoal: async (payload, token) => {
+    try {
+      const response = await apiClient.patch('/goals', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  },
+
   // PATCH /logs/{log_id}
   patchLog: async (logId, payload, token) => {
     try {

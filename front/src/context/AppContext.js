@@ -47,15 +47,46 @@ export function AppProvider({ children }) {
     isOnCoaster: false,
   });
 
+  const [exerciseLevels, setExerciseLevels] = useState([]); // [{id, level_type, addition}]
+
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
 
+  const TOKEN = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
+
   useEffect(() => {
-    const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
-    apiService.getGoal(token).then(res => {
-      if (res.success) {
-        setProfile(prev => ({ ...prev, goalMl: res.data.daily_target, customGoal: true }));
-      }
-    });
+    const load = async () => {
+      const [goalRes, meRes, exRes] = await Promise.all([
+        apiService.getGoal(TOKEN),
+        apiService.getMe(TOKEN),
+        apiService.getExerciseLevels(),
+      ]);
+      setProfile(prev => {
+        let u = { ...prev };
+        if (goalRes.success) {
+          u.goalMl           = goalRes.data.daily_target;
+          u.customGoal       = true;
+          u.reminderInterval = goalRes.data.rmd_interval ?? prev.reminderInterval;
+          u.autoStart        = goalRes.data.act_start    ?? prev.autoStart;
+          u.autoEnd          = goalRes.data.act_end      ?? prev.autoEnd;
+        }
+        if (meRes.success) {
+          const d = meRes.data;
+          u.name    = d.username ?? prev.name;
+          const gMap = { M: 'male', F: 'female', male: 'male', female: 'female' };
+          u.gender  = gMap[d.gender] ?? prev.gender;
+          u.weight  = d.weight   ?? prev.weight;
+          u.age     = d.age      ?? prev.age;
+          u.levelid = d.levelid  ?? null;
+          if (d.levelid) {
+            const LEVELID_TO_ACTIVITY = { 1: 'sedentary', 2: 'light', 3: 'moderate', 4: 'intense' };
+            u.activity = LEVELID_TO_ACTIVITY[d.levelid] ?? prev.activity;
+          }
+        }
+        return u;
+      });
+      if (exRes.success) setExerciseLevels(exRes.data);
+    };
+    load();
   }, []);
   // log 欄位對齊後端：{ log_id, type_id, d_volume, record_at, type_name }
   const totalMl = logs.reduce((sum, log) => sum + (log.d_volume ?? 0), 0);
@@ -118,6 +149,8 @@ export function AppProvider({ children }) {
       weekData,
       sensorData, setSensorData,
       syncHardwareDrink,
+      exerciseLevels,
+      TOKEN,
     }}>
       {children}
     </AppContext.Provider>

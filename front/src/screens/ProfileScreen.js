@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Tex
 import { useApp } from '../context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
+import apiService from '../services/api';
 
 const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
 
@@ -117,7 +118,7 @@ function EditableRow({ label, value, onEdit }) {
 }
 
 const ProfileScreen = () => {
-  const { profile, updateProfile, goalMl } = useApp();
+  const { profile, updateProfile, goalMl, exerciseLevels, TOKEN } = useApp();
   const insets = useSafeAreaInsets();
   const [urineIdx, setUrineIdx] = useState(0);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
@@ -234,11 +235,41 @@ const ProfileScreen = () => {
       update = {
         hasCoaster: tempHasCoaster,
         autoMode: tempHasCoaster,
-        autoStart: padT(tempAutoStart),
-        autoEnd:   padT(tempAutoEnd),
+        autoStart: tempHasCoaster ? padT(tempAutoStart) : '08:00',
+        autoEnd:   tempHasCoaster ? padT(tempAutoEnd)   : '22:00',
       };
     }
     updateProfile(update);
+
+    // Phase B：基本資料回寫 → PATCH /users/me
+    if (['name','gender','weight','age','activity'].includes(editField)) {
+      const payload = { age: profile.age }; // age 目前後端必帶
+      if (editField === 'name')     payload.username = update.name;
+      if (editField === 'gender')   payload.gender   = update.gender === 'male' ? 'M' : 'F';
+      if (editField === 'weight')   payload.weight   = update.weight;
+      if (editField === 'age')      payload.age      = update.age;
+      if (editField === 'activity') {
+        const ACTIVITY_TO_LEVELID = { sedentary: 1, light: 2, moderate: 3, intense: 4 };
+        payload.levelid = ACTIVITY_TO_LEVELID[update.activity];
+      }
+      apiService.updateProfile(payload, TOKEN);
+      // 若是影響建議飲水量的欄位，且未自訂目標，自動同步更新 daily_target
+      if (['gender', 'weight', 'age', 'activity'].includes(editField) && !profile.customGoal) {
+        const newGoal = calcWaterGoal({ ...profile, ...update });
+        apiService.patchGoal({ daily_target: newGoal }, TOKEN);
+      }
+    }
+    // Phase C：飲水設定回寫 → PATCH /goals
+    if (editField === 'goal') {
+      apiService.patchGoal({ daily_target: update.goalMl }, TOKEN);
+    }
+    if (editField === 'reminder') {
+      apiService.patchGoal({ rmd_interval: update.reminderInterval }, TOKEN);
+    }
+    if (editField === 'coaster') {
+      apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, TOKEN);
+    }
+
     setEditField(null);
   }
 

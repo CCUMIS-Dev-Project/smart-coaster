@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.user import UserProfileResponse, UserUpdate
 from app.services.user_service import get_user, update_user
 from app.middleware.auth import get_current_user
+from app.services.supabase_service import supabase
 
 router = APIRouter()
 
@@ -20,3 +21,9 @@ def edit_profile(body: UserUpdate, user_id: int = Depends(get_current_user)):
     if not data:
         raise HTTPException(status_code=400, detail="No fields to update")
     return update_user(user_id, data)
+
+
+@router.get("/exercise-levels")
+def list_exercise_levels():
+    res = supabase.table("exercise").select("id, level_type, addition").execute()
+    return res.data
