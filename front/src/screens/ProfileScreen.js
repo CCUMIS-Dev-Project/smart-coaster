@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Image, Animated, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Image, Animated, Modal } from 'react-native';
 import { useApp } from '../context/AppContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
 
 const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
@@ -16,23 +16,6 @@ const ACTIVITY_INFO = [
   { label: '高度', desc: '每週運動5次以上' },
   { label: '運動標準', desc: '一、感覺有點喘、說話稍費力，且持續時間超過 30 分鐘\n二、日均步數超過一萬步' },
 ];
-
-function Seg({ label, sel, onPress }) {
-  return (
-    <TouchableOpacity style={[s.seg, sel && s.segSel]} onPress={onPress} activeOpacity={0.75}>
-      <Text style={[s.segTxt, sel && s.segTxtSel]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <View style={s.infoRow}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value}</Text>
-    </View>
-  );
-}
 
 function RippleRing({ delay }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -75,21 +58,48 @@ function CustomSwitch({ value, onValueChange, disabled }) {
 
 // 時間輸入：HH 與 MM 分開，中間 ":" 固定不可刪
 function TimeInput({ value, onChange, style }) {
-  const parts = (value).split(':');
-  const hh = parts[0] ;
-  const mm = parts[1] ;
-  const onH = v => onChange(`${v.replace(/\D/g, '').slice(0, 2) }:${mm}`);
+  const mmRef = useRef(null);
+  const parts = (value || '').split(':');
+  const hh = parts[0] ?? '';
+  const mm = parts[1] ?? '';
+  const onH = v => {
+    const digits = v.replace(/\D/g, '').slice(0, 2);
+    onChange(`${digits}:${mm}`);
+    if (digits.length === 2) mmRef.current?.focus();
+  };
   const onM = v => onChange(`${hh}:${v.replace(/\D/g, '').slice(0, 2)}`);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}>
-      <TextInput style={[style, { width: 54, textAlign: 'center' }]}
+      <TextInput style={[style, { width: 54, textAlign: 'center', paddingHorizontal: 6 }]}
         value={hh} onChangeText={onH} keyboardType="numeric" maxLength={2}
-        placeholder="hh" placeholderTextColor={MUTED} />  
+        placeholder="hh" placeholderTextColor={MUTED} />
       <Text style={{ fontSize: 22, fontWeight: '900', color: '#4a6a84', marginHorizontal: 4 }}>:</Text>
-      <TextInput style={[style, { width: 54, textAlign: 'center' }]}
-         value={mm} onChangeText={onM} keyboardType="numeric" maxLength={2} 
-         placeholder="mm" placeholderTextColor={MUTED} /> 
+      <TextInput ref={mmRef} style={[style, { width: 54, textAlign: 'center', paddingHorizontal: 6 }]}
+        value={mm} onChangeText={onM} keyboardType="numeric" maxLength={2}
+        placeholder="mm" placeholderTextColor={MUTED} />
     </View>
+  );
+}
+
+// 登出按鈕（右下角淺灰文字，按下加深）
+function LogoutButton() {
+  const [pressed, setPressed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const color = pressed ? '#555' : hovered ? '#999' : '#ccc';
+  return (
+    <TouchableOpacity
+      activeOpacity={1}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onPress={() => { /* TODO: 串接後端登出 */ }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setPressed(false); }}
+      style={{ alignSelf: 'flex-end', paddingVertical: 8, paddingTop: 4, marginRight: 16 }}
+    >
+      <Text style={{ fontSize: 13, fontWeight: '600', color }}>
+        登出
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -108,6 +118,7 @@ function EditableRow({ label, value, onEdit }) {
 
 const ProfileScreen = () => {
   const { profile, updateProfile, goalMl } = useApp();
+  const insets = useSafeAreaInsets();
   const [urineIdx, setUrineIdx] = useState(0);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
 
@@ -120,7 +131,6 @@ const ProfileScreen = () => {
   const [tempCustomGoal, setTempCustomGoal] = useState(profile.customGoal);
   const [tempCustomGoalMl, setTempCustomGoalMl] = useState(String(profile.goalMl));
   const [tempHasCoaster, setTempHasCoaster] = useState(profile.hasCoaster);
-  const [tempAutoMode, setTempAutoMode] = useState(profile.autoMode);
   const [tempAutoStart, setTempAutoStart] = useState(profile.autoStart);
   const [tempAutoEnd, setTempAutoEnd] = useState(profile.autoEnd);
 
@@ -146,7 +156,6 @@ const ProfileScreen = () => {
     }
     if (field === 'coaster') {
       setTempHasCoaster(profile.hasCoaster);
-      setTempAutoMode(profile.autoMode);
       setTempAutoStart(profile.autoStart || '08:00');
       setTempAutoEnd(profile.autoEnd || '22:00');
     }
@@ -218,29 +227,20 @@ const ProfileScreen = () => {
           return;
         }
       }
+      const padT = t => {
+        const [h, m] = (t || '').split(':');
+        return `${(h || '0').padStart(2, '0')}:${(m || '0').padStart(2, '0')}`;
+      };
+      update = {
+        hasCoaster: tempHasCoaster,
+        autoMode: tempHasCoaster,
+        autoStart: padT(tempAutoStart),
+        autoEnd:   padT(tempAutoEnd),
+      };
     }
     updateProfile(update);
     setEditField(null);
   }
-
-  const ActivityInfoModal = (
-    <Modal visible={showActivityInfo} transparent animationType="fade">
-      <TouchableOpacity style={s.actOverlay} activeOpacity={1} onPress={() => setShowActivityInfo(false)}>
-        <View style={s.actModal}>
-          <Text style={s.actTitle}>活動量標準</Text>
-          {ACTIVITY_INFO.map(a => (
-            <View key={a.label} style={s.actRow}>
-              <Text style={s.actLabel}>{a.label}</Text>
-              <Text style={s.actDesc}>{a.desc}</Text>
-            </View>
-          ))}
-          <TouchableOpacity style={s.actClose} onPress={() => setShowActivityInfo(false)}>
-            <Text style={s.actCloseTxt}>了解</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
 
   // 個別欄位編輯 Modal 內容
   function renderEditModal() {
@@ -400,7 +400,7 @@ const ProfileScreen = () => {
     return (
       <Modal visible={!!editField} transparent animationType="slide">
         <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
+          <View style={[s.modalCard, { paddingBottom: insets.bottom + 24 }]}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{title}</Text>
               <TouchableOpacity onPress={() => setEditField(null)}>
@@ -441,7 +441,6 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={s.safe}>
-      {ActivityInfoModal}
       {renderEditModal()}
 
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
@@ -506,7 +505,7 @@ const ProfileScreen = () => {
           <Text style={s.urineLabel}>{URINE_LABELS[urineIdx]}</Text>
         </View>
 
-        <View style={{ height: 20 }} />
+        <LogoutButton />
       </ScrollView>
     </SafeAreaView>
   );
@@ -527,9 +526,6 @@ const s = StyleSheet.create({
   infoRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 13, borderTopWidth: 1, borderTopColor: '#f0f5fa', gap: 12 },
   infoLabel:  { flex: 1, fontSize: 15, color: '#6b8da8', fontWeight: '600' },
   infoValue:  { fontSize: 15, fontWeight: '800', color: TEXT },
-  editChip:   { backgroundColor: '#eaf3fc', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10 },
-  editChipTxt:{ fontSize: 12, fontWeight: '900', color: BLUE },
-
   urineCard:     { backgroundColor: CARD, borderRadius: 20, padding: 16, gap: 6 },
   urineTitle:    { fontSize: 14, fontWeight: '900', color: TEXT },
   urineSub:      { fontSize: 12, color: MUTED },
@@ -539,7 +535,7 @@ const s = StyleSheet.create({
   urineLabel:    { fontSize: 12, fontWeight: '800', color: MUTED, textAlign: 'center' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard:    { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 },
+  modalCard:    { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 16 },
   modalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle:   { fontSize: 20, fontWeight: '900', color: TEXT },
   saveBtn:      { backgroundColor: BLUE, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 4 },
@@ -547,8 +543,6 @@ const s = StyleSheet.create({
 
   lbl:    { fontSize: 11, fontWeight: '800', color: '#5a7a96', textTransform: 'uppercase', letterSpacing: 0.7 },
   inp:    { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 2, borderColor: BORDER, fontSize: 16, fontWeight: '700', color: TEXT, backgroundColor: '#f6fafd' },
-  twoCol: { flexDirection: 'row', gap: 12 },
-  col:    { flex: 1, gap: 6 },
   segRow: { flexDirection: 'row', gap: 8 },
   segGrid:{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   seg:    { flex: 1, paddingVertical: 13, borderRadius: 13, borderWidth: 2, borderColor: BORDER, backgroundColor: '#f6fafd', alignItems: 'center' },
@@ -558,7 +552,6 @@ const s = StyleSheet.create({
   segTxtSel: { color: BLUE_DARK },
 
   goalBox:    { backgroundColor: '#eaf6ff', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: '#bde0f8', gap: 10 },
-  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   goalTitle:  { fontSize: 15, fontWeight: '900', color: TEXT },
   goalSub:    { fontSize: 12, color: MUTED },
   goalFinal:  { fontSize: 28, fontWeight: '900', color: BLUE, textAlign: 'center' },
@@ -567,14 +560,13 @@ const s = StyleSheet.create({
   switchTitle: { fontSize: 15, fontWeight: '800', color: TEXT },
 
   timeBox:  { backgroundColor: '#f6fafd', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: BORDER, gap: 10 },
-  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  timeItem: { flex: 1, gap: 4 },
-  timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800', textAlign: 'left', paddingLeft: '4' },
+  timeRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 16 },
+  timeItem: { gap: 4 },
+  timeLbl:  { fontSize: 11, color: MUTED, fontWeight: '800', textAlign: 'left'},
   timeInp:  { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 2, borderColor: BORDER, fontSize: 18, fontWeight: '900', color: TEXT, textAlign: 'center', backgroundColor: '#fff' },
-  timeSep:  { fontSize: 20, color: MUTED, fontWeight: '900' },
+  timeSep:  { fontSize: 20, color: MUTED, fontWeight: '900', paddingTop: 11 },
 
-  infoBtn:     { width: 18, height: 18, borderRadius: 9, backgroundColor: '#d0e8f8', alignItems: 'center', justifyContent: 'center' },
-  infoBtnTxt:  { fontSize: 11, fontWeight: '900', color: '#3a90d4' },
+
   actOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
   actModal:    { backgroundColor: '#fff', borderRadius: 22, padding: 22, width: '100%', gap: 12 },
   actTitle:    { fontSize: 17, fontWeight: '900', color: '#1a2a3a', marginBottom: 4 },
