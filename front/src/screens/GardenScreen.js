@@ -322,7 +322,7 @@ function Flower8({ size = 40, colored }) {
 }
 
 const FLOWER_COMPONENTS = [Flower1,Flower2,Flower3,Flower4,Flower5,Flower6,Flower7,Flower8];
-const FLOWERS_INIT = FLOWER_DATA.map((f,i)=>({ ...f, unlocked: i<2, isNew: i===1 }));
+const FLOWERS_INIT = FLOWER_DATA.map(f => ({ ...f, unlocked: false, isNew: false }));
 
 
 // ── 全螢幕花園場景 ────────────────────────────────────────
@@ -464,7 +464,7 @@ function FlowerInfoModal({ flower, index, onClose }) {
 export default function GardenScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? ''; // TODO [串接 auth flow 時刪除]
+  const { token } = useApp();
 
   const [flowers, setFlowers]           = useState(FLOWERS_INIT);
   const [streakCount, setStreakCount]   = useState(0);

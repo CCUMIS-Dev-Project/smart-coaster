@@ -1,29 +1,30 @@
 // src/context/AppContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { calcWaterGoal } from '../constants/theme';
 import apiService from '../services/api';
 
 const AppContext = createContext(null);
 
+const DEFAULT_PROFILE = {
+  name: '',
+  gender: 'male',
+  weight: 65,
+  age: 28,
+  activity: 'light',
+  goalMl: 0,
+  customGoal: false,
+  selectedCup: { name: '馬克杯', emoji: '☕', ml: 400 },
+  reminderInterval: 60,
+  autoMode: true,
+  autoStart: '08:00',
+  autoEnd: '22:00',
+  hasCoaster: true,
+};
+
 export function AppProvider({ children }) {
   const [isSetupDone, setIsSetupDone] = useState(false);
-
-  const [profile, setProfile] = useState({
-    name: '',
-    gender: 'male',
-    weight: 65,
-    age: 28,
-    activity: 'light',
-    goalMl: 0,
-    customGoal: false,
-    selectedCup: { name: '馬克杯', emoji: '☕', ml: 400 }, // 預設水杯
-    reminderInterval: 60,
-    autoMode: true,
-    autoStart: '08:00',
-    autoEnd: '22:00',
-    hasCoaster: true,
-  });
-
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [logs, setLogs] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
 
@@ -37,7 +38,6 @@ export function AppProvider({ children }) {
     { day: '今', ml: 0 },
   ]);
 
-  // 紀錄硬體上一次傳來的總喝水量，用來計算差值
   const [lastHardwareAmount, setLastHardwareAmount] = useState(0);
 
   const [sensorData, setSensorData] = useState({
@@ -47,17 +47,29 @@ export function AppProvider({ children }) {
     isOnCoaster: false,
   });
 
-  const [exerciseLevels, setExerciseLevels] = useState([]); // [{id, level_type, addition}]
+  const [exerciseLevels, setExerciseLevels] = useState([]);
+  const [token, setToken] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
 
-  const TOKEN = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
-
+  // 啟動時從 AsyncStorage 讀取 token
   useEffect(() => {
-    const load = async () => {
+    const initAuth = async () => {
+      const stored = await AsyncStorage.getItem('userToken');
+      setToken(stored);
+      setIsAuthLoading(false);
+    };
+    initAuth();
+  }, []);
+
+  // token 變化時（登入 / 啟動帶 token）抓 profile
+  useEffect(() => {
+    if (!token) return;
+    const loadProfile = async () => {
       const [goalRes, meRes, exRes] = await Promise.all([
-        apiService.getGoal(TOKEN),
-        apiService.getMe(TOKEN),
+        apiService.getGoal(token),
+        apiService.getMe(token),
         apiService.getExerciseLevels(),
       ]);
       setProfile(prev => {
@@ -86,8 +98,9 @@ export function AppProvider({ children }) {
       });
       if (exRes.success) setExerciseLevels(exRes.data);
     };
-    load();
-  }, []);
+    loadProfile();
+  }, [token]);
+
   // log 欄位對齊後端：{ log_id, type_id, d_volume, record_at, type_name }
   const totalMl = logs.reduce((sum, log) => sum + (log.d_volume ?? 0), 0);
 
@@ -100,7 +113,14 @@ export function AppProvider({ children }) {
     setProfile(prev => ({ ...prev, ...data }));
   }
 
-  // 樂觀更新：直接插入 local state（Phase B 的 API 呼叫在 MainScreen 做）
+  async function logout() {
+    await AsyncStorage.multiRemove(['userToken', 'userId']);
+    setToken(null);
+    setProfile(DEFAULT_PROFILE);
+    setLogs([]);
+  }
+
+  // 樂觀更新：直接插入 local state
   function addLog(logData) {
     setLogs(prev => [logData, ...prev]);
   }
@@ -150,7 +170,7 @@ export function AppProvider({ children }) {
       sensorData, setSensorData,
       syncHardwareDrink,
       exerciseLevels,
-      TOKEN,
+      token, setToken, isAuthLoading, logout,
     }}>
       {children}
     </AppContext.Provider>

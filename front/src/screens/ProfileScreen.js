@@ -84,6 +84,7 @@ function TimeInput({ value, onChange, style }) {
 
 // 登出按鈕（右下角淺灰文字，按下加深）
 function LogoutButton() {
+  const { logout } = useApp();
   const [pressed, setPressed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const color = pressed ? '#555' : hovered ? '#999' : '#ccc';
@@ -92,7 +93,7 @@ function LogoutButton() {
       activeOpacity={1}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      onPress={() => { /* TODO: 串接後端登出 */ }}
+      onPress={logout}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setPressed(false); }}
       style={{ alignSelf: 'flex-end', paddingVertical: 8, paddingTop: 4, marginRight: 16 }}
@@ -118,7 +119,7 @@ function EditableRow({ label, value, onEdit }) {
 }
 
 const ProfileScreen = () => {
-  const { profile, updateProfile, goalMl, exerciseLevels, TOKEN } = useApp();
+  const { profile, updateProfile, goalMl, exerciseLevels, token } = useApp();
   const insets = useSafeAreaInsets();
   const [urineIdx, setUrineIdx] = useState(0);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
@@ -252,22 +253,22 @@ const ProfileScreen = () => {
         const ACTIVITY_TO_LEVELID = { sedentary: 1, light: 2, moderate: 3, intense: 4 };
         payload.levelid = ACTIVITY_TO_LEVELID[update.activity];
       }
-      apiService.updateProfile(payload, TOKEN);
+      apiService.updateProfile(payload, token);
       // 若是影響建議飲水量的欄位，且未自訂目標，自動同步更新 daily_target
       if (['gender', 'weight', 'age', 'activity'].includes(editField) && !profile.customGoal) {
         const newGoal = calcWaterGoal({ ...profile, ...update });
-        apiService.patchGoal({ daily_target: newGoal }, TOKEN);
+        apiService.patchGoal({ daily_target: newGoal }, token);
       }
     }
     // Phase C：飲水設定回寫 → PATCH /goals
     if (editField === 'goal') {
-      apiService.patchGoal({ daily_target: update.goalMl }, TOKEN);
+      apiService.patchGoal({ daily_target: update.goalMl }, token);
     }
     if (editField === 'reminder') {
-      apiService.patchGoal({ rmd_interval: update.reminderInterval }, TOKEN);
+      apiService.patchGoal({ rmd_interval: update.reminderInterval }, token);
     }
     if (editField === 'coaster') {
-      apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, TOKEN);
+      apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, token);
     }
 
     setEditField(null);

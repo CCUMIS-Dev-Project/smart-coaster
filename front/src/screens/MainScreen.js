@@ -45,25 +45,22 @@ const CAFF_SIZE   = Math.min(100, Math.floor(SCREEN_W * 0.22)); // 咖啡因小�
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MainScreen = () => {
-  // TODO [串接 auth flow 時刪除] 改成從 AppContext 或 SecureStore 拿真實 JWT
-  const testToken = process.env.EXPO_PUBLIC_DEV_TOKEN ?? '';
-  //console.log('[debug] testToken:', testToken ? testToken.slice(0, 20) + '...' : '(empty)');
+  // useApp：全域狀態，包含使用者設定、飲水目標、今日紀錄、感測器資料
+  const {
+      profile, goalMl, totalMl, logs, replaceLogs,
+      addLog, updateLog, deleteLog, deleteLogs,
+      sensorData, setSensorData, syncHardwareDrink,
+      token,
+    } = useApp();
 
   // useBLE：負責藍牙掃描、連線、收發資料
-  const { scanAndConnect, stopScan, connectedDevice, bleData ,writeToDevice} = useBLE(testToken);
+  const { scanAndConnect, stopScan, connectedDevice, bleData ,writeToDevice} = useBLE(token);
 
   // 紀錄杯墊連線狀態
   const [isScanning, setIsScanning] = useState(false);
 
   // 已連線提示 Modal
   const [showConnectedAlert, setShowConnectedAlert] = useState(false);
-
-  // useApp：全域狀態，包含使用者設定、飲水目標、今日紀錄、感測器資料
-  const {
-      profile, goalMl, totalMl, logs, replaceLogs,
-      addLog, updateLog, deleteLog, deleteLogs,
-      sensorData, setSensorData, syncHardwareDrink,
-    } = useApp();
 
     const age = profile?.age || 25;
     // ── 咖啡因每日建議上限（純前端醫學準則，不需後端 DB）──────────
@@ -174,7 +171,7 @@ const MainScreen = () => {
     useEffect(() => {
       const _d = new Date();
       const today = [_d.getFullYear(), String(_d.getMonth()+1).padStart(2,'0'), String(_d.getDate()).padStart(2,'0')].join('-');
-      apiService.getLogs(today, testToken).then(res => {
+      apiService.getLogs(today, token).then(res => {
         if (res.success) {
           replaceLogs(res.data);
           if (connectedDevice && writeToDevice) {
@@ -185,7 +182,7 @@ const MainScreen = () => {
           console.warn('[MainScreen] 載入今日紀錄失敗:', res.error);
         }
       });
-    }, []); // 空陣列：只在 mount 時執行一次
+    }, [token]); // token 變化時（切換帳號）重新載入
 
     // ── Phase B：新增飲水紀錄 ────────────────────────────────────
 
@@ -198,7 +195,7 @@ const MainScreen = () => {
         record_at: new Date().toISOString(),
         is_auto: false,
       };
-      const res = await apiService.postLog(payload, testToken);
+      const res = await apiService.postLog(payload, token);
       if (res.success) {
         addLog(res.data);
         if (connectedDevice && writeToDevice) {
@@ -220,7 +217,7 @@ const MainScreen = () => {
         record_at: new Date().toISOString(),
         is_auto: false,
       };
-      const res = await apiService.postLog(payload, testToken);
+      const res = await apiService.postLog(payload, token);
       if (res.success) {
         addLog(res.data);
         setShowAddModal(false);
@@ -276,7 +273,7 @@ const MainScreen = () => {
     async function handleEdit() {
       const ml = parseInt(editMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
-      const res = await apiService.patchLog(editingLog.log_id, { d_volume: ml, type_id: editType }, testToken);
+      const res = await apiService.patchLog(editingLog.log_id, { d_volume: ml, type_id: editType }, token);
       if (res.success) {
         updateLog(editingLog.log_id, { d_volume: res.data.d_volume, type_id: res.data.type_id, type_name: res.data.type_name });
       } else {
@@ -339,7 +336,7 @@ const MainScreen = () => {
           
         }));
         // 上傳至後端 Supabase
-        apiService.postEnvLog(temp, hum, testToken);
+        apiService.postEnvLog(temp, hum, token);
       }else if (type === 'O') {
         // O | 2024/03/24 15:30:00 | diffAmount
         const offlineTime = parts[1]; // 取出杯墊記錄的真實時間
@@ -624,7 +621,7 @@ const MainScreen = () => {
                 onPress={async () => {
                   // Phase D：逐一打 DELETE API，全部完成後再更新 state
                   const results = await Promise.all(
-                    selected.map(id => apiService.deleteLog(id, testToken))
+                    selected.map(id => apiService.deleteLog(id, token))
                   );
                   const failed = results.filter(r => !r.success);
                   if (failed.length > 0) {

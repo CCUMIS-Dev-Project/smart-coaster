@@ -147,10 +147,9 @@ function PieChart({ data }) {
 }
 
 export default function ReportScreen() {
-  const { goalMl, totalMl } = useApp();
+  const { goalMl, totalMl, token } = useApp();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const token = process.env.EXPO_PUBLIC_DEV_TOKEN ?? ''; // TODO [串接 auth flow 時刪除]
 
   const [kbHeight, setKbHeight] = useState(0);
   const [showWeekCompare, setShowWeekCompare] = useState(false);
