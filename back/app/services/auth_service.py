@@ -39,6 +39,7 @@ def register_user(body: UserRegister) -> dict:
         "gender": body.gender,
         "weight": body.weight,
         "levelid": body.levelid,
+        "age": body.age,
     }
     
     user_response = supabase.table(USERS_TABLE).insert(user_data).execute()

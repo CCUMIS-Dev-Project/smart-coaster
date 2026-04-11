@@ -21,14 +21,12 @@ function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
-        <>
-          <Stack.Screen name="MainTabs" component={MainTabNavigator} />
-          <Stack.Screen name="Initial" component={InitialSettingScreen} />
-        </>
+        <Stack.Screen name="MainTabs" component={MainTabNavigator} />
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Initial" component={InitialSettingScreen} />
         </>
       )}
     </Stack.Navigator>

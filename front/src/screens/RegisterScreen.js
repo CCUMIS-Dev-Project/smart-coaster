@@ -1,56 +1,44 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { CustomInput, COLORS } from '../components/CustomInput';
-import apiService from '../services/api';
 import { FontAwesome } from '@expo/vector-icons';
+
+const showAlert = (title, message) => {
+  if (typeof window !== 'undefined') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 
 const RegisterScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-//   const [verificationCode, setVerificationCode] = useState('');
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleRegister = async () => {
-    // 1. 基礎驗證
+  const handleRegister = () => {
     if (!username || !password || !confirmPassword) {
-      Alert.alert('提示', '請填寫所有欄位');
+      setErrorMsg('請填寫所有欄位');
       return;
     }
-
     if (password !== confirmPassword) {
-      Alert.alert('提示', '兩次輸入的密碼不一致');
+      setErrorMsg('兩次輸入的密碼不一致');
       return;
     }
-
     if (!isTermsAccepted) {
-      Alert.alert('提示', '請閱讀並同意服務條款');
+      setErrorMsg('請閱讀並同意服務條款');
       return;
     }
-
-    // 2. 準備註冊資料
-    const userData = {
-      username: username,
-      password: password,
-    };
-
-    // 3. 呼叫 API
-    const result = await apiService.register(userData);
-
-    if (result.success) {
-      Alert.alert('註冊成功', '接下來請登入', [
-        { 
-          onPress: () => navigation.replace('Login') // 註冊成功後導向設定頁面
-        }
-      ]);
-    } else {
-      Alert.alert('註冊失敗', result.error);
-    }
+    setErrorMsg('');
+    // 不在此呼叫 API，帶著帳密進入初始設定，最後統一送出
+    navigation.replace('Initial', { username, password });
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -99,22 +87,25 @@ const RegisterScreen = ({ navigation }) => {
             keyboardType="numeric"
           /> */}
 
-          {/* 服務條款勾選 */}
-          <TouchableOpacity 
-            style={styles.termsContainer} 
-            onPress={() => setIsTermsAccepted(!isTermsAccepted)}
-          >
-            <View style={[styles.checkbox, isTermsAccepted && styles.checkboxActive]}>
-              {isTermsAccepted && <FontAwesome name="check" size={12} color="#FFF" />}
-            </View>
-            <Text style={styles.termsText}>我已閱讀並同意服務條款</Text>
-          </TouchableOpacity>
+          {/* 服務條款勾選 + 錯誤訊息同行 */}
+          <View style={styles.termsRow}>
+            <TouchableOpacity
+              style={styles.termsContainer}
+              onPress={() => setIsTermsAccepted(!isTermsAccepted)}
+            >
+              <View style={[styles.checkbox, isTermsAccepted && styles.checkboxActive]}>
+                {isTermsAccepted && <FontAwesome name="check" size={12} color="#FFF" />}
+              </View>
+              <Text style={styles.termsText}>我已閱讀並同意服務條款</Text>
+            </TouchableOpacity>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
         </View>
 
         {/* 按鈕區域 */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={styles.signInButton} 
+          <TouchableOpacity
+            style={styles.signInButton}
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.signInText}>登入</Text>
@@ -135,8 +126,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FDF8ED',
   },
   scrollContainer: {
+    flexGrow: 1,
     paddingHorizontal: 30,
-    paddingVertical: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -166,11 +157,16 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
   },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    marginBottom: 20,
+  },
   termsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
   },
   checkbox: {
     width: 20,
@@ -188,6 +184,15 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 14,
     color: '#666',
+  },
+  errorText: {
+    color: '#f87171',
+    fontSize: 12,
+    fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'right',
+    marginLeft: 8,
+    minHeight: 18,
   },
   buttonContainer: {
     flexDirection: 'row',

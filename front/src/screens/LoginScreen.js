@@ -1,15 +1,41 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Image } from 'react-native';
 import { CustomInput, COLORS } from '../components/CustomInput';
 import apiService from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../context/AppContext';
+
+function RippleRing({ delay }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(anim, { toValue: 1, duration: 2600, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  const scale   = anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.3] });
+  const opacity = anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.5, 0] });
+  return <Animated.View style={[s.rippleRing, { transform: [{ scale }], opacity }]} />;
+}
 
 const LoginScreen = ({ navigation }) => {
   const { setToken } = useApp();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  const bobAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bobAnim, { toValue: -10, duration: 1400, useNativeDriver: true }),
+        Animated.timing(bobAnim, { toValue: 0,   duration: 1400, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
 
   const handleLogin = async () => {
     setLoginError('');
@@ -30,136 +56,156 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
+      style={s.container}
     >
-      <View style={styles.innerContainer}>
-        {/* 上方插圖區域
-        <View style={styles.imageContainer}>
-          {/* 請替換成你實際的圖片路徑 */}
-          {/* <Image 
-            source={require('../../assets/login_illustration.png')} 
-            style={styles.image}
+      {/* 上方 1/3：logo + 水杯 */}
+      <View style={s.topSection}>
+        <Text style={s.logoTxt}>Day Day補給站</Text>
+        <View style={s.rippleWrap}>
+          <RippleRing delay={0} />
+          <RippleRing delay={800} />
+          <RippleRing delay={1600} />
+          <Animated.Image
+            source={require('../assets/cup_main.png')}
+            style={[s.cupImg, { transform: [{ translateY: bobAnim }] }]}
             resizeMode="contain"
           />
-        </View> */}
+        </View>
+      </View>
 
-        {/* 標題區域 */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>歡迎來到DayDay補給站</Text>
-          <Text style={styles.subtitle}>飲水大小事，DayDay補給站與你作伴。</Text>
+      {/* 下方 2/3：標題 + 輸入 + 按鈕 */}
+      <View style={s.bottomSection}>
+        <Text style={s.headline}>歡迎來到DayDay補給站</Text>
+        <Text style={s.subTxt}>飲水大小事，DayDay補給站與你作伴。</Text>
+
+        <View style={s.formWrap}>
+          <CustomInput
+            iconName="user"
+            placeholder="輸入使用者名稱"
+            value={username}
+            onChangeText={v => { setUsername(v); setLoginError(''); }}
+          />
+          <CustomInput
+            iconName="lock"
+            placeholder="輸入密碼"
+            secureTextEntry={true}
+            value={password}
+            onChangeText={v => { setPassword(v); setLoginError(''); }}
+          />
+          <Text style={s.errorTxt}>{loginError}</Text>
         </View>
 
-        {/* 輸入區域 */}
-        <View style={{ alignSelf: 'stretch', marginBottom: 40 }}>
-          <View style={styles.formContainer}>
-            <CustomInput
-              iconName="user"
-              placeholder="輸入使用者名稱"
-              value={username}
-              onChangeText={v => { setUsername(v); setLoginError(''); }}
-            />
-            <CustomInput
-              iconName="lock"
-              placeholder="輸入密碼"
-              secureTextEntry={true}
-              value={password}
-              onChangeText={v => { setPassword(v); setLoginError(''); }}
-            />
-          </View>
-          {!!loginError && (
-            <Text style={{ position: 'absolute', bottom: 0, right: 10, color: '#f87171', fontSize: 12, fontWeight: '700' }}>
-              {loginError}
-            </Text>
-          )}
-        </View>
+        <TouchableOpacity style={s.btn} onPress={handleLogin} activeOpacity={0.85}>
+          <Text style={s.btnTxt}>登入</Text>
+        </TouchableOpacity>
 
-        {/* 按鈕區域 */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={styles.signUpButton} 
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.signUpText}>註冊</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginText}>登入</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.75}>
+          <Text style={s.registerLink}>還沒有帳號？<Text style={s.registerLinkBold}>註冊</Text></Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 };
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF8ED', // 設計圖的背景色
+    backgroundColor: '#e8f5fe',
+    paddingHorizontal: 32,
+    paddingTop: 50,
+    paddingBottom: 20,
   },
-  innerContainer: {
+  topSection: {
     flex: 1,
-    paddingHorizontal: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageContainer: {
-    height: 150,
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  image: {
-    height: 120,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primaryBlue,
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.primaryBlue,
-  },
-  formContainer: {
     width: '100%',
-    marginBottom: 10,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  bottomSection: {
+    flex: 2,
     width: '100%',
-    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 8,
   },
-  signUpButton: {
+  logoTxt: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#3a90d4',
+    alignSelf: 'flex-start',
+    marginBottom: 0,
+  },
+  rippleWrap: {
+    width: 160,
+    height: 160,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
   },
-  signUpText: {
+  rippleRing: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: '#5ab4f5',
+  },
+  cupImg: {
+    width: 90,
+    height: 90,
+  },
+  headline: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#5ab4f5',
+    textAlign: 'center',
+    lineHeight: 34,
+    marginBottom: 6,
+  },
+  subTxt: {
+    fontSize: 13,
+    color: '#6b8da8',
+    textAlign: 'center',
+    marginBottom: 100,
+  },
+  formWrap: {
+    width: '100%',
+    marginBottom: 6,
+  },
+  errorTxt: {
+    color: '#f87171',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+    textAlign: 'right',
+    minHeight: 18,
+  },
+  btn: {
+    backgroundColor: '#5ab4f5',
+    paddingVertical: 17,
+    borderRadius: 16,
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 16,
+    shadowColor: '#3a90d4',
+    shadowOpacity: 0.38,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  btnTxt: {
+    color: '#fff',
     fontSize: 16,
-    color: COLORS.primaryBlue,
-    fontWeight: '600',
+    fontWeight: '900',
   },
-  loginButton: {
-    backgroundColor: COLORS.primaryBlue,
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 25, // 圓角按鈕
-    elevation: 3, // Android 陰影
-    shadowColor: '#000', // iOS 陰影
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+  registerLink: {
+    fontSize: 14,
+    color: '#6b8da8',
   },
-  loginText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  registerLinkBold: {
+    color: '#3a90d4',
+    fontWeight: '900',
   },
 });
 

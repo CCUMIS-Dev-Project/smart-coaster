@@ -5,9 +5,10 @@ from typing import Optional
 class UserRegister(BaseModel):
     username: str
     password: str
-    gender: Optional[str]
-    weight: Optional[float]
-    levelid: Optional[int]
+    gender: Optional[str] = None
+    weight: Optional[float] = None
+    levelid: Optional[int] = None
+    age: Optional[int] = None
     daily_target: Optional[int] = 2000
     rmd_interval: Optional[int] = 60
     act_start: Optional[str] = "08:00"
