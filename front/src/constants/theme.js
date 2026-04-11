@@ -25,6 +25,14 @@ export const colors = {
   // DB type_name（英文）→ DRINK_TYPE 物件
   export const DRINK_BY_KEY = Object.fromEntries(DRINK_TYPES.map(d => [d.key, d]));
   
+  export const CUPS = [
+    { name: '洋芋片罐', image: require('../assets/cup_can.png'),   ml: 320, desc: '我才不要喝水，快給我吃餅乾！' },
+    { name: '水杯',     image: require('../assets/cup_main.png'),  ml: 350, desc: '平凡中帶點小確幸' },
+    { name: '茶杯',     image: require('../assets/cup_tea.png'),   ml: 200, desc: '慢慢來，人生不急' },
+    { name: '馬克杯',   image: require('../assets/cup_mug.png'),   ml: 400, desc: '早晨救星，戒不掉' },
+    { name: '玻璃杯',   image: require('../assets/cup_lemon.png'), ml: 300, desc: '清新系，夏天的靈魂' },
+  ];
+
   export const ACTIVITY_LEVELS = [
     { label: '久坐',   key: 'sedentary', rate: 0 },
     { label: '輕度',   key: 'light',     rate: 0.10 },

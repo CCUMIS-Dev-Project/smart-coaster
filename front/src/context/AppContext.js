@@ -1,7 +1,8 @@
 // src/context/AppContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { calcWaterGoal } from '../constants/theme';
+import { decode as atob } from 'base-64';
+import { calcWaterGoal, CUPS } from '../constants/theme';
 import apiService from '../services/api';
 
 const AppContext = createContext(null);
@@ -14,12 +15,12 @@ const DEFAULT_PROFILE = {
   activity: 'light',
   goalMl: 0,
   customGoal: false,
-  selectedCup: { name: '馬克杯', emoji: '☕', ml: 400 },
+  selectedCup: CUPS[3], // 馬克杯（預設）
   reminderInterval: 60,
   autoMode: true,
   autoStart: '08:00',
   autoEnd: '22:00',
-  hasCoaster: true,
+  hasCoaster: false,
 };
 
 export function AppProvider({ children }) {
@@ -55,9 +56,29 @@ export function AppProvider({ children }) {
 
   // 啟動時從 AsyncStorage 讀取 token
   useEffect(() => {
+    const isExpired = (token) => {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.exp * 1000 < Date.now();
+      } catch {
+        return true;
+      }
+    };
+
     const initAuth = async () => {
-      const stored = await AsyncStorage.getItem('userToken');
-      setToken(stored);
+      const [stored, cupName] = await Promise.all([
+        AsyncStorage.getItem('userToken'),
+        AsyncStorage.getItem('selectedCupName'),
+      ]);
+      if (cupName) {
+        const cup = CUPS.find(c => c.name === cupName);
+        if (cup) setProfile(prev => ({ ...prev, selectedCup: cup }));
+      }
+      if (stored && !isExpired(stored)) {
+        setToken(stored);
+      } else if (stored) {
+        await AsyncStorage.removeItem('userToken');
+      }
       setIsAuthLoading(false);
     };
     initAuth();
@@ -116,7 +137,9 @@ export function AppProvider({ children }) {
   async function logout() {
     await AsyncStorage.multiRemove(['userToken', 'userId']);
     setToken(null);
-    setProfile(DEFAULT_PROFILE);
+    const cupName = await AsyncStorage.getItem('selectedCupName');
+    const savedCup = cupName ? (CUPS.find(c => c.name === cupName) ?? DEFAULT_PROFILE.selectedCup) : DEFAULT_PROFILE.selectedCup;
+    setProfile({ ...DEFAULT_PROFILE, selectedCup: savedCup });
     setLogs([]);
   }
 

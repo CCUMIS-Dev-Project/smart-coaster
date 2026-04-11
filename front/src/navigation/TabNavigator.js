@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons'; // Expo 內建的圖示庫
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
 
@@ -10,7 +10,6 @@ import ReportScreen from '../screens/ReportScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MainScreen from '../screens/MainScreen.js';
 import { colors } from '../constants/theme';
-import { useApp } from '../context/AppContext';
 import GardenScreen  from '../screens/GardenScreen';
 
 const Tab = createBottomTabNavigator();
@@ -45,26 +44,6 @@ function FlowerIcon({ color }) {
   );
 }
 
-// 使用者選的杯子圖片
-function CupIcon({ focused }) {
-  const { profile } = useApp();
-  if (profile?.selectedCup?.image) {
-    return (
-      <Image
-        source={profile.selectedCup.image}
-        style={{ width: 26, height: 26, opacity: focused ? 1 : 0.35 }}
-        resizeMode="contain"
-      />
-    );
-  }
-  // fallback
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24">
-      <Path d="M6 2h12l1 6H5L6 2z" fill={focused ? BLUE : MUTED} />
-      <Path d="M5 8h14v12a2 2 0 01-2 2H7a2 2 0 01-2-2V8z" fill={focused ? BLUE : MUTED} opacity={0.8} />
-    </Svg>
-  );
-}
 
 function TabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
@@ -100,7 +79,7 @@ function TabBar({ state, descriptors, navigation }) {
             // break;
             case '個人':
             label = '個人';
-            IconComponent = <CupIcon focused={focused} />;
+            IconComponent = <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={iconColor} />;
             break;
             case '花園':
             label = '花園';

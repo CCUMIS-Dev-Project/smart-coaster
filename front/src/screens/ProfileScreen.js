@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Image, Animated, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Image, Animated, Modal, ActivityIndicator, Alert } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
 import apiService from '../services/api';
+import useBLE from '../hooks/useBLE';
 
 const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
 
@@ -135,6 +136,42 @@ const ProfileScreen = () => {
   const [tempHasCoaster, setTempHasCoaster] = useState(profile.hasCoaster);
   const [tempAutoStart, setTempAutoStart] = useState(profile.autoStart);
   const [tempAutoEnd, setTempAutoEnd] = useState(profile.autoEnd);
+
+  // BLE 掃描（杯墊設定用）
+  const { scanAndConnect, stopScan, connectedDevice } = useBLE(token);
+  const [isCoasterScanning, setIsCoasterScanning] = useState(false);
+  const scanTimeoutRef = useRef(null);
+  const connectedRef   = useRef(null);
+
+  useEffect(() => {
+    connectedRef.current = connectedDevice;
+    if (connectedDevice && isCoasterScanning) {
+      clearTimeout(scanTimeoutRef.current);
+      setIsCoasterScanning(false);
+      setTempHasCoaster(true);
+    }
+  }, [connectedDevice]);
+
+  useEffect(() => () => clearTimeout(scanTimeoutRef.current), []);
+
+  const handleCoasterSwitchToggle = (val) => {
+    if (!val) {
+      clearTimeout(scanTimeoutRef.current);
+      stopScan?.();
+      setIsCoasterScanning(false);
+      setTempHasCoaster(false);
+      return;
+    }
+    setIsCoasterScanning(true);
+    scanAndConnect?.();
+    scanTimeoutRef.current = setTimeout(() => {
+      stopScan?.();
+      setIsCoasterScanning(false);
+      if (!connectedRef.current) {
+        Alert.alert('未找到杯墊', '未偵測到附近的智慧杯墊，\n自動記錄功能未開啟');
+      }
+    }, 10000);
+  };
 
   const suggestedGoal = calcWaterGoal({
     gender: tempGender,
@@ -405,9 +442,14 @@ const ProfileScreen = () => {
           <View style={s.switchRow}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={s.switchTitle}>智慧杯墊自動記錄</Text>
-              <Text style={{ fontSize: 11, color: MUTED }}>開啟後由杯墊感測喝水量，並設定記錄時段</Text>
+              <Text style={{ fontSize: 11, color: MUTED }}>
+                {isCoasterScanning ? '正在掃描附近的智慧杯墊...' : '開啟後由杯墊感測喝水量，並設定記錄時段'}
+              </Text>
             </View>
-            <CustomSwitch value={tempHasCoaster} onValueChange={setTempHasCoaster} />
+            {isCoasterScanning
+              ? <ActivityIndicator size="small" color={BLUE} />
+              : <CustomSwitch value={tempHasCoaster} onValueChange={handleCoasterSwitchToggle} />
+            }
           </View>
           {tempHasCoaster && (
             <View style={s.timeBox}>
@@ -446,8 +488,13 @@ const ProfileScreen = () => {
                 ⚠ {fieldError}
               </Text>
             )}
-            <TouchableOpacity style={s.saveBtn} onPress={saveField} activeOpacity={0.85}>
-              <Text style={s.saveBtnTxt}>儲存</Text>
+            <TouchableOpacity
+              style={[s.saveBtn, isCoasterScanning && { opacity: 0.5 }]}
+              onPress={saveField}
+              disabled={isCoasterScanning}
+              activeOpacity={0.85}
+            >
+              <Text style={s.saveBtnTxt}>{isCoasterScanning ? '掃描中...' : '儲存'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -519,7 +566,7 @@ const ProfileScreen = () => {
             onEdit={() => openEdit('goal')} />
           <EditableRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`}
             onEdit={() => openEdit('reminder')} />
-          <EditableRow label="智慧杯墊" value={profile.hasCoaster ? (profile.autoMode ? '自動記錄' : '手動記錄') : '未連接'}
+          <EditableRow label="智慧杯墊" value={profile.hasCoaster ? '自動記錄' : '未連接'}
             onEdit={() => openEdit('coaster')} />
         </View>
 

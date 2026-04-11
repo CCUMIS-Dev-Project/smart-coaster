@@ -1,22 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, KeyboardAvoidingView, Image, Modal, Alert, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Platform, KeyboardAvoidingView, Image, Modal, Alert, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
+import { colors, ACTIVITY_LEVELS, CUPS, calcWaterGoal } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import apiService from '../services/api';
+import useBLE from '../hooks/useBLE';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BLUE = colors.blue, BLUE_DARK = colors.blueDark, BLUE_LIGHT = colors.blueLight;
 const TEXT = colors.text, MUTED = colors.muted, BORDER = colors.border;
 
-const CUPS = [
-  { name: '洋芋片罐', image: require('../assets/cup_can.png'),   ml: 320, desc: '我才不要喝水，快給我吃餅乾！' },
-  { name: '水杯',     image: require('../assets/cup_main.png'),  ml: 350, desc: '平凡中帶點小確幸' },
-  { name: '茶杯',     image: require('../assets/cup_tea.png'),   ml: 200, desc: '慢慢來，人生不急' },
-  { name: '馬克杯',   image: require('../assets/cup_mug.png'),   ml: 400, desc: '早晨救星，戒不掉' },
-  { name: '玻璃杯',   image: require('../assets/cup_lemon.png'), ml: 300, desc: '清新系，夏天的靈魂' },
-];
 
 const ACTIVITY_INFO = [
   { label: '久坐', desc: '幾乎不運動，整天坐著工作或休息' },
@@ -89,7 +83,57 @@ const InitialSettingScreen = () => {
   const [reminderInterval, setReminderInterval] = useState('60');
   const [autoStart,  setAutoStart]  = useState('08:00');
   const [autoEnd,    setAutoEnd]    = useState('22:00');
-  const [hasCoaster, setHasCoaster] = useState(true);
+  const [hasCoaster, setHasCoaster] = useState(false);
+
+  // BLE
+  const { scanAndConnect, stopScan, connectedDevice } = useBLE(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const scanTimeoutRef = useRef(null);
+  const connectedRef = useRef(null);
+
+  // 監聽裝置連線狀態
+  useEffect(() => {
+    connectedRef.current = connectedDevice;
+    if (connectedDevice && isScanning) {
+      clearTimeout(scanTimeoutRef.current);
+      setIsScanning(false);
+      setHasCoaster(true); // 真的找到才開啟
+    }
+  }, [connectedDevice]);
+
+  // 離開頁面時清除 timeout
+  useEffect(() => {
+    return () => { clearTimeout(scanTimeoutRef.current); };
+  }, []);
+
+  const handleCoasterToggle = (val) => {
+    setFieldError('');
+    if (!val) {
+      clearTimeout(scanTimeoutRef.current);
+      stopScan?.();
+      setIsScanning(false);
+      setHasCoaster(false);
+      return;
+    }
+    // 開始掃描，hasCoaster 保持 false，找到才設 true
+    setIsScanning(true);
+    scanAndConnect?.();
+    scanTimeoutRef.current = setTimeout(() => {
+      stopScan?.();
+      setIsScanning(false);
+      if (!connectedRef.current) {
+        // hasCoaster 維持 false，不需要另外設
+        Alert.alert('未找到杯墊', '未偵測到附近的智慧杯墊，\n自動記錄功能未開啟');
+      }
+    }, 10000);
+  };
+
+  const handleCancelScan = () => {
+    clearTimeout(scanTimeoutRef.current);
+    stopScan?.();
+    setIsScanning(false);
+    setHasCoaster(false);
+  };
 
   // UI 狀態
   const [showActivityInfo, setShowActivityInfo] = useState(false);
@@ -179,18 +223,18 @@ const InitialSettingScreen = () => {
         return;
       }
 
-      const loginResult = await apiService.login(username, password);
-      if (!loginResult.success) {
-        setFieldError(`登入失敗：${loginResult.error}`);
+      const token = registerResult.data.access_token;
+      if (!token) {
+        setFieldError('註冊成功但未取得 token，請重新登入');
         setSubmitting(false);
         return;
       }
-      const token = loginResult.data.access_token;
-      await AsyncStorage.setItem('userToken', token);
-      await AsyncStorage.setItem('userId', loginResult.data.user_id.toString());
-      setToken(token);
 
-updateProfile({
+      await AsyncStorage.setItem('userToken', token);
+      await AsyncStorage.setItem('userId', registerResult.data.user_id.toString());
+      await AsyncStorage.setItem('selectedCupName', activeCup.name);
+
+      updateProfile({
         gender,
         weight: parseFloat(weight), age, activity,
         goalMl: finalGoal,
@@ -199,6 +243,8 @@ updateProfile({
         autoMode: hasCoaster, autoStart, autoEnd, hasCoaster,
       });
       completeSetup();
+      setSubmitting(false);
+      setToken(token);
 
     } catch (error) {
       console.error('設定流程發生錯誤:', error);
@@ -206,6 +252,26 @@ updateProfile({
       setSubmitting(false);
     }
   };
+
+  // ── 掃描杯墊 Modal ──────────────────────────────────────
+  const ScanningModal = (
+    <Modal visible={isScanning} transparent animationType="fade">
+      <Pressable style={s.actOverlay} onPress={handleCancelScan}>
+        <Pressable>
+          <View style={[s.actModal, { alignItems: 'center', gap: 16, paddingVertical: 28 }]}>
+            <Text style={[s.actTitle, { textAlign: 'center', marginBottom: 0 }]}>連接杯墊</Text>
+            <ActivityIndicator size="large" color="#5ab4f5" />
+            <Text style={{ color: MUTED, fontSize: 14, textAlign: 'center' }}>
+              正在掃描附近的智慧杯墊...
+            </Text>
+            <TouchableOpacity style={[s.actClose, { marginTop: 0 }]} onPress={handleCancelScan}>
+              <Text style={s.actCloseTxt}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 
   // ── 活動量說明 Modal ────────────────────────────────────
   const ActivityInfoModal = (
@@ -399,6 +465,7 @@ updateProfile({
   // ── Step 4: 提醒設定 ─────────────────────────────────
   return (
     <SafeAreaView style={s.safeBg}>
+      {ScanningModal}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -446,7 +513,7 @@ updateProfile({
                   <Text style={s.switchTitle}>智慧杯墊自動記錄</Text>
                   <Text style={s.switchDesc}>開啟後由杯墊感測喝水量，並設定記錄時段</Text>
                 </View>
-                <CustomSwitch value={hasCoaster} onValueChange={v => { setHasCoaster(v); setFieldError(''); }} />
+                <CustomSwitch value={hasCoaster || isScanning} onValueChange={handleCoasterToggle} disabled={isScanning} />
               </View>
 
               {hasCoaster && (
@@ -481,12 +548,12 @@ updateProfile({
 
           <View style={{ paddingBottom: insets.bottom + 16 }}>
             <TouchableOpacity
-              style={[s.btn, submitting && { opacity: 0.6 }]}
+              style={[s.btn, (submitting || isScanning) && { opacity: 0.6 }]}
               onPress={handleFinalSubmit}
-              disabled={submitting}
+              disabled={submitting || isScanning}
               activeOpacity={0.85}
             >
-              <Text style={s.btnTxt}>{submitting ? '處理中...' : '開始使用'}</Text>
+              <Text style={s.btnTxt}>{submitting ? '處理中...' : isScanning ? '掃描中...' : '開始使用'}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

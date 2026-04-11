@@ -6,7 +6,7 @@ from app.middleware.auth import get_current_user
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
+@router.post("/register", response_model=TokenResponse, status_code=201)
 def register(body: UserRegister):
     try:
         return register_user(body)

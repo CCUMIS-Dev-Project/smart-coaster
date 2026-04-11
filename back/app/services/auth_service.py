@@ -69,7 +69,8 @@ def register_user(body: UserRegister) -> dict:
         print(f"Goal creation failed: {e}")
         raise RuntimeError("註冊流程不完整，請稍後再試")
 
-    return new_user
+    token = create_access_token(new_user["user_id"])
+    return {"access_token": token, "token_type": "bearer", "user_id": new_user["user_id"]}
 
 # 從 DB 找使用者，回傳 user_id 和 hashed password
 def delete_user(user_id: int) -> None:
