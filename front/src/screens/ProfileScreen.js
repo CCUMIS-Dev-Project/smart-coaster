@@ -97,7 +97,7 @@ function LogoutButton() {
       onPress={logout}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setPressed(false); }}
-      style={{ alignSelf: 'flex-end', paddingVertical: 8, paddingTop: 4, marginRight: 16 }}
+      style={{ alignSelf:'center', paddingVertical: 8, paddingTop: 4}}
     >
       <Text style={{ fontSize: 13, fontWeight: '600', color }}>
         登出
@@ -120,7 +120,10 @@ function EditableRow({ label, value, onEdit }) {
 }
 
 const ProfileScreen = () => {
-  const { profile, updateProfile, goalMl, exerciseLevels, token } = useApp();
+  const { 
+    profile, updateProfile, goalMl, exerciseLevels, 
+    token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice 
+  } = useApp();
   const insets = useSafeAreaInsets();
   const [urineIdx, setUrineIdx] = useState(0);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
@@ -138,7 +141,7 @@ const ProfileScreen = () => {
   const [tempAutoEnd, setTempAutoEnd] = useState(profile.autoEnd);
 
   // BLE 掃描（杯墊設定用）
-  const { scanAndConnect, stopScan, connectedDevice } = useBLE(token);
+  // const { scanAndConnect, stopScan, connectedDevice } = useBLE(token);
   const [isCoasterScanning, setIsCoasterScanning] = useState(false);
   const scanTimeoutRef = useRef(null);
   const connectedRef   = useRef(null);
@@ -566,7 +569,7 @@ const ProfileScreen = () => {
             onEdit={() => openEdit('goal')} />
           <EditableRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`}
             onEdit={() => openEdit('reminder')} />
-          <EditableRow label="智慧杯墊" value={profile.hasCoaster ? '自動記錄' : '未連接'}
+          <EditableRow label="智慧杯墊" value={connectedDevice  ? '已連線' : '未連接'}
             onEdit={() => openEdit('coaster')} />
         </View>
 

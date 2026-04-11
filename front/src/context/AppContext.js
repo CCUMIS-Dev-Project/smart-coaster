@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decode as atob } from 'base-64';
 import { calcWaterGoal, CUPS } from '../constants/theme';
 import apiService from '../services/api';
+import useBLE from '../hooks/useBLE';
 
 const AppContext = createContext(null);
 
@@ -53,6 +54,8 @@ export function AppProvider({ children }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
+
+  const { scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice } = useBLE(token);
 
   // 啟動時從 AsyncStorage 讀取 token
   useEffect(() => {
@@ -182,6 +185,10 @@ export function AppProvider({ children }) {
     }
   }
 
+  useEffect(() => {
+    setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
+  }, [connectedDevice]);
+
   return (
     <AppContext.Provider value={{
       isSetupDone, completeSetup,
@@ -194,6 +201,7 @@ export function AppProvider({ children }) {
       syncHardwareDrink,
       exerciseLevels,
       token, setToken, isAuthLoading, logout,
+      scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice
     }}>
       {children}
     </AppContext.Provider>
