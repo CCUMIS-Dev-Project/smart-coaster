@@ -310,6 +310,13 @@ const ProfileScreen = () => {
     if (editField === 'coaster') {
       apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, token);
     }
+    if (editField === 'reminder') {
+      apiService.patchGoal({ rmd_interval: update.reminderInterval }, token);
+      // 若杯墊已連線，立即同步提醒間隔給硬體
+      if (connectedDevice && writeToDevice) {
+        writeToDevice(`R|${update.reminderInterval}`);
+      }
+    }
 
     setEditField(null);
   }

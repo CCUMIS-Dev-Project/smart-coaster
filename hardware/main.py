@@ -4,8 +4,13 @@
 # 特徵 UUID: 6e400003-b5a3-f393-e0a9-e50e24dcca9e (NOTIFY / READ)
 # 
 # 數據類型標記 (第一個字元): 
+# 硬體回傳 APP 指令：
 # 'W' = Water Status (核心水量與狀態)
 # 'E' = Env Status (環境溫溼度與設定)
+# APP 回呼硬體：
+# 'S' = Sync Total (APP 傳送當日累計飲水量給硬體)
+# 'R' = Reminder Interval (APP 設定提醒時間)
+# 'T' = APP 回傳時間供硬體校時
 # =================================================================
 
 # 1. 核心狀態數據 (發送時機：放回杯墊、拿起水杯、系統切換時)
@@ -28,6 +33,11 @@
 # 'S' = Sync Total (APP 傳送當日累計飲水量給硬體)
 # 格式: "S|{累計毫升}"
 # 範例: "S|650.0"
+
+# 4. APP 傳送提醒間隔給硬體
+# 'R' = Reminder Interval (APP 設定提醒時間)
+# 格式: "R|{分鐘數}"
+# 範例: "R|45"
 # =================================================================
 import utime
 import math
@@ -61,10 +71,10 @@ hx.set_scale(HX711_SCALE)
 system_active = False
 is_on_coaster = False
 is_waiting_for_stable = False
-
 drink_amount = 0
 last_stable_volume = 0
 diff = 0.0
+reminder_ms = REMINDER_MS  # 提醒時長由 APP 動態更新
 
 # 計時器變數
 last_interaction_time = 0
@@ -153,7 +163,7 @@ def check_double_press(current_weight, current_ticks):
     is_currently_pressed = heavy
     return False
 
-# --- 藍牙接收 APP 回呼函數 ---
+# --- 藍牙接收 APP 回呼硬體函數 ---
 def handle_ble_rx(data):
     global drink_amount
     print(f"收到 APP 指令: {data}")
@@ -177,6 +187,14 @@ def handle_ble_rx(data):
             print(f"✅ 飲水同步成功: {synced_amount:.1f} ml")
         except Exception as e:
             print("❌ 飲水同步失敗:", e)
+    elif data.startswith('R|'):
+        global reminder_ms
+        try:
+            minutes = int(data.split('|')[1])
+            reminder_ms = minutes * 60 * 1000
+            print(f"✅ 提醒間隔已更新: {minutes} 分鐘")
+        except Exception as e:
+            print("❌ 提醒間隔更新失敗:", e)
 
 # 將這個函數綁定給藍牙模組
 ble.on_rx = handle_ble_rx
@@ -232,7 +250,7 @@ while True:
                     last_sensor_ticks = current_ticks
                     print("DHT11 Updated: {:.1f}C, {:.1f}%".format(current_temp, current_hum))
                     # 透過藍牙發送環境數據
-                    ble.send_env_status(current_temp, current_hum, REMINDER_MS)
+                    ble.send_env_status(current_temp, current_hum, reminder_ms)
                 except OSError as e:
                     print("DHT11 讀取失敗:", e)
 
