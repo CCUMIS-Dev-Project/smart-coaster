@@ -257,7 +257,7 @@ while True:
             # 2. 取得當前重量與計算超時狀態
             current_weight = raw_weight  # 複用迴圈開頭已讀取的重量，避免重複讀取
             time_passed = utime.ticks_diff(current_ticks, last_interaction_time)
-            is_overdue = time_passed > REMINDER_MS
+            is_overdue = time_passed > reminder_ms
             data_changed = False
 
             # --- 邏輯分支 1：水杯在杯墊上 (計算水量、檢查提醒) ---

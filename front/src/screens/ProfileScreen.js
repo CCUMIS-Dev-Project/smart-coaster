@@ -304,9 +304,6 @@ const ProfileScreen = () => {
     if (editField === 'goal') {
       apiService.patchGoal({ daily_target: update.goalMl }, token);
     }
-    if (editField === 'reminder') {
-      apiService.patchGoal({ rmd_interval: update.reminderInterval }, token);
-    }
     if (editField === 'coaster') {
       apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, token);
     }
@@ -572,12 +569,12 @@ const ProfileScreen = () => {
         {/* 飲水設定 */}
         <View style={s.group}>
           <Text style={s.groupTitle}>飲水設定</Text>
+          <EditableRow label="智慧杯墊" value={connectedDevice  ? '已連線' : '未連接'}
+            onEdit={() => openEdit('coaster')} />
           <EditableRow label="每日目標" value={`${goalMl} ml`}
             onEdit={() => openEdit('goal')} />
           <EditableRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`}
             onEdit={() => openEdit('reminder')} />
-          <EditableRow label="智慧杯墊" value={connectedDevice  ? '已連線' : '未連接'}
-            onEdit={() => openEdit('coaster')} />
         </View>
 
         {/* 尿液顏色 */}
