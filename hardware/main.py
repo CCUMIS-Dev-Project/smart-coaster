@@ -11,6 +11,7 @@
 # 'S' = Sync Total (APP 傳送當日累計飲水量給硬體)
 # 'R' = Reminder Interval (APP 設定提醒時間)
 # 'T' = APP 回傳時間供硬體校時
+# 'D' = Daily Target (APP 回傳每日飲水目標)
 # =================================================================
 
 # 1. 核心狀態數據 (發送時機：放回杯墊、拿起水杯、系統切換時)
@@ -38,6 +39,11 @@
 # 'R' = Reminder Interval (APP 設定提醒時間)
 # 格式: "R|{分鐘數}"
 # 範例: "R|45"
+
+# 4. APP 回傳每日飲水目標
+# 'D' = Daily Target (APP 回傳每日飲水目標)
+# 格式: "D|{目標毫升數}"
+# 範例: "D|2500"
 # =================================================================
 import utime
 import math
@@ -75,6 +81,7 @@ drink_amount = 0
 last_stable_volume = 0
 diff = 0.0
 reminder_ms = REMINDER_MS  # 提醒時長由 APP 動態更新
+daily_target = DAILY_TARGET
 
 # 計時器變數
 last_interaction_time = 0
@@ -195,6 +202,14 @@ def handle_ble_rx(data):
             print(f"✅ 提醒間隔已更新: {minutes} 分鐘")
         except Exception as e:
             print("❌ 提醒間隔更新失敗:", e)
+    elif data.startswith('D|'):
+        global daily_target
+        try:
+            new_daily_target = int(data.split('|')[1])
+            daily_target = new_daily_target
+            print(f"✅ 飲水目標已更新: {daily_target} ml")
+        except Exception as e:
+            print("❌ 飲水目標更新失敗:", e)
 
 # 將這個函數綁定給藍牙模組
 ble.on_rx = handle_ble_rx
@@ -301,7 +316,7 @@ while True:
                         last_stable_volume = current_volume 
                         is_on_coaster = True
                         is_waiting_for_stable = False
-                        display.update_main_screen(drink_amount, diff, reminder=is_overdue)
+                        display.update_main_screen(drink_amount, diff, daily_target, reminder=is_overdue)
 
                 # 放穩後的燈光與螢幕更新
                 if is_on_coaster: 
@@ -313,7 +328,7 @@ while True:
                         leds.turn_off()
 
                     if utime.ticks_diff(current_ticks, last_display_ticks) > DISPLAY_INTERVAL_MS:
-                        display.update_main_screen(drink_amount, diff, reminder=is_overdue)
+                        display.update_main_screen(drink_amount, diff, daily_target, reminder=is_overdue)
                         last_display_ticks = current_ticks
 
             # --- 邏輯分支 2：水杯被拿起來 (燈光特效、顯示喝水中) ---

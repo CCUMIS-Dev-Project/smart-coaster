@@ -10,7 +10,7 @@ class DisplayManager:
         """初始化 I2C 與 SSD1306 OLED 螢幕"""
         self.i2c = I2C(0, sda=Pin(OLED_SDA_PIN), scl=Pin(OLED_SCL_PIN))
         self.oled = SSD1306_I2C(OLED_WIDTH, OLED_HEIGHT, self.i2c)
-        self.daily_target = DAILY_TARGET
+        # self.daily_target = DAILY_TARGET
         
     def clear(self):
         """清除螢幕畫面 (不立即顯示，需配合 show())"""
@@ -47,13 +47,14 @@ class DisplayManager:
     # ==========================================
     # 主數據儀表板 (核心畫面)
     # ==========================================
-    def update_main_screen(self, amount, diff, reminder=False, syncing=False):
+    def update_main_screen(self, amount, diff, daily_target, reminder=False, syncing=False):
         """
         繪製喝水進度主畫面
         :param amount: 目前累積喝水量
         :param diff: 剛剛喝了多少水
         :param reminder: 是否處於提醒喝水狀態
         :param syncing: 是否正在等待重量穩定
+        :daily_target:使用者飲水目標
         """
         self.clear()
         
@@ -61,7 +62,7 @@ class DisplayManager:
         self.oled.text("Day Day", 12, 0)
         
         # 2. 顯示喝水數據
-        self.oled.text("{:.0f}/{:d} ml".format(amount, self.daily_target), 25, 12)
+        self.oled.text("{:.0f}/{:d} ml".format(amount, daily_target), 25, 12)
         
         # 3. 進度條設計
         bar_x, bar_y = 10, 28
@@ -71,7 +72,7 @@ class DisplayManager:
         self.oled.rect(bar_x, bar_y, bar_width, bar_height, 1)
         
         # 計算進度比例 (限制最大值為 1.0，避免爆表)
-        progress = min(amount / self.daily_target, 1.0)
+        progress = min(amount / daily_target, 1.0)
         fill_width = int(progress * (bar_width - 4))
         
         # 畫出填滿部分 (內縮 2 像素)

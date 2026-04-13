@@ -303,6 +303,10 @@ const ProfileScreen = () => {
     // Phase C：飲水設定回寫 → PATCH /goals
     if (editField === 'goal') {
       apiService.patchGoal({ daily_target: update.goalMl }, token);
+      // 若杯墊已連線，立即同步飲水目標給硬體
+      if (connectedDevice && writeToDevice) {
+        writeToDevice(`D|${update.goalMl}`);
+      }
     }
     if (editField === 'coaster') {
       apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, token);
