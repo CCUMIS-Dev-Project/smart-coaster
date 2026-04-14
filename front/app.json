@@ -53,8 +53,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": " "
+        "projectId": "9e079277-562d-466b-b96b-aa46b2f13433"
       }
-    }
+    },
+    "owner": "ccumis-dev-project"
   }
 }

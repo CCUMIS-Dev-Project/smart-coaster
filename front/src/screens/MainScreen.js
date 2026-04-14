@@ -13,12 +13,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, Pressable, ImageBackground,
-  TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
-  Animated, ScrollView, Dimensions, PanResponder,ActivityIndicator
+  TouchableOpacity, Alert, Modal, TextInput,
+  Animated, ScrollView, Dimensions, PanResponder, ActivityIndicator, Keyboard
 } from 'react-native';
 // SafeAreaView from react-native 在 Android 上不處理 status bar。
 // 改用 react-native-safe-area-context（Expo 內建）以正確處理瀏海 / 狀態列
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 // import useBLE from '../hooks/useBLE';
 import apiService from '../services/api';
@@ -85,6 +86,15 @@ const MainScreen = () => {
     const [editType, setEditType] = useState(1);               // 編輯 Modal 中的飲品 type_id
 
     const insets = useSafeAreaInsets(); // 取得螢幕安全區域 insets（瀏海、Home 條等）
+    const tabBarHeight = useBottomTabBarHeight();
+    const [baseH] = useState(() => Dimensions.get('window').height);
+    const [kbHeight, setKbHeight] = useState(0); // 鍵盤高度（0 = 收起）
+
+    useEffect(() => {
+      const show = Keyboard.addListener('keyboardDidShow', (e) => setKbHeight(e.endCoordinates.height));
+      const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+      return () => { show.remove(); hide.remove(); };
+    }, []);
 
     // ── 底部紀錄卡片：可拖曳上下展開 ────────────────────────────
     const SCREEN_H = Dimensions.get('window').height;
@@ -209,6 +219,7 @@ const MainScreen = () => {
     async function handleAddCustom() {
       const ml = parseInt(addMl);
       if (!ml || ml <= 0) { Alert.alert('請輸入有效的毫升數'); return; }
+      if (ml > 1000) { Alert.alert('單次飲水上限為 1000ml'); return; }
       const payload = {
         type_id: drinkType,
         d_volume: ml,
@@ -414,10 +425,10 @@ const MainScreen = () => {
           
           {/* 環境數據 */}
           <View style={{ alignItems: 'center', backgroundColor: 'transparent' }}>
-            <Text style={{ fontSize: 15, color: '#fff' }}>
+            <Text style={{ fontSize: 12, color: '#fff' }}>
               溫度:{sensorData.temperature != null ? `${sensorData.temperature}°C` : '--°C'}
             </Text>
-            <Text style={{ fontSize: 15, color: '#fff' }}>
+            <Text style={{ fontSize: 12, color: '#fff' }}>
               濕度:{sensorData.humidity != null ? `${sensorData.humidity}%` : '--%'}
             </Text>
           </View>
@@ -425,7 +436,7 @@ const MainScreen = () => {
           {/* 杯墊連線按鈕 */}
           <TouchableOpacity style={[s.PickerButton]} onPress={handleConnect}>
             {/* <Text style={s.drinkLabel}>杯墊</Text> */}
-            <Text style={[s.drinkName, { fontSize: 20, color: isConnected ? '#4ade80' : '#f87171' }]}>
+            <Text style={[s.drinkName, { fontSize: 14, color: isConnected ? '#4ade80' : '#f87171' }]}>
               {isConnected ? '已連線' : '未連線'}
             </Text>
           </TouchableOpacity>
@@ -638,32 +649,38 @@ const MainScreen = () => {
 
       {/* 新增飲水 Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
         <View style={s.modalOverlay}>
-          <View style={[s.modalCard, { paddingBottom: insets.bottom + 24 }]}>
-            <Text style={s.modalTitle}>新增飲水紀錄</Text>
-            <Text style={s.modalLbl}>飲品類型</Text>
-            <View style={s.drinkTypeRow}>
-              {DRINK_TYPES.map(d => (
-                <TouchableOpacity key={d.type_id} style={[s.drinkChip, drinkType === d.type_id && s.drinkChipSel]} onPress={() => setDrinkType(d.type_id)} activeOpacity={0.75}>
-                  <View style={[s.chipDot, { backgroundColor: d.color }]} />
-                  <Text style={[s.drinkChipTxt, drinkType === d.type_id && { color: '#3498db' }]}>{d.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={s.modalLbl}>毫升數</Text>
-            <View style={s.mlQuickRow}>
-              {['100','150','200','250','350','500'].map(v => (
-                <TouchableOpacity key={v} style={[s.mlChip, addMl === v && s.mlChipSel]} onPress={() => setAddMl(v)}>
-                  <Text style={[s.mlChipTxt, addMl === v && { color: '#3498db' }]}>{v}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TextInput style={s.modalInp} keyboardType="numeric" value={addMl} onChangeText={setAddMl} placeholder="或輸入自訂毫升數" placeholderTextColor="#bbb" />
-            <View style={s.modalBtns}>
+          <View style={[s.modalCard, {
+            marginBottom: kbHeight > 0 ? kbHeight : 0,
+            maxHeight: baseH - kbHeight - 16,
+            paddingBottom: kbHeight > 0 ? 8 : tabBarHeight,
+          }]}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
+              <Text style={s.modalTitle}>新增飲水紀錄</Text>
+              <Text style={s.modalLbl}>飲品類型</Text>
+              <View style={s.drinkTypeRow}>
+                {DRINK_TYPES.map(d => (
+                  <TouchableOpacity key={d.type_id} style={[s.drinkChip, drinkType === d.type_id && s.drinkChipSel]} onPress={() => setDrinkType(d.type_id)} activeOpacity={0.75}>
+                    <View style={[s.chipDot, { backgroundColor: d.color }]} />
+                    <Text style={[s.drinkChipTxt, drinkType === d.type_id && { color: '#3498db' }]}>{d.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={s.modalLbl}>毫升數</Text>
+              <View style={s.mlQuickRow}>
+                {['100','150','200','250','350','500'].map(v => (
+                  <TouchableOpacity key={v} style={[s.mlChip, addMl === v && s.mlChipSel]} onPress={() => setAddMl(v)}>
+                    <Text style={[s.mlChipTxt, addMl === v && { color: '#3498db' }]}>{v}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput style={s.modalInp} keyboardType="numeric" value={addMl} onChangeText={setAddMl} placeholder="或輸入自訂毫升數" placeholderTextColor="#bbb" maxLength={4} />
+            </ScrollView>
+            <View style={[s.modalBtns, { marginTop: 12 }]}>
               <TouchableOpacity style={s.modalCancel} onPress={() => setShowAddModal(false)}>
                 <Text style={s.modalCancelTxt}>取消</Text>
               </TouchableOpacity>
@@ -673,17 +690,21 @@ const MainScreen = () => {
             </View>
           </View>
         </View>
-        </KeyboardAvoidingView>
       </Modal>
 
       {/* 編輯 Modal */}
       <Modal visible={showEditModal} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={s.modalOverlay}>
-            <View style={[s.modalCard, { paddingBottom: insets.bottom + 24 }]}>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalCard, {
+            marginBottom: kbHeight > 0 ? kbHeight : 0,
+            maxHeight: baseH - kbHeight - 16,
+            paddingBottom: kbHeight > 0 ? 8 : tabBarHeight,
+          }]}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
               <Text style={s.modalTitle}>編輯紀錄</Text>
               <Text style={s.modalLbl}>飲品類型</Text>
               <View style={s.drinkTypeRow}>
@@ -704,17 +725,17 @@ const MainScreen = () => {
                 onChangeText={setEditMl}
                 autoFocus
               />
-              <View style={s.modalBtns}>
-                <TouchableOpacity style={s.modalCancel} onPress={() => setShowEditModal(false)}>
-                  <Text style={s.modalCancelTxt}>取消</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.modalConfirm} onPress={handleEdit}>
-                  <Text style={s.modalConfirmTxt}>儲存</Text>
-                </TouchableOpacity>
-              </View>
+            </ScrollView>
+            <View style={[s.modalBtns, { marginTop: 12 }]}>
+              <TouchableOpacity style={s.modalCancel} onPress={() => setShowEditModal(false)}>
+                <Text style={s.modalCancelTxt}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalConfirm} onPress={handleEdit}>
+                <Text style={s.modalConfirmTxt}>儲存</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       </Pressable>
@@ -778,7 +799,7 @@ const s = StyleSheet.create({
   background: { flex: 1, width: '100%' },
   container:  { flex: 1, paddingHorizontal: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginHorizontal: 4, zIndex: 100 },
-  PickerButton: { backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8EE' , alignItems: 'center',width:100 ,height:50},
+  PickerButton: { backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 16, paddingHorizontal: 15, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8EE' , alignItems: 'center', justifyContent: 'center', width: 100 },
   drinkDropdownWrap: { position: 'relative', zIndex: 100, width: 110 },
   dropdown: { position: 'absolute', top: 70, left: 0, zIndex: 200, backgroundColor: 'rgba(255,255,255,0.97)', borderRadius: 16, borderWidth: 1.5, borderColor: '#E1E8EE', minWidth: 140, paddingVertical: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 16 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 16 },
@@ -789,7 +810,7 @@ const s = StyleSheet.create({
   drinkLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
   drinkRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 2 },
   drinkDot:   { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  drinkName:  { fontSize: 20, fontWeight: 'bold', color: '#333' ,alignItems:'center'},
+  drinkName:  { fontSize: 14, fontWeight: 'bold', color: '#333' ,alignItems:'center'},
   mainRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, paddingVertical: 8, zIndex: 1 },
   waterWrap: { alignItems: 'center', gap: 8 },
   circle: { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2, backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 8, borderColor: '#AEE2FF', overflow: 'hidden' },
@@ -845,7 +866,7 @@ const s = StyleSheet.create({
   checkbox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#ccc', alignItems: 'center', justifyContent: 'center' },
   checkboxSel: { backgroundColor: '#3498db', borderColor: '#3498db' },
   modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard:      { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalCard:      { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalTitle:     { fontSize: 20, fontWeight: '900', color: '#333', marginBottom: 18 },
   modalLbl:       { fontSize: 11, fontWeight: '800', color: '#5a7a96', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 8 },
   //喝水快速選擇鍵

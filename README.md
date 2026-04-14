@@ -177,7 +177,7 @@ eas build --profile development --platform android
 
 ---
 ### 4. 前後端串接
- ps: 由於我先做**主頁面**串接，所以開發時要繞過jwt，可參考front/.env.example 手動填入EXPO_PUBLIC_API_URL
+ ps: 由於我先做**主頁面**串接，所以開發時要繞過jwt，可參考front/.env.example 手動填入EXPO_PUBLIC_API_URL </br>
  -> 點render網址，到swaggerUI (先不要直接貼網址上來，忘記的話跟v要)</br> 
  -> login (Try It Out)，把access_token複製下來貼這裡
 

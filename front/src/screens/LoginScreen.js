@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Image, ScrollView, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CustomInput, COLORS } from '../components/CustomInput';
 import apiService from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -23,6 +24,7 @@ function RippleRing({ delay }) {
 
 const LoginScreen = ({ navigation }) => {
   const { setToken } = useApp();
+  const { height: winH } = useWindowDimensions();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -56,62 +58,74 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
-      style={s.container}
-    >
-      {/* 上方 1/3：logo + 水杯 */}
-      <View style={s.topSection}>
-        <Text style={s.logoTxt}>Day Day補給站</Text>
-        <View style={s.rippleWrap}>
-          <RippleRing delay={0} />
-          <RippleRing delay={800} />
-          <RippleRing delay={1600} />
-          <Animated.Image
-            source={require('../assets/cup_main.png')}
-            style={[s.cupImg, { transform: [{ translateY: bobAnim }] }]}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
+    <SafeAreaView style={s.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={[s.container, { minHeight: winH }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 上方 1/3：logo + 水杯 */}
+          <View style={s.topSection}>
+            <Text style={s.logoTxt}>Day Day補給站</Text>
+            <View style={s.rippleWrap}>
+              <RippleRing delay={0} />
+              <RippleRing delay={800} />
+              <RippleRing delay={1600} />
+              <Animated.Image
+                source={require('../assets/cup_main.png')}
+                style={[s.cupImg, { transform: [{ translateY: bobAnim }] }]}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
 
-      {/* 下方 2/3：標題 + 輸入 + 按鈕 */}
-      <View style={s.bottomSection}>
-        <Text style={s.headline}>歡迎來到DayDay補給站</Text>
-        <Text style={s.subTxt}>飲水大小事，DayDay補給站與你作伴。</Text>
+          {/* 下方 2/3：標題 + 輸入 + 按鈕 */}
+          <View style={s.bottomSection}>
+            <Text style={s.headline}>歡迎來到DayDay補給站</Text>
+            <Text style={s.subTxt}>飲水大小事，DayDay補給站與你作伴。</Text>
 
-        <View style={s.formWrap}>
-          <CustomInput
-            iconName="user"
-            placeholder="輸入使用者名稱"
-            value={username}
-            onChangeText={v => { setUsername(v); setLoginError(''); }}
-          />
-          <CustomInput
-            iconName="lock"
-            placeholder="輸入密碼"
-            secureTextEntry={true}
-            value={password}
-            onChangeText={v => { setPassword(v); setLoginError(''); }}
-          />
-          <Text style={s.errorTxt}>{loginError}</Text>
-        </View>
+            <View style={s.formWrap}>
+              <CustomInput
+                iconName="user"
+                placeholder="輸入使用者名稱"
+                value={username}
+                onChangeText={v => { setUsername(v); setLoginError(''); }}
+              />
+              <CustomInput
+                iconName="lock"
+                placeholder="輸入密碼"
+                secureTextEntry={true}
+                value={password}
+                onChangeText={v => { setPassword(v); setLoginError(''); }}
+              />
+              <Text style={s.errorTxt}>{loginError}</Text>
+            </View>
 
-        <TouchableOpacity style={s.btn} onPress={handleLogin} activeOpacity={0.85}>
-          <Text style={s.btnTxt}>登入</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={s.btn} onPress={handleLogin} activeOpacity={0.85}>
+              <Text style={s.btnTxt}>登入</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.75}>
-          <Text style={s.registerLink}>還沒有帳號？<Text style={s.registerLinkBold}>註冊</Text></Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.75}>
+              <Text style={s.registerLink}>還沒有帳號？<Text style={s.registerLinkBold}>註冊</Text></Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const s = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: '#e8f5fe',
+  },
+  container: {
+    flexGrow: 1,
     backgroundColor: '#e8f5fe',
     paddingHorizontal: 32,
     paddingTop: 50,
@@ -167,7 +181,7 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: '#6b8da8',
     textAlign: 'center',
-    marginBottom: 100,
+    marginBottom: 24,
   },
   formWrap: {
     width: '100%',

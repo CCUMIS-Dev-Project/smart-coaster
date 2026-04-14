@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Image, Animated, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Image, Animated, Modal, ActivityIndicator, Alert, Keyboard, Dimensions } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
@@ -157,6 +157,14 @@ const ProfileScreen = () => {
 
   useEffect(() => () => clearTimeout(scanTimeoutRef.current), []);
 
+  const [kbHeight, setKbHeight] = useState(0);
+  const [baseH] = useState(() => Dimensions.get('window').height);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) => setKbHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
   const handleCoasterSwitchToggle = (val) => {
     if (!val) {
       clearTimeout(scanTimeoutRef.current);
@@ -242,6 +250,13 @@ const ProfileScreen = () => {
     if (editField === 'gender') update = { gender: tempGender };
     if (editField === 'activity') update = { activity: tempActivity };
     if (editField === 'goal') {
+      if (tempCustomGoal) {
+        const goalVal = parseInt(tempCustomGoalMl);
+        if (!isNaN(goalVal) && goalVal > 10000) {
+          setFieldError('超過 10000 ml 可能導致水中毒，請重新設定目標');
+          return;
+        }
+      }
       update = {
         customGoal: tempCustomGoal,
         goalMl: tempCustomGoal
@@ -430,12 +445,17 @@ const ProfileScreen = () => {
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <TextInput style={[s.inp, { flex: 1 }]} keyboardType="numeric"
-                    value={tempCustomGoalMl} onChangeText={setTempCustomGoalMl} />
+                    value={tempCustomGoalMl} onChangeText={setTempCustomGoalMl} maxLength={5} />
                   <Text style={{ color: MUTED, fontWeight: '800' }}>ml</Text>
                 </View>
                 {!!tempCustomGoalMl && parseInt(tempCustomGoalMl) < suggestedGoal && (
                   <Text style={{ fontSize: 11, color: '#f87171', fontWeight: '700', marginTop: 4 }}>
                     最低目標為建議值 {suggestedGoal} ml
+                  </Text>
+                )}
+                {!!tempCustomGoalMl && parseInt(tempCustomGoalMl) > 10000 && (
+                  <Text style={{ fontSize: 11, color: '#f87171', fontWeight: '700', marginTop: 4 }}>
+                    ⚠ 超過 10000 ml 可能導致水中毒，請謹慎設定
                   </Text>
                 )}
               </>
@@ -485,7 +505,11 @@ const ProfileScreen = () => {
     return (
       <Modal visible={!!editField} transparent animationType="slide">
         <View style={s.modalOverlay}>
-          <View style={[s.modalCard, { paddingBottom: insets.bottom + 24 }]}>
+          <View style={[s.modalCard, {
+            marginBottom: kbHeight > 0 ? kbHeight : 0,
+            maxHeight: baseH - kbHeight - 16,
+            paddingBottom: kbHeight > 0 ? 8 : insets.bottom + 24,
+          }]}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{title}</Text>
               <TouchableOpacity onPress={() => setEditField(null)}>
