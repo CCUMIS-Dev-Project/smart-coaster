@@ -123,7 +123,7 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF8ED',
+    backgroundColor: 'white',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -146,12 +146,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.primaryBlue, // 使用專案主題藍
+    color: '#5ab4f5', 
     marginBottom: 5,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.primaryBlue,
+    fontSize: 13,
+    color: '#6b8da8',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   formContainer: {
     width: '100%',
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   registerButton: {
-    backgroundColor: COLORS.primaryBlue,
+    backgroundColor: '#5ab4f5', 
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 25,
