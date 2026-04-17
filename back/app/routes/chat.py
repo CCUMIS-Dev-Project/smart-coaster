@@ -1,9 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from app.services import groq_service, supabase_service
+from app.services.ml_service import DailyGoalCalculator, IntervalPredictor
+from app.services.knowledge_service import find_relevant_knowledge
 from app.middleware.auth import get_current_user
+from datetime import datetime
+import pytz
 
 router = APIRouter(prefix="/api")
+_interval_predictor = IntervalPredictor()
 
 class ChatRequest(BaseModel):
     message: str
@@ -20,17 +25,60 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
     try:
         if not request.message:
             raise HTTPException(status_code=400, detail="No message provided")
-            
-        user_info = supabase_service.fetch_user_profile(user_id)
+
+        # 取得完整使用者資料
+        profile = supabase_service.fetch_full_user_profile(user_id)
         recent_logs = supabase_service.fetch_recent_water_records(user_id, limit=10)
         today_drink_ml = supabase_service.fetch_today_water_sum(user_id)
-        
+
+        # 用醫學公式計算每日目標
+        daily_goal = DailyGoalCalculator.calculate(
+            weight_kg=profile["weight"],
+            exercise_addition=profile["exercise_addition"],
+            temp=profile.get("temp"),
+            humidity=profile.get("humidity"),
+        )
+
+        # 計算當前進度
+        progress = DailyGoalCalculator.get_progress_summary(
+            daily_goal=daily_goal,
+            today_drink_ml=today_drink_ml,
+            act_start_str=profile.get("act_start", "08:00:00"),
+            act_end_str=profile.get("act_end", "22:00:00"),
+        )
+        target_now = progress["target_now"]
+        ai_message = progress["message"]
+
+        # 飲水間隔預測（個人化 ML 模型）
+        all_logs = supabase_service.fetch_all_drinking_logs(user_id)
+        env_logs = supabase_service.fetch_env_logs_range(user_id)
+
+        interval_result = _interval_predictor.predict_next_interval(
+            user_id=user_id,
+            logs=all_logs,
+            daily_goal=daily_goal,
+            act_start_str=profile.get("act_start", "08:00:00"),
+            act_end_str=profile.get("act_end", "22:00:00"),
+            rmd_interval=profile.get("rmd_interval", 90),
+            env_logs=env_logs,
+        )
+
+        if interval_result["confidence"] == "model":
+            interval_text = (
+                f"根據你過去 7 天的飲水習慣，ML 模型預測你下次最佳喝水時間約在 "
+                f"{interval_result['adjusted_gap_minutes']} 分鐘後 "
+                f"（約 {interval_result['next_reminder_at'][:16]}），"
+                f"模型使用了 {interval_result['data_points']} 筆歷史數據訓練。"
+            )
+        else:
+            interval_text = (
+                f"目前數據不足（僅 {interval_result['data_points']} 筆），"
+                f"尚未啟用個人化模型，建議每 {interval_result['adjusted_gap_minutes']} 分鐘喝一次水。"
+                f"持續使用杯墊約 7 天後，系統將能根據你的習慣預測最佳飲水時間。"
+            )
+
         # 整理最近 10 筆的歷史紀錄
-        from datetime import datetime
-        import pytz
-        
         history_lines = []
-        # logs are returned newest first, reverse for chronological timeline
         for log in reversed(recent_logs):
             try:
                 record_time = datetime.fromisoformat(log['record_at'].replace('Z', '+00:00'))
@@ -40,23 +88,45 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
                 history_lines.append(f"[{time_str}] 紀錄水量: {amt}ml")
             except Exception:
                 pass
-                
+
         history_text = "\n".join(history_lines) if history_lines else "目前無歷史紀錄"
-        
+
+        # 組裝天氣 / 活動量描述
+        temp = profile.get("temp")
+        humidity = profile.get("humidity")
+        temp_str = f"{temp}°C" if temp is not None else "無資料"
+        humidity_str = f"{humidity}%" if humidity is not None else "無資料"
+
         context_str = f"""
 【使用者基本資料】
-性別：{user_info.get('gender')}
-體重：{user_info.get('weight')} 公斤
-每日目標飲水量：{user_info.get('goal_ml')} ml
+性別：{profile.get('gender')}
+身高：{profile.get('height')} 公分
+體重：{profile.get('weight')} 公斤
 
-【目前即時狀態 (Real-time Context)】
-由於硬體即時感測器尚未連線，目前僅能提供以下來自資料庫最新一天的狀態：
-- 今日總累積飲水量：{today_drink_ml} ml
+【個人化健康飲水目標（醫學公式）】
+- 專屬個人的今日飲水目標：{daily_goal} ml
+- 目標計算依據：體重 {profile.get('weight')}kg × 33ml/kg，再依活動量與環境溫濕度修正
+- 目前環境：溫度 {temp_str}、濕度 {humidity_str}
+- 目前此刻應達到的理想黃金進度：{target_now} ml
+- 進度分析：{ai_message}
 
-【最近十筆飲水歷史紀錄 (Timeline)】
+【硬體感測器即時數據】
+- 智慧杯墊回報今日實際已飲用量：{today_drink_ml} ml
+
+【最近十筆硬體飲水紀錄 ( Timeline )】
 {history_text}
+
+【個人化飲水時間預測（ML 模型）】
+{interval_text}
+
+【回覆準則】
+請在回答時，明確指出「今日已飲用量是以硬體感測到的真實數據」，而「目標水量」是透過個人的身體數據 (體重等) 與環境數據 (溫度、濕度) 計算出的「專屬健康目標」，避免產生 AI 在「猜測」已喝水量的誤會。如果使用者詢問下次什麼時候喝水，請根據【個人化飲水時間預測】的資訊來回答。
 """
-        
+
+        # 根據使用者提問，動態載入相關知識
+        extra_knowledge = find_relevant_knowledge(request.message)
+        context_str += extra_knowledge
+
         ai_reply = groq_service.generate_chat_response(
             prompt=request.message,
             context=context_str

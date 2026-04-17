@@ -66,10 +66,14 @@ const apiService = {
    * @param {string} message - User message to send
    * @returns {Promise} Response from chatbot
    */
-  sendChatMessage: async (message) => {
+  sendChatMessage: async (message, userToken) => {
     try {
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.CHAT, {
         message: message,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${userToken}`
+        }
       });
       return { success: true, data: response.data };
     } catch (error) {

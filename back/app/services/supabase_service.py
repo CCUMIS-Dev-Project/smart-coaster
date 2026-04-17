@@ -85,6 +85,90 @@ def fetch_weekly_water_sum(user_id: int) -> dict:
         "sun_ml": weekly_stats.get(sorted_dates[6], 0),
     }
 
+def fetch_full_user_profile(user_id: int) -> dict:
+    """
+    擴充版 profile：包含 users 基本資料、exercise.addition、goals 設定、最新 env_logs。
+    """
+    # 取得使用者基本資料 + exercise addition
+    user_res = supabase.table("users").select(
+        "gender, weight, height, age, levelid"
+    ).eq("user_id", user_id).execute()
+    user_data = user_res.data[0] if user_res.data else {}
+
+    # 取得 exercise.addition
+    exercise_addition = 0.0
+    level_id = user_data.get("levelid")
+    if level_id:
+        ex_res = supabase.table("exercise").select("addition").eq("id", level_id).execute()
+        if ex_res.data:
+            exercise_addition = ex_res.data[0].get("addition", 0.0) or 0.0
+
+    # 取得 goals 設定
+    goal_res = supabase.table("goals").select(
+        "daily_target, rmd_interval, act_start, act_end"
+    ).eq("user_id", user_id).execute()
+    goal_data = goal_res.data[0] if goal_res.data else {}
+
+    # 取得最新一筆 env_logs
+    env_res = supabase.table("env_logs").select(
+        "temp, humidity"
+    ).eq("user_id", user_id).order("record_at", desc=True).limit(1).execute()
+    env_data = env_res.data[0] if env_res.data else {}
+
+    return {
+        "gender": user_data.get("gender", "未知"),
+        "weight": user_data.get("weight", 60),
+        "height": user_data.get("height", 160),
+        "age": user_data.get("age", 25),
+        "exercise_addition": exercise_addition,
+        "daily_target": goal_data.get("daily_target", 2000),
+        "rmd_interval": goal_data.get("rmd_interval", 90),
+        "act_start": goal_data.get("act_start", "08:00:00"),
+        "act_end": goal_data.get("act_end", "22:00:00"),
+        "temp": env_data.get("temp"),
+        "humidity": env_data.get("humidity"),
+    }
+
+
+def fetch_all_drinking_logs(user_id: int, days: int = 7) -> list:
+    """
+    取得過去 N 天所有未刪除的 drinking_logs（按 record_at ASC），供模型訓練用。
+    """
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz)
+    start = now - timedelta(days=days)
+
+    logs_res = (
+        supabase.table("drinking_logs")
+        .select("log_id, d_volume, record_at, type_id")
+        .eq("user_id", user_id)
+        .is_("delete_at", "null")
+        .gte("record_at", start.isoformat())
+        .order("record_at", desc=False)
+        .execute()
+    )
+    return logs_res.data if logs_res.data else []
+
+
+def fetch_env_logs_range(user_id: int, days: int = 7) -> list:
+    """
+    取得過去 N 天 env_logs（按 record_at ASC），用來匹配訓練樣本的溫濕度。
+    """
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz)
+    start = now - timedelta(days=days)
+
+    env_res = (
+        supabase.table("env_logs")
+        .select("temp, humidity, record_at")
+        .eq("user_id", user_id)
+        .gte("record_at", start.isoformat())
+        .order("record_at", desc=False)
+        .execute()
+    )
+    return env_res.data if env_res.data else []
+
+
 def insert_sensor_log(data: dict) -> dict:
     """
     Insert a localized sensor log into the DB, replacing the memory array.
@@ -102,7 +186,7 @@ def insert_sensor_log(data: dict) -> dict:
     if data.get('timestamp'):
         new_record['record_at'] = data.get('timestamp')
         
-    if new_record["d_volume"] > 0:
+    if new_record["d_volume"] >= 20:  # 過濾 < 20ml 的噪音（放東西、輕觸等）
         res = supabase.table("drinking_logs").insert(new_record).execute()
         return res.data[0] if res.data else None
     

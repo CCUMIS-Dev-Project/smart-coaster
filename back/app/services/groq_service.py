@@ -20,7 +20,7 @@ def generate_chat_response(prompt: str, context: str, model: str = DEFAULT_MODEL
     messages = [
         {
             "role": "system",
-            "content": f"{get_base_prompt()}\n\n{context}"
+            "content": f"{get_base_prompt()}\n\n{context}\n\n【嚴格指示】\n請務必全程使用「繁體中文 (zh-TW)」進行自然、流暢的回覆，嚴禁夾雜簡體字、越南文或其他非本機預設的語言文字。"
         },
         {
             "role": "user",
@@ -52,7 +52,8 @@ def generate_weekly_report(context: str, model: str = DEFAULT_MODEL) -> str:
 1. 判斷使用者是否有達到體重所需的標準飲水量 (一般醫學建議為「體重 x 30~40ml」)。
 2. 觀察週末與平日的飲水差異，並點出問題。
 3. 給出下週的具體改善建議 (例如：增加早晨起床喝水、設定定時提醒等)。
-4. 請使用 Markdown 格式排版 (例如使用粗體、條列式)。"""
+4. 請使用 Markdown 格式排版 (例如使用粗體、條列式)。
+5. 【重要】請務必全程使用「繁體中文 (zh-TW)」撰寫報告，嚴禁夾雜簡體字、越南文或其他非必要的語言文字。"""
         },
         {
             "role": "user",

@@ -15,7 +15,6 @@ const BLUE = colors.blue, TEXT = colors.text, MUTED = colors.muted;
 const BORDER = colors.border, CARD = colors.card;
 const GREEN = '#5ecb6b';
 
-const GROQ_API_KEY = 'YOUR_GROQ_API_KEY';
 
 // ── 植物生長 SVG（stage 1 幼苗 → 2 小植株 → 3 長葉片 → 4 花苞 → 5 完整開花）
 // colored=true 顯示彩色，false 顯示灰色（未達標日）
@@ -244,16 +243,10 @@ export default function ReportScreen() {
   async function sendMessage() {
     if (!input.trim() || loading) return;
     const userMsg = { role: 'user', content: input.trim() };
-    const newMsgs = [...messages, userMsg];
-    setMessages(newMsgs); setInput(''); setLoading(true);
+    setMessages(prev => [...prev, userMsg]); setInput(''); setLoading(true);
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
-        body: JSON.stringify({ model: 'llama3-8b-8192', messages: [{ role: 'system', content: '你是一個專業的補水健康助理，用繁體中文回答，保持簡短友善，每次回答不超過100字。' }, ...newMsgs], max_tokens: 300 }),
-      });
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || '抱歉，我現在無法回答。';
+      const result = await apiService.sendChatMessage(userMsg.content, token);
+      const reply = result.success ? result.data.reply : '抱歉，我現在無法回答。';
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: '連線失敗，請稍後再試。' }]);
