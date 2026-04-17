@@ -30,6 +30,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         profile = supabase_service.fetch_full_user_profile(user_id)
         recent_logs = supabase_service.fetch_recent_water_records(user_id, limit=10)
         today_drink_ml = supabase_service.fetch_today_water_sum(user_id)
+        drink_breakdown = supabase_service.fetch_today_drink_breakdown(user_id)
 
         # 用醫學公式計算每日目標
         daily_goal = DailyGoalCalculator.calculate(
@@ -112,6 +113,8 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
 
 【硬體感測器即時數據】
 - 智慧杯墊回報今日實際已飲用量：{today_drink_ml} ml
+- 今日飲品分類明細：{', '.join([f"{d['type_name']} {d['volume_ml']}ml（咖啡因 {d['caffeine_mg']}mg）" for d in drink_breakdown['breakdown']]) or '尚無紀錄'}
+- 今日咖啡因總攝取量：{drink_breakdown['total_caffeine_mg']} mg（建議每日上限 400mg）
 
 【最近十筆硬體飲水紀錄 ( Timeline )】
 {history_text}

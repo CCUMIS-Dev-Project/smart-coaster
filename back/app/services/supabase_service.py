@@ -130,6 +130,52 @@ def fetch_full_user_profile(user_id: int) -> dict:
     }
 
 
+def fetch_today_drink_breakdown(user_id: int) -> dict:
+    """
+    查詢今日各飲品類型的飲用量與咖啡因攝取量。
+    回傳：{ "breakdown": [{"type_name": "咖啡", "volume_ml": 300, "caffeine_mg": 285}], "total_caffeine_mg": 285 }
+    """
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # 查今日所有飲水紀錄（含 type_id）
+    logs_res = (
+        supabase.table("drinking_logs")
+        .select("d_volume, type_id")
+        .eq("user_id", user_id)
+        .is_("delete_at", "null")
+        .gte("record_at", today_start.isoformat())
+        .execute()
+    )
+    logs = logs_res.data if logs_res.data else []
+
+    # 查所有飲品類型
+    drinks_res = supabase.table("drinks").select("type_id, type_name, caff_per_100ml").execute()
+    drinks_map = {d["type_id"]: d for d in (drinks_res.data or [])}
+
+    # 按類型彙總
+    type_volumes = {}
+    for log in logs:
+        tid = log["type_id"]
+        type_volumes[tid] = type_volumes.get(tid, 0) + log["d_volume"]
+
+    breakdown = []
+    total_caffeine = 0
+    for tid, volume in type_volumes.items():
+        drink_info = drinks_map.get(tid, {})
+        caff_per_100 = drink_info.get("caff_per_100ml", 0)
+        caffeine_mg = round(volume * caff_per_100 / 100)
+        total_caffeine += caffeine_mg
+        breakdown.append({
+            "type_name": drink_info.get("type_name", f"類型{tid}"),
+            "volume_ml": volume,
+            "caffeine_mg": caffeine_mg,
+        })
+
+    return {"breakdown": breakdown, "total_caffeine_mg": total_caffeine}
+
+
 def fetch_all_drinking_logs(user_id: int, days: int = 7) -> list:
     """
     取得過去 N 天所有未刪除的 drinking_logs（按 record_at ASC），供模型訓練用。
