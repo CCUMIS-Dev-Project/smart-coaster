@@ -1,10 +1,11 @@
 // src/context/AppContext.js
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decode as atob } from 'base-64';
 import { calcWaterGoal, CUPS } from '../constants/theme';
 import apiService from '../services/api';
 import useBLE from '../hooks/useBLE';
+import * as Location from 'expo-location';
 
 const AppContext = createContext(null);
 
@@ -203,6 +204,59 @@ export function AppProvider({ children }) {
   useEffect(() => {
     setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
   }, [connectedDevice]);
+
+
+  // 天氣api輪巡
+  const weatherIntervalRef = useRef(null);
+  const locationRef = useRef(null); // 快取座標，避免重複申請
+
+  const fetchAndSetWeather = async () => {
+    // 若已連線，直接跳過（DHT11 優先）
+    if (connectedDevice) return;
+
+    // 取得（或使用快取）座標
+    if (!locationRef.current) {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('[Weather] 位置權限被拒');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+      locationRef.current = { lat: loc.coords.latitude, lon: loc.coords.longitude };
+    }
+
+    const { lat, lon } = locationRef.current;
+    const result = await apiService.fetchWeather(lat, lon);
+    if (result.success) {
+      setSensorData(prev => ({
+        ...prev,
+        temperature: result.temperature,
+        humidity: result.humidity,
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (connectedDevice) {
+      // 杯墊連線：停止天氣輪詢
+      if (weatherIntervalRef.current) {
+        clearInterval(weatherIntervalRef.current);
+        weatherIntervalRef.current = null;
+      }
+    } else {
+      // 杯墊未連線：立即取一次，然後每 10 分鐘更新
+      fetchAndSetWeather();
+      weatherIntervalRef.current = setInterval(fetchAndSetWeather, 10 * 60 * 1000);
+    }
+
+    return () => {
+      if (weatherIntervalRef.current) {
+        clearInterval(weatherIntervalRef.current);
+        weatherIntervalRef.current = null;
+      }
+    };
+  }, [connectedDevice]);
+  // 天氣api輪尋結束
 
   return (
     <AppContext.Provider value={{

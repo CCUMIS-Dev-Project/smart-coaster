@@ -328,6 +328,25 @@ const apiService = {
       return { success: false, error: error.message };
     }
   },
+
+  // app 未連上杯墊時，首頁溫溼度使用Open-Meteo 天氣 API 
+  fetchWeather: async (lat, lon) => {
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast`
+        + `?latitude=${lat}&longitude=${lon}`
+        + `&current=temperature_2m,relative_humidity_2m`;
+      const res = await axios.get(url, { timeout: 8000 });
+      const cur = res.data.current;
+      return {
+        success: true,
+        temperature: parseFloat(cur.temperature_2m.toFixed(1)),
+        humidity: parseFloat(cur.relative_humidity_2m.toFixed(1)),
+      };
+    } catch (e) {
+      console.warn('[Weather] 取得失敗:', e.message);
+      return { success: false };
+    }
+  },
 };
 
 export default apiService;
