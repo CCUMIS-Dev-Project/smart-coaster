@@ -51,7 +51,7 @@ const MainScreen = () => {
     const {
       profile, goalMl, totalMl, logs, replaceLogs,
       addLog, updateLog, deleteLog, deleteLogs,
-      sensorData, setSensorData, syncHardwareDrink,
+      sensorData, setSensorData, 
       token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice
     } = useApp();
 
@@ -329,7 +329,7 @@ const MainScreen = () => {
         }
 
         // 同步喝水量到 App 紀錄中
-        syncHardwareDrink(drinkAmount);
+        // syncHardwareDrink(drinkAmount);
 
       } else if (type === 'E') {
         // 格式: E | temp | hum | reminder_min

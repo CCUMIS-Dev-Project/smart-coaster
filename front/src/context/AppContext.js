@@ -40,7 +40,7 @@ export function AppProvider({ children }) {
     { day: '今', ml: 0 },
   ]);
 
-  const [lastHardwareAmount, setLastHardwareAmount] = useState(0);
+  // const [lastHardwareAmount, setLastHardwareAmount] = useState(0);
 
   const [sensorData, setSensorData] = useState({
     temperature: "--",
@@ -125,6 +125,21 @@ export function AppProvider({ children }) {
     loadProfile();
   }, [token]);
 
+  // 監聽杯墊 BLE 資料，上傳後端並以真實 log_id 加入 local state
+  useEffect(() => {
+    if (!bleData || !token) return;
+    const parts = bleData.split('|');
+    if (parts[0] !== 'W') return;
+    const volume = parseFloat(parts[3]);
+    if (volume <= 0) return;  
+
+    apiService.handleWaterData(bleData, token).then(result => {
+      if (result?.success && result.data) {
+        addLog(result.data); // result.data.log_id 是後端真實整數 ID
+      }
+    });
+  }, [bleData]);
+
   // log 欄位對齊後端：{ log_id, type_id, d_volume, record_at, type_name }
   const totalMl = logs.reduce((sum, log) => sum + (log.d_volume ?? 0), 0);
 
@@ -168,22 +183,22 @@ export function AppProvider({ children }) {
   }
 
   // 當硬體傳來新的喝水量時，計算增量並新增一筆紀錄（type_id 1 = water）
-  function syncHardwareDrink(currentTotal) {
-    if (currentTotal > lastHardwareAmount) {
-      const diff = currentTotal - lastHardwareAmount;
-      addLog({
-        log_id: `hw-${Date.now()}`,
-        type_id: 1,
-        type_name: 'water',
-        d_volume: Math.round(diff),
-        record_at: new Date().toISOString(),
-        is_auto: true,
-      });
-      setLastHardwareAmount(currentTotal);
-    } else if (currentTotal < lastHardwareAmount) {
-      setLastHardwareAmount(currentTotal);
-    }
-  }
+  // function syncHardwareDrink(currentTotal) {
+  //   if (currentTotal > lastHardwareAmount) {
+  //     const diff = currentTotal - lastHardwareAmount;
+  //     addLog({
+  //       log_id: `hw-${Date.now()}`,
+  //       type_id: 1,
+  //       type_name: 'water',
+  //       d_volume: Math.round(diff),
+  //       record_at: new Date().toISOString(),
+  //       is_auto: true,
+  //     });
+  //     setLastHardwareAmount(currentTotal);
+  //   } else if (currentTotal < lastHardwareAmount) {
+  //     setLastHardwareAmount(currentTotal);
+  //   }
+  // }
 
   useEffect(() => {
     setSensorData(prev => ({ ...prev, connected: !!connectedDevice }));
@@ -198,7 +213,7 @@ export function AppProvider({ children }) {
       isRecording, setIsRecording,
       weekData,
       sensorData, setSensorData,
-      syncHardwareDrink,
+      // syncHardwareDrink,
       exerciseLevels,
       token, setToken, isAuthLoading, logout,
       scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice

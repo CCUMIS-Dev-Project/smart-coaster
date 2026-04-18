@@ -131,11 +131,11 @@ export default function useBLE(userToken) {
             console.log('收到數據:', rawString);
             setBleData(rawString); // 將原始字串傳出去給外部解析
 
-            if (userToken) {
-              apiService.handleWaterData(rawString, userToken);
-            } else {
-              console.log('尚未取得 userToken，暫不上傳');
-            }
+            // if (userToken) {
+            //   apiService.handleWaterData(rawString, userToken);
+            // } else {
+            //   console.log('尚未取得 userToken，暫不上傳');
+            // }
           }
         }
       );
