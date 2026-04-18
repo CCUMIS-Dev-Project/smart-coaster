@@ -172,5 +172,19 @@ export default function useBLE(userToken) {
     bleManager.stopDeviceScan();
   };
 
-  return { scanAndConnect, connectedDevice, bleData, writeToDevice, stopScan };
+
+  // 6. 斷開裝置連線
+  const disconnectDevice = async () => {
+  if (!connectedDevice) return;
+  try {
+    await connectedDevice.cancelConnection();
+    console.log('✅ 已主動斷開連線');
+  } catch (error) {
+    console.log('❌ 斷線失敗:', error.message);
+  } finally {
+    setConnectedDevice(null);
+  }
+};
+
+  return { scanAndConnect, connectedDevice, bleData, writeToDevice, stopScan, disconnectDevice };
 }

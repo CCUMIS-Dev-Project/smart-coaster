@@ -52,7 +52,7 @@ const MainScreen = () => {
       profile, goalMl, totalMl, logs, replaceLogs,
       addLog, updateLog, deleteLog, deleteLogs,
       sensorData, setSensorData, 
-      token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice
+      token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice
     } = useApp();
 
     // 紀錄杯墊連線狀態
@@ -170,6 +170,11 @@ const MainScreen = () => {
     const handleCancelScan = () => {
       stopScan();
       setIsScanning(false);
+    };
+
+    const handleDisconnect = async () => {
+      setShowConnectedAlert(false);
+      await disconnectDevice();
     };
     // ── 藍牙區結束 ────────────────────────────────────────────────
 
@@ -605,11 +610,20 @@ const MainScreen = () => {
             </View>
             <Text style={{ color: '#555', marginBottom: 16 }}>智慧杯墊已成功連接,可以開始使用。</Text>
             <View style={s.modalBtns}>
+
+              <TouchableOpacity
+                style={[s.modalConfirm, { backgroundColor: '#f87171' }]}
+                onPress={handleDisconnect}
+              >
+                <Text style={s.modalConfirmTxt}>取消連線</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[s.modalConfirm, { backgroundColor: '#4ade80' }]}
                 onPress={() => setShowConnectedAlert(false)}
               >
                 <Text style={s.modalConfirmTxt}>確定</Text>
+                
               </TouchableOpacity>
             </View>
           </View>

@@ -55,7 +55,7 @@ export function AppProvider({ children }) {
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
 
-  const { scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice } = useBLE(token);
+  const { scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice,disconnectDevice } = useBLE(token);
 
   // 啟動時從 AsyncStorage 讀取 token
   useEffect(() => {
@@ -216,7 +216,7 @@ export function AppProvider({ children }) {
       // syncHardwareDrink,
       exerciseLevels,
       token, setToken, isAuthLoading, logout,
-      scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice
+      scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice
     }}>
       {children}
     </AppContext.Provider>

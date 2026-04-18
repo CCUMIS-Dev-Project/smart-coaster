@@ -36,7 +36,7 @@ REMINDER_MS = 30 * 60 * 1000  # 喝水提醒時間 (正式版：30分鐘)
 STABLE_DELAY_MS = 4000        # 放下水杯後等待穩定的時間 (3秒)
 
 # SENSOR_INTERVAL_MS = 10000    # 溫溼度感測器讀取頻率 (測試用：10秒) 
-SENSOR_INTERVAL_MS = 600000    # 溫溼度感測器讀取頻率 (正式版：10分鐘) 
+SENSOR_INTERVAL_MS = 300000    # 溫溼度感測器讀取頻率 (正式版：5分鐘) 
 DISPLAY_INTERVAL_MS = 500     # 螢幕刷新頻率 (0.5秒)
 
 # --- 4. 藍牙 (BLE) 設定 ---
