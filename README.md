@@ -188,6 +188,12 @@ eas build --profile development --platform android
 
 ---
 
+### 5. APP 打包
+```
+eas build --platform android
+```
+---
+
 ## 🔍 連線偵錯指引 (Debug)
 
 1. **找不到杯墊？**

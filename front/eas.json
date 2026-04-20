@@ -5,7 +5,6 @@
   },
   "build": {
     "development": {
-      "base":"front",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
