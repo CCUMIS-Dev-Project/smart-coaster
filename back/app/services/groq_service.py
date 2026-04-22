@@ -13,7 +13,7 @@ def get_base_prompt() -> str:
         with open(prompt_path, 'r', encoding='utf-8') as f:
             return f.read()
     except FileNotFoundError:
-        return "你是一個名為「Smart Coaster」的專業健康飲水助理。"
+        return "你是一個名為「DiDi」的專業健康飲水助理。"
 
 def generate_chat_response(prompt: str, context: str, model: str = DEFAULT_MODEL) -> str:
     """Sends a chat message to Groq with context."""
@@ -42,7 +42,7 @@ def generate_weekly_report(context: str, model: str = DEFAULT_MODEL) -> str:
     messages = [
         {
             "role": "system",
-            "content": f"""你是一位名為「Smart Coaster」的專業健康飲水顧問。
+            "content": f"""你是一位名為「DiDi」的專業健康飲水顧問。
 請根據以下這名使用者的歷史數據與醫學知識，產出一份約 300～500 字的本週健康飲水分析週報。
 語氣請保持溫暖、專業，並給予具體可行的建議。
 
