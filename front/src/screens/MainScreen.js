@@ -178,6 +178,25 @@ const MainScreen = () => {
     };
     // ── 藍牙區結束 ────────────────────────────────────────────────
 
+    // 自動背景掃描：token 載入後靜默嘗試連線
+    useEffect(() => {
+      if (!token || connectedDevice) return;
+
+      let scanTimeout;
+      const autoConnect = async () => {
+        try {
+          scanTimeout = setTimeout(() => stopScan(), 15000);
+          await scanAndConnect();
+        } catch {
+          // 靜默失敗，用戶可手動按鈕重試
+        } finally {
+          clearTimeout(scanTimeout);
+        }
+      };
+
+      autoConnect();
+    }, [token]);
+
     // ── Phase C：App 啟動時載入今日紀錄 ──────────────────────────
     // 元件掛載後向後端拉取今日所有紀錄，用 replaceLogs 整批寫入 AppContext
     // （不用 addLog 是因為那是單筆插入，這裡需要完整覆蓋）
