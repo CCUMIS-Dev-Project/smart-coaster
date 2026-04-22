@@ -26,40 +26,27 @@ def fetch_recent_water_records(user_id: int, limit: int = 10) -> list:
     """
     Fetch the latest 'limit' number of drinking logs for the timeline context.
     """
-    logs_res = supabase.table("drinking_logs").select("d_volume, record_at").eq("user_id", user_id).order("record_at", desc=True).limit(limit).execute()
+    logs_res = supabase.table("drinking_logs").select("d_volume, record_at").eq("user_id", user_id).is_("delete_at", "null").order("record_at", desc=True).limit(limit).execute()
     return logs_res.data if logs_res.data else []
 
 def fetch_today_water_sum(user_id: int) -> int:
     """
-    Calculate the total water intake for 'today' (anchored to the latest DB record).
+    Calculate the total water intake for 'today'.
     """
-    logs_res = supabase.table("drinking_logs").select("record_at").eq("user_id", user_id).order("record_at", desc=True).limit(1).execute()
-    
-    if logs_res.data:
-        latest_time_str = logs_res.data[0]['record_at']
-        now = datetime.fromisoformat(latest_time_str.replace('Z', '+00:00')).astimezone(pytz.timezone('Asia/Taipei'))
-    else:
-        now = datetime.now(pytz.timezone('Asia/Taipei'))
-
+    now = datetime.now(pytz.timezone('Asia/Taipei'))
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_logs_res = supabase.table("drinking_logs").select("d_volume").eq("user_id", user_id).gte("record_at", today_start.isoformat()).lte("record_at", now.isoformat()).execute()
+    today_logs_res = supabase.table("drinking_logs").select("d_volume").eq("user_id", user_id).is_("delete_at", "null").gte("record_at", today_start.isoformat()).lte("record_at", now.isoformat()).execute()
     return sum([log.get("d_volume", 0) for log in today_logs_res.data]) if today_logs_res.data else 0
 
 def fetch_weekly_water_sum(user_id: int) -> dict:
     """
     Calculate the sum of water intake for the past 7 days, grouped by day.
     """
-    latest_log_res = supabase.table("drinking_logs").select("record_at").eq("user_id", user_id).order("record_at", desc=True).limit(1).execute()
-    
-    if latest_log_res.data:
-        latest_time_str = latest_log_res.data[0]['record_at']
-        now = datetime.fromisoformat(latest_time_str.replace('Z', '+00:00')).astimezone(pytz.timezone('Asia/Taipei'))
-    else:
-        now = datetime.now(pytz.timezone('Asia/Taipei'))
+    now = datetime.now(pytz.timezone('Asia/Taipei'))
         
     seven_days_ago = now - timedelta(days=7)
     
-    logs_res = supabase.table("drinking_logs").select("d_volume, record_at").eq("user_id", user_id).gte("record_at", seven_days_ago.isoformat()).lte("record_at", now.isoformat()).execute()
+    logs_res = supabase.table("drinking_logs").select("d_volume, record_at").eq("user_id", user_id).is_("delete_at", "null").gte("record_at", seven_days_ago.isoformat()).lte("record_at", now.isoformat()).execute()
     
     weekly_stats = { (now - timedelta(days=i)).strftime("%Y-%m-%d"): 0 for i in range(7) }
     
