@@ -20,59 +20,59 @@ const GREEN = '#5ecb6b';
 // colored=true 顯示彩色，false 顯示灰色（未達標日）
 function PlantSVG({ stage, colored }) {
   const c = colored;
-  const green1 = c?'#7ec860':'#ccc', green2=c?'#9adc78':'#ddd', green3=c?'#6bb850':'#bbb';
-  const floral=c?'#f4a0c0':'#ddd', stem=c?'#5a9e50':'#aaa';
-  if(stage===1) return(
+  const green1 = c ? '#7ec860' : '#ccc', green2 = c ? '#9adc78' : '#ddd', green3 = c ? '#6bb850' : '#bbb';
+  const floral = c ? '#f4a0c0' : '#ddd', stem = c ? '#5a9e50' : '#aaa';
+  if (stage === 1) return (
     <Svg width={24} height={28} viewBox="0 0 28 32">
-      <Ellipse cx="14" cy="28" rx="8" ry="3" fill="#8B6914" opacity={0.2}/>
-      <Rect x="12.5" y="14" width="3" height="14" rx="1.5" fill={stem}/>
-      <Ellipse cx="14" cy="12" rx="6" ry="6" fill={green1}/>
+      <Ellipse cx="14" cy="28" rx="8" ry="3" fill="#8B6914" opacity={0.2} />
+      <Rect x="12.5" y="14" width="3" height="14" rx="1.5" fill={stem} />
+      <Ellipse cx="14" cy="12" rx="6" ry="6" fill={green1} />
     </Svg>
   );
-  if(stage===2) return(
+  if (stage === 2) return (
     <Svg width={29} height={40} viewBox="0 0 34 46">
-      <Ellipse cx="17" cy="43" rx="10" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="15.5" y="18" width="3" height="25" rx="1.5" fill={stem}/>
-      <Ellipse cx="17" cy="15" rx="7" ry="7" fill={green2}/>
+      <Ellipse cx="17" cy="43" rx="10" ry="3" fill="#8B6914" opacity={0.18} />
+      <Rect x="15.5" y="18" width="3" height="25" rx="1.5" fill={stem} />
+      <Ellipse cx="17" cy="15" rx="7" ry="7" fill={green2} />
     </Svg>
   );
-  if(stage===3) return(
+  if (stage === 3) return (
     <Svg width={33} height={52} viewBox="0 0 38 58">
-      <Ellipse cx="19" cy="55" rx="11" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="17.5" y="24" width="3" height="31" rx="1.5" fill={stem}/>
-      <Path d="M19 50 C8 45 5 34 15 36 C20 37 19 50 19 50Z" fill={green3}/>
-      <Path d="M19 50 C30 45 33 34 23 36 C18 37 19 50 19 50Z" fill={green1}/>
-      <Ellipse cx="19" cy="20" rx="8" ry="8" fill={green2}/>
+      <Ellipse cx="19" cy="55" rx="11" ry="3" fill="#8B6914" opacity={0.18} />
+      <Rect x="17.5" y="24" width="3" height="31" rx="1.5" fill={stem} />
+      <Path d="M19 50 C8 45 5 34 15 36 C20 37 19 50 19 50Z" fill={green3} />
+      <Path d="M19 50 C30 45 33 34 23 36 C18 37 19 50 19 50Z" fill={green1} />
+      <Ellipse cx="19" cy="20" rx="8" ry="8" fill={green2} />
     </Svg>
   );
-  if(stage===4) return(
+  if (stage === 4) return (
     <Svg width={37} height={62} viewBox="0 0 42 70">
-      <Ellipse cx="21" cy="67" rx="12" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="19.5" y="30" width="3" height="37" rx="1.5" fill={stem}/>
-      <Path d="M21 56 C10 51 8 41 17 42 C21 43 21 56 21 56Z" fill={green3}/>
-      <Path d="M21 56 C32 51 34 41 25 42 C21 43 21 56 21 56Z" fill={green1}/>
-      <Rect x="19" y="16" width="4" height="12" rx="2" fill={stem}/>
-      <Ellipse cx="21" cy="16" rx="6" ry="9" fill={floral}/>
+      <Ellipse cx="21" cy="67" rx="12" ry="3" fill="#8B6914" opacity={0.18} />
+      <Rect x="19.5" y="30" width="3" height="37" rx="1.5" fill={stem} />
+      <Path d="M21 56 C10 51 8 41 17 42 C21 43 21 56 21 56Z" fill={green3} />
+      <Path d="M21 56 C32 51 34 41 25 42 C21 43 21 56 21 56Z" fill={green1} />
+      <Rect x="19" y="16" width="4" height="12" rx="2" fill={stem} />
+      <Ellipse cx="21" cy="16" rx="6" ry="9" fill={floral} />
     </Svg>
   );
   // stage 5：完整開花
-  return(
+  return (
     <Svg width={42} height={72} viewBox="0 0 48 80">
-      <Ellipse cx="24" cy="77" rx="13" ry="3" fill="#8B6914" opacity={0.18}/>
-      <Rect x="22.5" y="38" width="3" height="39" rx="1.5" fill={stem}/>
-      <Path d="M24 64 C12 59 10 48 20 49 C24 50 24 64 24 64Z" fill={green3}/>
-      <Path d="M24 64 C36 59 38 48 28 49 C24 50 24 64 24 64Z" fill={green1}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" fill={c?'#ff9ab8':'#ddd'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(60 24 24)" fill={c?'#ffb4cc':'#eee'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(120 24 24)" fill={c?'#ff9ab8':'#ddd'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(180 24 24)" fill={c?'#ffb4cc':'#eee'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(240 24 24)" fill={c?'#ff9ab8':'#ddd'}/>
-      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(300 24 24)" fill={c?'#ffb4cc':'#eee'}/>
-      <Circle cx="24" cy="24" r="8" fill={c?'#ffe066':'#eee'}/>
-      <Circle cx="24" cy="24" r="5" fill={c?'#ffd040':'#e0e0e0'}/>
-      <Circle cx="22" cy="23" r="1.2" fill="#7a4a10"/>
-      <Circle cx="26" cy="23" r="1.2" fill="#7a4a10"/>
-      <Path d="M21.5 25.5 Q24 28 26.5 25.5" stroke="#7a4a10" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      <Ellipse cx="24" cy="77" rx="13" ry="3" fill="#8B6914" opacity={0.18} />
+      <Rect x="22.5" y="38" width="3" height="39" rx="1.5" fill={stem} />
+      <Path d="M24 64 C12 59 10 48 20 49 C24 50 24 64 24 64Z" fill={green3} />
+      <Path d="M24 64 C36 59 38 48 28 49 C24 50 24 64 24 64Z" fill={green1} />
+      <Ellipse cx="24" cy="14" rx="5" ry="10" fill={c ? '#ff9ab8' : '#ddd'} />
+      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(60 24 24)" fill={c ? '#ffb4cc' : '#eee'} />
+      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(120 24 24)" fill={c ? '#ff9ab8' : '#ddd'} />
+      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(180 24 24)" fill={c ? '#ffb4cc' : '#eee'} />
+      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(240 24 24)" fill={c ? '#ff9ab8' : '#ddd'} />
+      <Ellipse cx="24" cy="14" rx="5" ry="10" transform="rotate(300 24 24)" fill={c ? '#ffb4cc' : '#eee'} />
+      <Circle cx="24" cy="24" r="8" fill={c ? '#ffe066' : '#eee'} />
+      <Circle cx="24" cy="24" r="5" fill={c ? '#ffd040' : '#e0e0e0'} />
+      <Circle cx="22" cy="23" r="1.2" fill="#7a4a10" />
+      <Circle cx="26" cy="23" r="1.2" fill="#7a4a10" />
+      <Path d="M21.5 25.5 Q24 28 26.5 25.5" stroke="#7a4a10" strokeWidth="1.2" fill="none" strokeLinecap="round" />
     </Svg>
   );
 }
@@ -82,7 +82,7 @@ function PlantSVG({ stage, colored }) {
 const SW = Dimensions.get('window').width;
 const SH = Dimensions.get('window').height;
 // s.inner padding 16*2=32, statsRow gap 12, 兩卡各佔一半
-const CARD_W   = Math.floor((SW - 32 - 12) / 2);   // 每張卡片精確像素寬
+const CARD_W = Math.floor((SW - 32 - 12) / 2);   // 每張卡片精確像素寬
 // 圓餅尺寸：卡片內寬（扣 padding 14*2=28）的 52%
 const PIE_SIZE = Math.floor((CARD_W - 28) * 0.52);
 
@@ -132,9 +132,11 @@ function PieChart({ data }) {
           <TouchableOpacity key={i} onPress={() => toggle(i)} activeOpacity={0.7}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: seg.color },
-                sel === i && { width: 10, height: 10, borderRadius: 5 }]} />
-              <Text style={{ fontSize: 11, fontWeight: sel === i ? '900' : '700',
-                color: sel === i ? TEXT : MUTED }}>
+              sel === i && { width: 10, height: 10, borderRadius: 5 }]} />
+              <Text style={{
+                fontSize: 11, fontWeight: sel === i ? '900' : '700',
+                color: sel === i ? TEXT : MUTED
+              }}>
                 {seg.label}{sel === i ? `  ${seg.pct}%` : ''}
               </Text>
             </View>
@@ -152,16 +154,16 @@ export default function ReportScreen() {
 
   const [kbHeight, setKbHeight] = useState(0);
   const [showWeekCompare, setShowWeekCompare] = useState(false);
-  const [showChat,  setShowChat]  = useState(false);
-  const [messages,  setMessages]  = useState([{ role: 'assistant', content: '你好！我是你的補水 AI 助理，有任何補水問題都可以問我' }]);
-  const [input,   setInput]   = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [messages, setMessages] = useState([{ role: 'assistant', content: 'Hi, 我是DayDay，你的飲水助理，今天喝夠水了嗎？' }]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatScrollRef = useRef(null);
 
   // ── API 資料 state ───────────────────────────────────────────
-  const [weeklyStat, setWeeklyStat]   = useState(null);
-  const [dailyStat,  setDailyStat]    = useState(null);
-  const [streak,     setStreak]       = useState(null);
+  const [weeklyStat, setWeeklyStat] = useState(null);
+  const [dailyStat, setDailyStat] = useState(null);
+  const [streak, setStreak] = useState(null);
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', e => setKbHeight(e.endCoordinates.height));
@@ -189,15 +191,15 @@ export default function ReportScreen() {
   // 直方圖資料：7天，未來顯示 null
   const barData = weeklyStat?.days?.map(d => ({
     day: DAY_ZH[new Date(d.date + 'T12:00:00').getDay()],
-    ml:  d.date > todayStr ? null : d.total_ml,
+    ml: d.date > todayStr ? null : d.total_ml,
     hit: d.total_ml >= (dailyStat?.daily_target ?? goalMl),
   })) ?? [];
 
-  const thisAvg  = Math.round(weeklyStat?.avg_this_week ?? 0);
-  const prevAvg  = Math.round(weeklyStat?.avg_last_week ?? 0);
-  const diffPct  = weeklyStat?.change_pct ?? 0;
-  const isUp     = diffPct >= 0;
-  const maxV     = Math.max(...barData.map(d => d.ml ?? 0), dailyStat?.daily_target ?? goalMl, 100);
+  const thisAvg = Math.round(weeklyStat?.avg_this_week ?? 0);
+  const prevAvg = Math.round(weeklyStat?.avg_last_week ?? 0);
+  const diffPct = weeklyStat?.change_pct ?? 0;
+  const isUp = diffPct >= 0;
+  const maxV = Math.max(...barData.map(d => d.ml ?? 0), dailyStat?.daily_target ?? goalMl, 100);
 
   // 圓餅圖：by_type → label + color（用 DRINK_BY_ID mapping）
   const drinkBreakdown = (weeklyStat?.by_type ?? []).map(t => ({
@@ -217,9 +219,9 @@ export default function ReportScreen() {
   const caffeineLimitMg = 400;
 
   // 今日進度（優先用 dailyStat，fallback AppContext）
-  const todayTotal  = dailyStat?.total_ml  ?? totalMl;
+  const todayTotal = dailyStat?.total_ml ?? totalMl;
   const todayTarget = dailyStat?.daily_target ?? goalMl;
-  const todayPct    = Math.min(100, Math.round((todayTotal / Math.max(todayTarget, 1)) * 100));
+  const todayPct = Math.min(100, Math.round((todayTotal / Math.max(todayTarget, 1)) * 100));
 
   // ── Phase B：streak → gardenDays ─────────────────────────────
   const gardenStreak = streak?.current_streak ?? 0;
@@ -255,8 +257,8 @@ export default function ReportScreen() {
   }
 
   const DAY_LABELS = ['第1天', '第2天', '第3天', '第4天', '第5天'];
-  const DOT_COLOR  = { done: '#5ecb6b', today: BLUE, fail: '#f87171', empty: '#dde8de' };
-  const DOT_LABEL  = { done: '✓', today: '▶', fail: '✕', empty: '' };
+  const DOT_COLOR = { done: '#5ecb6b', today: BLUE, fail: '#f87171', empty: '#dde8de' };
+  const DOT_LABEL = { done: '✓', today: '▶', fail: '✕', empty: '' };
 
   return (
     <SafeAreaView style={s.safe}>
@@ -397,7 +399,7 @@ export default function ReportScreen() {
             height: SH - kbHeight - (insets.top || 40) - 16,
           }]}>
             <View style={s.chatTopbar}>
-              <Text style={s.chatTitle}>AI 補水助理</Text>
+              <Text style={s.chatTitle}>Day Day 補水小助理</Text>
               <TouchableOpacity onPress={() => setShowChat(false)}><Text style={{ fontSize: 24, color: MUTED }}>×</Text></TouchableOpacity>
             </View>
             <ScrollView ref={chatScrollRef} style={s.chatMsgs} contentContainerStyle={{ padding: 16, gap: 10 }} onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}>
@@ -421,19 +423,19 @@ export default function ReportScreen() {
 
 //style
 const s = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: '#f0f7f2' },
-  inner:    { padding: 16, paddingTop: 35, paddingBottom: 32, gap: 14 },
-  head:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headRight:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title:    { fontSize: 22, fontWeight: '900', color: '#1a2a1e' },
-  gardenBtn:   { backgroundColor: '#ffffff', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12},
-  gardenBtnTxt:{ fontSize: 11, fontWeight: '900', color: '#31a8d6' },
+  safe: { flex: 1, backgroundColor: '#f0f7f2' },
+  inner: { padding: 16, paddingTop: 35, paddingBottom: 32, gap: 14 },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontSize: 22, fontWeight: '900', color: '#1a2a1e' },
+  gardenBtn: { backgroundColor: '#ffffff', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12 },
+  gardenBtnTxt: { fontSize: 11, fontWeight: '900', color: '#31a8d6' },
 
-  plantCard:    { backgroundColor: CARD, borderRadius: 24, padding: 18, position: 'relative', overflow: 'hidden' },
-  plantCardBg:  { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f0fff4', borderRadius: 24 },
+  plantCard: { backgroundColor: CARD, borderRadius: 24, padding: 18, position: 'relative', overflow: 'hidden' },
+  plantCardBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f0fff4', borderRadius: 24 },
   plantCardTitle: { fontSize: 11, fontWeight: '900', color: '#8aaa90', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 14 },
-  stagesRow:{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 },
-  stage:    { alignItems: 'center', gap: 5, flex: 1 },
+  stagesRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 },
+  stage: { alignItems: 'center', gap: 5, flex: 1 },
   stageDot: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   stageDotTxt: { fontSize: 9, fontWeight: '900', color: '#fff' },
   stageDay: { fontSize: 9, fontWeight: '800', color: '#8aaa90' },
@@ -451,56 +453,56 @@ const s = StyleSheet.create({
   histCard: { backgroundColor: CARD, borderRadius: 18, padding: 14 },
   histHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   histTitle: { fontSize: 13, fontWeight: '900', color: TEXT },
-  weekBtn:   { borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12, borderWidth: 1.5 },
-  weekBtnUp:   { backgroundColor: '#dcfce7', borderColor: '#86efac' },
+  weekBtn: { borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12, borderWidth: 1.5 },
+  weekBtnUp: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
   weekBtnDown: { backgroundColor: '#fee2e2', borderColor: '#fca5a5' },
-  weekBtnTxt:  { fontSize: 12, fontWeight: '900' },
-  histRow:  { flexDirection: 'row', gap: 6 },
-  histDay:  { flex: 1, alignItems: 'center', gap: 4 },
+  weekBtnTxt: { fontSize: 12, fontWeight: '900' },
+  histRow: { flexDirection: 'row', gap: 6 },
+  histDay: { flex: 1, alignItems: 'center', gap: 4 },
   histBarWrap: { width: '100%', height: 80, backgroundColor: '#e8f2ea', borderRadius: 99, overflow: 'hidden', justifyContent: 'flex-end' },
   histBarFill: { width: '100%', borderRadius: 99 },
   histDayLbl: { fontSize: 9, fontWeight: '800', color: '#8aaa90' },
-  histMl:   { fontSize: 9, fontWeight: '900', color: TEXT },
+  histMl: { fontSize: 9, fontWeight: '900', color: TEXT },
 
-  statsRow:   { flexDirection: 'row', gap: 12 },                                     
-  statsCard:  { flex: 1, backgroundColor: CARD, borderRadius: 18, padding: 14 },
+  statsRow: { flexDirection: 'row', gap: 12 },
+  statsCard: { flex: 1, backgroundColor: CARD, borderRadius: 18, padding: 14 },
   statsTitle: { fontSize: 11, fontWeight: '900', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 },
-  caffNum:   { fontSize: 30, fontWeight: '900', color: TEXT },
+  caffNum: { fontSize: 30, fontWeight: '900', color: TEXT },
   caffLimit: { fontSize: 18, fontWeight: '700', color: MUTED },
-  caffUnit:  { fontSize: 13, fontWeight: '700', color: MUTED },
+  caffUnit: { fontSize: 13, fontWeight: '700', color: MUTED },
 
-  aiCard:   { backgroundColor: CARD, borderRadius: 20, padding: 16 },
+  aiCard: { backgroundColor: CARD, borderRadius: 20, padding: 16 },
   aiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  aiTitle:  { fontSize: 15, fontWeight: '900', color: TEXT },
-  chatBtn:  { backgroundColor: BLUE, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 },
+  aiTitle: { fontSize: 15, fontWeight: '900', color: TEXT },
+  chatBtn: { backgroundColor: BLUE, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 },
   chatBtnTxt: { fontSize: 13, fontWeight: '900', color: '#fff' },
-  aiText:   { fontSize: 13, color: '#4a6a84', lineHeight: 20 },
+  aiText: { fontSize: 13, color: '#4a6a84', lineHeight: 20 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
   compareModal: { backgroundColor: CARD, borderRadius: 24, padding: 24, width: '100%', gap: 16 },
   compareModalTitle: { fontSize: 18, fontWeight: '900', color: TEXT, textAlign: 'center' },
-  compareRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  compareCol:   { flex: 1, alignItems: 'center', gap: 4 },
+  compareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  compareCol: { flex: 1, alignItems: 'center', gap: 4 },
   compareColLbl: { fontSize: 12, color: MUTED, fontWeight: '800' },
   compareColVal: { fontSize: 22, fontWeight: '900', color: TEXT },
   compareColUnit: { fontSize: 13, color: MUTED },
-  compareArrow:  { width: 90, alignItems: 'center' },
+  compareArrow: { width: 90, alignItems: 'center' },
   compareArrowTxt: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
-  compareDesc:   { fontSize: 13, color: '#4a6a84', textAlign: 'left', lineHeight: 20 },
-  compareClose:  { backgroundColor: BLUE, paddingVertical: 13, borderRadius: 14, alignItems: 'center' },
+  compareDesc: { fontSize: 13, color: '#4a6a84', textAlign: 'left', lineHeight: 20 },
+  compareClose: { backgroundColor: BLUE, paddingVertical: 13, borderRadius: 14, alignItems: 'center' },
   compareCloseTxt: { color: '#fff', fontWeight: '900', fontSize: 15 },
 
   chatOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  chatCard:    { backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '75%' },
-  chatTopbar:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: BORDER },
-  chatTitle:   { fontSize: 18, fontWeight: '900', color: TEXT },
-  chatMsgs:    { flex: 1 },
-  bubble:      { maxWidth: '80%', padding: 12, borderRadius: 16 },
-  bubbleUser:  { alignSelf: 'flex-end', backgroundColor: BLUE, borderBottomRightRadius: 4 },
-  bubbleAI:    { alignSelf: 'flex-start', backgroundColor: '#f0f5fa', borderBottomLeftRadius: 4 },
-  bubbleTxt:   { fontSize: 14, lineHeight: 20 },
+  chatCard: { backgroundColor: CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '75%' },
+  chatTopbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: BORDER },
+  chatTitle: { fontSize: 18, fontWeight: '900', color: TEXT },
+  chatMsgs: { flex: 1 },
+  bubble: { maxWidth: '80%', padding: 12, borderRadius: 16 },
+  bubbleUser: { alignSelf: 'flex-end', backgroundColor: BLUE, borderBottomRightRadius: 4 },
+  bubbleAI: { alignSelf: 'flex-start', backgroundColor: '#f0f5fa', borderBottomLeftRadius: 4 },
+  bubbleTxt: { fontSize: 14, lineHeight: 20 },
   chatInputRow: { flexDirection: 'row', gap: 10, paddingTop: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: BORDER },
-  chatInput:   { flex: 1, backgroundColor: '#f6fafd', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, fontSize: 15, color: TEXT, borderWidth: 1.5, borderColor: BORDER },
-  sendBtn:     { backgroundColor: BLUE, borderRadius: 14, paddingHorizontal: 18, justifyContent: 'center' },
-  sendBtnTxt:  { color: '#fff', fontWeight: '900', fontSize: 15 },
+  chatInput: { flex: 1, backgroundColor: '#f6fafd', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, fontSize: 15, color: TEXT, borderWidth: 1.5, borderColor: BORDER },
+  sendBtn: { backgroundColor: BLUE, borderRadius: 14, paddingHorizontal: 18, justifyContent: 'center' },
+  sendBtnTxt: { color: '#fff', fontWeight: '900', fontSize: 15 },
 });
