@@ -57,6 +57,7 @@ const MainScreen = () => {
 
     // 紀錄杯墊連線狀態
     const [isScanning, setIsScanning] = useState(false);
+    const [isAutoScanning, setIsAutoScanning] = useState(false);
 
     // 已連線提示 Modal
     const [showConnectedAlert, setShowConnectedAlert] = useState(false);
@@ -184,6 +185,7 @@ const MainScreen = () => {
 
       let scanTimeout;
       const autoConnect = async () => {
+        setIsAutoScanning(true);
         try {
           scanTimeout = setTimeout(() => stopScan(), 15000);
           await scanAndConnect();
@@ -191,6 +193,7 @@ const MainScreen = () => {
           // 靜默失敗，用戶可手動按鈕重試
         } finally {
           clearTimeout(scanTimeout);
+          setIsAutoScanning(false);
         }
       };
 
@@ -459,10 +462,13 @@ const MainScreen = () => {
 
           {/* 杯墊連線按鈕 */}
           <TouchableOpacity style={[s.PickerButton]} onPress={handleConnect}>
-            {/* <Text style={s.drinkLabel}>杯墊</Text> */}
-            <Text style={[s.drinkName, { fontSize: 14, color: isConnected ? '#4ade80' : '#f87171' }]}>
-              {isConnected ? '已連線' : '未連線'}
-            </Text>
+            {(isAutoScanning || isScanning) && !isConnected ? (
+              <ActivityIndicator size="small" color="#3498db" />
+            ) : (
+              <Text style={[s.drinkName, { fontSize: 14, color: isConnected ? '#4ade80' : '#f87171' }]}>
+                {isConnected ? '已連線' : '未連線'}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
         {/*下拉選單+連接杯墊區結束 */}
