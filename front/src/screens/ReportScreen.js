@@ -155,7 +155,7 @@ export default function ReportScreen() {
   const [kbHeight, setKbHeight] = useState(0);
   const [showWeekCompare, setShowWeekCompare] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [messages, setMessages] = useState([{ role: 'assistant', content: 'Hi, 我是DayDay，你的飲水助理，今天喝夠水了嗎？' }]);
+  const [messages, setMessages] = useState([{ role: 'assistant', content: 'Hi, 我是 DiDi，你的飲水助理，今天喝夠水了嗎？' }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatScrollRef = useRef(null);
@@ -399,7 +399,7 @@ export default function ReportScreen() {
             height: SH - kbHeight - (insets.top || 40) - 16,
           }]}>
             <View style={s.chatTopbar}>
-              <Text style={s.chatTitle}>Day Day 補水小助理</Text>
+              <Text style={s.chatTitle}>DiDi 補水小助理</Text>
               <TouchableOpacity onPress={() => setShowChat(false)}><Text style={{ fontSize: 24, color: MUTED }}>×</Text></TouchableOpacity>
             </View>
             <ScrollView ref={chatScrollRef} style={s.chatMsgs} contentContainerStyle={{ padding: 16, gap: 10 }} onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}>
