@@ -119,8 +119,8 @@ const MainTabNavigator = () => {
         tabBar={props => <TabBar {...props} />}
         screenOptions={{ headerShown: false }}
         >
-            <Tab.Screen name="主頁" component={MainScreen}/> 
             <Tab.Screen name="週報" component={ReportScreen} />
+            <Tab.Screen name="主頁" component={MainScreen}/> 
             <Tab.Screen name="花園" component={GardenScreen} />
             <Tab.Screen name="個人" component={ProfileScreen} />
         </Tab.Navigator>
