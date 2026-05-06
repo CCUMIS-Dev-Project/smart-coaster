@@ -533,7 +533,7 @@ const MainScreen = () => {
             <Text style={s.qBtnMl}>60ml</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.qBtnPlus} onPress={() => setShowAddModal(true)} activeOpacity={0.5}>
-            <Ionicons name="add-circle-outline" size={36} color="#3498db" />
+            <Ionicons name="add-circle-outline" size={36} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
