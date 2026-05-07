@@ -128,6 +128,7 @@ const ProfileScreen = () => {
   } = useApp();
   const insets = useSafeAreaInsets();
   const [urineIdx, setUrineIdx] = useState(0);
+  const [showUrineInfo, setShowUrineInfo] = useState(false);
   const [showActivityInfo, setShowActivityInfo] = useState(false);
 
   // 個別編輯 modal 狀態
@@ -648,7 +649,17 @@ const ProfileScreen = () => {
 
         {/* 尿液顏色 */}
         <View style={s.urineCard}>
-          <Text style={s.urineTitle}>今日尿液顏色</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={s.urineTitle}>今日尿液顏色</Text>
+            <TouchableOpacity onPress={() => setShowUrineInfo(v => !v)}>
+              <Text style={{ fontSize: 13, color: '#8aaac0' }}>ⓘ</Text>
+            </TouchableOpacity>
+          </View>
+          {showUrineInfo && (
+            <Text style={{ fontSize: 10, color: '#8aaac0' }}>
+              參考來源：Armstrong Urine Color Scale
+            </Text>
+          )}
           <Text style={s.urineSub}>可透過尿液顏色去調整自己的喝水量喔！</Text>
           <View style={s.urineScale}>
             {URINE_COLORS.map((c, i) => (
