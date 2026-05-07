@@ -30,7 +30,8 @@
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_SCAN",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.leolin4ni.coasterapp"
     },
@@ -49,7 +50,12 @@
           ],
           "bluetoothAlwaysPermission": "Allow App to connect to the Smart Coaster"
         }
-      ]
+      ],
+      ["expo-notifications", {
+        "icon": "./src/assets/icon.png",
+        "color": "#4AABDD",
+        "sounds": []
+      }]
     ],
     "extra": {
       "eas": {

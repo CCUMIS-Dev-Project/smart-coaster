@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
 import { colors, DRINK_TYPES, DRINK_BY_ID } from '../constants/theme';
+import { requestNotificationPermission, scheduleWaterReminder } from '../utils/notifications';
 
 // 解構顏色 token，方便後續 StyleSheet 引用
 const { blue: BLUE, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
@@ -52,7 +53,8 @@ const MainScreen = () => {
       profile, goalMl, totalMl, logs, replaceLogs,
       addLog, updateLog, deleteLog, deleteLogs,
       sensorData, setSensorData, 
-      token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice
+      token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice,
+      nextReminderAt, setNextReminderAt,
     } = useApp();
 
     // 紀錄杯墊連線狀態
@@ -96,6 +98,12 @@ const MainScreen = () => {
       const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
       return () => { show.remove(); hide.remove(); };
     }, []);
+
+    useEffect(() => {
+      requestNotificationPermission(); // 請求權限（非同步，不阻塞）
+      scheduleWaterReminder(profile?.reminderInterval ?? 60)
+        .then(ts => setNextReminderAt(ts)); // 無論是否授權都設定倒數
+    }, []); // 僅在掛載時執行一次
 
     // ── 底部紀錄卡片：可拖曳上下展開 ────────────────────────────
     const SCREEN_H = Dimensions.get('window').height;
@@ -233,6 +241,7 @@ const MainScreen = () => {
       const res = await apiService.postLog(payload, token);
       if (res.success) {
         addLog(res.data);
+        scheduleWaterReminder(profile?.reminderInterval ?? 60).then(ts => setNextReminderAt(ts));
         if (connectedDevice && writeToDevice) {
           writeToDevice(`S|${totalMl + addedMl}`);  // totalMl 尚未更新，需加上新增量
         }
@@ -256,6 +265,7 @@ const MainScreen = () => {
       const res = await apiService.postLog(payload, token);
       if (res.success) {
         addLog(res.data);
+        scheduleWaterReminder(profile?.reminderInterval ?? 60).then(ts => setNextReminderAt(ts));
         setShowAddModal(false);
         setAddMl('250'); // 重置為預設值
         if (connectedDevice && writeToDevice) {

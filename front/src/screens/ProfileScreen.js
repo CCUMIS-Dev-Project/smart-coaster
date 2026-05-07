@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, ACTIVITY_LEVELS, calcWaterGoal } from '../constants/theme';
 import apiService from '../services/api';
 import useBLE from '../hooks/useBLE';
+import { scheduleWaterReminder } from '../utils/notifications';
 
 const { blue: BLUE, blueDark: BLUE_DARK, blueLight: BLUE_LIGHT, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
 
@@ -122,7 +123,8 @@ function EditableRow({ label, value, onEdit }) {
 const ProfileScreen = () => {
   const { 
     profile, updateProfile, goalMl, exerciseLevels, 
-    token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice 
+    token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice,
+    nextReminderAt, setNextReminderAt, 
   } = useApp();
   const insets = useSafeAreaInsets();
   const [urineIdx, setUrineIdx] = useState(0);
@@ -145,6 +147,22 @@ const ProfileScreen = () => {
   const [isCoasterScanning, setIsCoasterScanning] = useState(false);
   const scanTimeoutRef = useRef(null);
   const connectedRef   = useRef(null);
+
+  // 提醒計時
+  const [reminderCountdown, setReminderCountdown] = useState('');
+
+  useEffect(() => {
+    if (!nextReminderAt) { setReminderCountdown(''); return; }
+    function tick() {
+      const diff = Math.max(0, Math.round((nextReminderAt - Date.now()) / 1000));
+      const m = Math.floor(diff / 60);
+      const s = diff % 60;
+      setReminderCountdown(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [nextReminderAt]);
 
   useEffect(() => {
     connectedRef.current = connectedDevice;
@@ -332,6 +350,10 @@ const ProfileScreen = () => {
       if (connectedDevice && writeToDevice) {
         writeToDevice(`R|${update.reminderInterval}`);
       }
+
+      // 新增：重設本地通知排程
+      scheduleWaterReminder(update.reminderInterval)
+        .then(ts => setNextReminderAt(ts));
     }
 
     setEditField(null);
@@ -603,6 +625,11 @@ const ProfileScreen = () => {
             onEdit={() => openEdit('goal')} />
           <EditableRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`}
             onEdit={() => openEdit('reminder')} />
+          {reminderCountdown ? (
+            <View style={s.reminderCountRow}>
+              <Text style={s.reminderCountTxt}>⏱ 距下次提醒：{reminderCountdown}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* 尿液顏色 */}
@@ -689,5 +716,18 @@ const s = StyleSheet.create({
   actDesc:     { fontSize: 13, color: '#4a6a84', flex: 1, lineHeight: 20 },
   actClose:    { backgroundColor: '#5ab4f5', paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 4 },
   actCloseTxt: { color: '#fff', fontSize: 15, fontWeight: '900' },
+  reminderCountRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(174,226,255,0.2)',
+    borderRadius: 8,
+    marginHorizontal: 4,
+    marginBottom: 4,
+  },
+  reminderCountTxt: {
+    fontSize: 12,
+    color: '#4AABDD',
+    fontWeight: '700',
+  },
 });
 export default ProfileScreen;

@@ -30,6 +30,7 @@ export function AppProvider({ children }) {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [logs, setLogs] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [nextReminderAt, setNextReminderAt] = useState(0);
 
   const [weekData] = useState([
     { day: '一', ml: 1600 },
@@ -270,7 +271,8 @@ export function AppProvider({ children }) {
       // syncHardwareDrink,
       exerciseLevels,
       token, setToken, isAuthLoading, logout,
-      scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice
+      scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice,
+      nextReminderAt, setNextReminderAt,
     }}>
       {children}
     </AppContext.Provider>
