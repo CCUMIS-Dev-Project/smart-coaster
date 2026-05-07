@@ -1,5 +1,6 @@
 // src/context/AppContext.js
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decode as atob } from 'base-64';
 import { calcWaterGoal, CUPS } from '../constants/theme';
@@ -54,6 +55,8 @@ export function AppProvider({ children }) {
   const [exerciseLevels, setExerciseLevels] = useState([]);
   const [token, setToken] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const tokenRef = useRef(null);
+  useEffect(() => { tokenRef.current = token; }, [token]);
 
   const goalMl = profile.customGoal ? profile.goalMl : calcWaterGoal(profile);
 
@@ -89,51 +92,67 @@ export function AppProvider({ children }) {
     initAuth();
   }, []);
 
+  // 抓 profile（可被 token 變化或 AppState resume 呼叫）
+  const loadProfile = useCallback(async (t) => {
+    if (!t) return;
+    const [goalRes, meRes, exRes] = await Promise.all([
+      apiService.getGoal(t),
+      apiService.getMe(t),
+      apiService.getExerciseLevels(),
+    ]);
+    setProfile(prev => {
+      let u = { ...prev };
+      if (goalRes.success) {
+        u.goalMl           = goalRes.data.daily_target;
+        u.reminderInterval = goalRes.data.rmd_interval ?? prev.reminderInterval;
+        u.autoStart        = goalRes.data.act_start    ?? prev.autoStart;
+        u.autoEnd          = goalRes.data.act_end      ?? prev.autoEnd;
+      }
+      if (meRes.success) {
+        const d = meRes.data;
+        u.name    = d.username ?? prev.name;
+        const gMap = { M: 'male', F: 'female', male: 'male', female: 'female' };
+        u.gender  = gMap[d.gender] ?? prev.gender;
+        u.weight  = d.weight   ?? prev.weight;
+        u.age     = d.age      ?? prev.age;
+        u.levelid = d.levelid  ?? null;
+        if (d.levelid) {
+          const LEVELID_TO_ACTIVITY = { 1: 'sedentary', 2: 'light', 3: 'moderate', 4: 'intense' };
+          u.activity = LEVELID_TO_ACTIVITY[d.levelid] ?? prev.activity;
+        }
+      }
+      if (goalRes.success && meRes.success) {
+        const calculated = calcWaterGoal({
+          gender: u.gender,
+          weight: parseFloat(u.weight),
+          age: parseFloat(u.age),
+          activity: u.activity,
+        });
+        u.customGoal = Math.abs(u.goalMl - calculated) > 5;
+      }
+      return u;
+    });
+    if (exRes.success) setExerciseLevels(exRes.data);
+  }, []);
+
   // token 變化時（登入 / 啟動帶 token）抓 profile
   useEffect(() => {
-    if (!token) return;
-    const loadProfile = async () => {
-      const [goalRes, meRes, exRes] = await Promise.all([
-        apiService.getGoal(token),
-        apiService.getMe(token),
-        apiService.getExerciseLevels(),
-      ]);
-      setProfile(prev => {
-        let u = { ...prev };
-        if (goalRes.success) {
-          u.goalMl           = goalRes.data.daily_target;
-          u.reminderInterval = goalRes.data.rmd_interval ?? prev.reminderInterval;
-          u.autoStart        = goalRes.data.act_start    ?? prev.autoStart;
-          u.autoEnd          = goalRes.data.act_end      ?? prev.autoEnd;
-        }
-        if (meRes.success) {
-          const d = meRes.data;
-          u.name    = d.username ?? prev.name;
-          const gMap = { M: 'male', F: 'female', male: 'male', female: 'female' };
-          u.gender  = gMap[d.gender] ?? prev.gender;
-          u.weight  = d.weight   ?? prev.weight;
-          u.age     = d.age      ?? prev.age;
-          u.levelid = d.levelid  ?? null;
-          if (d.levelid) {
-            const LEVELID_TO_ACTIVITY = { 1: 'sedentary', 2: 'light', 3: 'moderate', 4: 'intense' };
-            u.activity = LEVELID_TO_ACTIVITY[d.levelid] ?? prev.activity;
-          }
-        }
-        if (goalRes.success && meRes.success) {
-          const calculated = calcWaterGoal({
-            gender: u.gender,
-            weight: parseFloat(u.weight),
-            age: parseFloat(u.age),
-            activity: u.activity,
-          });
-          u.customGoal = Math.abs(u.goalMl - calculated) > 5;
-        }
-        return u;
-      });
-      if (exRes.success) setExerciseLevels(exRes.data);
-    };
-    loadProfile();
-  }, [token]);
+    if (token) loadProfile(token);
+  }, [token, loadProfile]);
+
+  // app 從背景回來時補抓資料
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+      if (prev !== 'active' && nextState === 'active') {
+        const t = tokenRef.current;
+        if (t) loadProfile(t);
+      }
+    });
+    return () => sub.remove();
+  }, [loadProfile]);
 
   // 監聽杯墊 BLE 資料，上傳後端並以真實 log_id 加入 local state
   useEffect(() => {
