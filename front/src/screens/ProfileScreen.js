@@ -243,7 +243,7 @@ const ProfileScreen = () => {
     if (editField === 'weight') {
       const w = parseFloat(tempVal);
       const curAge = parseFloat(profile.age) || 25;
-      const minW = curAge < 13 ? 15 : curAge < 19 ? 30 : 25;
+      const minW = curAge < 13 ? 15 : curAge < 19 ? 30 : 40;
       const maxW = curAge < 13 ? 80 : curAge < 19 ? 120 : 150;
       if (!w || w < minW || w > maxW) {
         setFieldError(`體重需介於 ${minW}–${maxW} kg，若數值正確請諮詢醫師`);

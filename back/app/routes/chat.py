@@ -94,7 +94,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         humidity_str = f"{humidity}%" if humidity is not None else "無資料"
 
         # 依年齡計算咖啡因每日建議上限（台灣FDA / Harvard 分層）
-        user_age = profile.get("age", 25) or 25
+        user_age = profile.get("age", 25)
         caff_limit = 0 if user_age < 12 else 100 if user_age < 19 else 350 if user_age <= 75 else 300
 
         context_str = f"""

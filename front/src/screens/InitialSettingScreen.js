@@ -165,7 +165,7 @@ const InitialSettingScreen = () => {
     if (a > 100) { setFieldError('請確認年齡輸入是否正確'); return false; }
 
     // 體重範圍（依年齡分層）
-    const minW = a < 13 ? 15 : a < 19 ? 30 : 25;
+    const minW = a < 13 ? 15 : a < 19 ? 30 : 40;
     const maxW = a < 13 ? 80 : a < 19 ? 120 : 150;
     if (w < minW || w > maxW) {
       setFieldError(`${Math.round(a)} 歲建議體重介於 ${minW}–${maxW} kg，若數值正確請諮詢醫師`);
