@@ -41,10 +41,21 @@ export const colors = {
   ];
   
   export function calcWaterGoal({ gender, weight, age, activity }) {
-    const base    = Math.round(weight * (gender === 'male' ? 35 : 30));
     const actRate = ACTIVITY_LEVELS.find(a => a.key === activity)?.rate ?? 0.10;
-    const actAdd  = Math.round(base * actRate);
-    const ageMod  = age > 55 ? -Math.round(base * 0.1) : 0;
-    return base + actAdd + ageMod;
+    let base;
+
+    if (age < 13) {
+      // 兒童：依衛福部建議體重分段計算
+      if (weight <= 10)       base = weight * 30;
+      else if (weight <= 20)  base = 1000 + (weight - 10) * 50;
+      else                    base = 1500 + (weight - 20) * 20;
+    } else {
+      // 成人（含青少年）：性別係數 + 年齡調整
+      base = Math.round(weight * (gender === 'male' ? 35 : 30));
+      if (age > 55) base -= Math.round(base * 0.1);
+    }
+
+    const result = Math.round(base + base * actRate);
+    return Math.max(800, Math.min(result, 4000));
   }
   

@@ -102,7 +102,6 @@ export function AppProvider({ children }) {
         let u = { ...prev };
         if (goalRes.success) {
           u.goalMl           = goalRes.data.daily_target;
-          u.customGoal       = true;
           u.reminderInterval = goalRes.data.rmd_interval ?? prev.reminderInterval;
           u.autoStart        = goalRes.data.act_start    ?? prev.autoStart;
           u.autoEnd          = goalRes.data.act_end      ?? prev.autoEnd;
@@ -119,6 +118,15 @@ export function AppProvider({ children }) {
             const LEVELID_TO_ACTIVITY = { 1: 'sedentary', 2: 'light', 3: 'moderate', 4: 'intense' };
             u.activity = LEVELID_TO_ACTIVITY[d.levelid] ?? prev.activity;
           }
+        }
+        if (goalRes.success && meRes.success) {
+          const calculated = calcWaterGoal({
+            gender: u.gender,
+            weight: parseFloat(u.weight),
+            age: parseFloat(u.age),
+            activity: u.activity,
+          });
+          u.customGoal = Math.abs(u.goalMl - calculated) > 5;
         }
         return u;
       });

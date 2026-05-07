@@ -274,6 +274,10 @@ const ProfileScreen = () => {
           setFieldError('超過 10000 ml 可能導致水中毒，請重新設定目標');
           return;
         }
+        if (!isNaN(goalVal) && goalVal < suggestedGoal) {
+          setFieldError(`目標不能低於公式建議值 ${suggestedGoal} ml`);
+          return;
+        }
       }
       update = {
         customGoal: tempCustomGoal,
@@ -327,10 +331,17 @@ const ProfileScreen = () => {
         payload.levelid = ACTIVITY_TO_LEVELID[update.activity];
       }
       apiService.updateProfile(payload, token);
-      // 若是影響建議飲水量的欄位，且未自訂目標，自動同步更新 daily_target
-      if (['gender', 'weight', 'age', 'activity'].includes(editField) && !profile.customGoal) {
-        const newGoal = calcWaterGoal({ ...profile, ...update });
-        apiService.patchGoal({ daily_target: newGoal }, token);
+      if (['gender', 'weight', 'age', 'activity'].includes(editField)) {
+        const newFormula = calcWaterGoal({ ...profile, ...update });
+        if (!profile.customGoal) {
+          // 自動計算模式：公式結果直接同步
+          updateProfile({ goalMl: newFormula });
+          apiService.patchGoal({ daily_target: newFormula }, token);
+        } else if (newFormula > profile.goalMl) {
+          // 手動目標模式：公式上升超過手動目標時，自動抬高至公式值
+          updateProfile({ goalMl: newFormula });
+          apiService.patchGoal({ daily_target: newFormula }, token);
+        }
       }
     }
     // Phase C：飲水設定回寫 → PATCH /goals

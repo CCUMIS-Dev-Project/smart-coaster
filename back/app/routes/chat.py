@@ -32,13 +32,8 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         today_drink_ml = supabase_service.fetch_today_water_sum(user_id)
         drink_breakdown = supabase_service.fetch_today_drink_breakdown(user_id)
 
-        # 用醫學公式計算每日目標
-        daily_goal = DailyGoalCalculator.calculate(
-            weight_kg=profile["weight"],
-            exercise_addition=profile["exercise_addition"],
-            temp=profile.get("temp"),
-            humidity=profile.get("humidity"),
-        )
+        # 直接使用資料庫個人化目標（依性別、體重、年齡、活動量計算並由使用者確認）
+        daily_goal = profile.get("daily_target", 2000)
 
         # 計算當前進度
         progress = DailyGoalCalculator.get_progress_summary(
@@ -104,10 +99,9 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
 身高：{profile.get('height')} 公分
 體重：{profile.get('weight')} 公斤
 
-【個人化健康飲水目標（醫學公式）】
-- 專屬個人的今日飲水目標：{daily_goal} ml
-- 目標計算依據：體重 {profile.get('weight')}kg × 33ml/kg，再依活動量與環境溫濕度修正
-- 目前環境：溫度 {temp_str}、濕度 {humidity_str}
+【個人化健康飲水目標】
+- 今日飲水目標：{daily_goal} ml（使用者依性別、體重、年齡與活動量個人化設定）
+- 目前環境感測：溫度 {temp_str}、濕度 {humidity_str}（可作為動態調整建議依據）
 - 目前此刻應達到的理想黃金進度：{target_now} ml
 - 進度分析：{ai_message}
 
