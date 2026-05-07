@@ -155,19 +155,33 @@ const InitialSettingScreen = () => {
     if (!weight.trim()) { setFieldError('請輸入體重'); return false; }
     const w = parseFloat(weight);
     if (isNaN(w)) { setFieldError('體重請輸入數字'); return false; }
-    if (w < 25 || w > 150) {
-      setFieldError('體重需介於 25–150 kg，若數值正確請諮詢醫生');
-      return false;
-    }
+
     if (!age.trim()) { setFieldError('請輸入年齡'); return false; }
     const a = parseFloat(age);
     if (isNaN(a)) { setFieldError('年齡請輸入數字'); return false; }
-    if (a < 10 || a > 100) {
-      setFieldError('建議使用年齡介於 10–100 歲');
+
+    // 年齡硬擋
+    if (a < 6)   { setFieldError('本系統適用年齡為 6 歲以上'); return false; }
+    if (a > 100) { setFieldError('請確認年齡輸入是否正確'); return false; }
+
+    // 體重範圍（依年齡分層）
+    const minW = a < 13 ? 15 : a < 19 ? 30 : 25;
+    const maxW = a < 13 ? 80 : a < 19 ? 120 : 150;
+    if (w < minW || w > maxW) {
+      setFieldError(`${Math.round(a)} 歲建議體重介於 ${minW}–${maxW} kg，若數值正確請諮詢醫師`);
       return false;
     }
+
     if (!activity) { setFieldError('請選擇活動量'); return false; }
     setFieldError('');
+
+    // 軟警告（不擋關）
+    if (a < 10) {
+      Alert.alert('提醒', '6–9 歲建議由家長陪同完成設定');
+    } else if (a >= 75) {
+      Alert.alert('提醒', '75 歲以上飲水目標建議以醫師指示為準，本系統計算僅供參考');
+    }
+
     return true;
   };
 

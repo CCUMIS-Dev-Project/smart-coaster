@@ -93,6 +93,10 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         temp_str = f"{temp}°C" if temp is not None else "無資料"
         humidity_str = f"{humidity}%" if humidity is not None else "無資料"
 
+        # 依年齡計算咖啡因每日建議上限（台灣FDA / Harvard 分層）
+        user_age = profile.get("age", 25) or 25
+        caff_limit = 0 if user_age < 12 else 100 if user_age < 19 else 350 if user_age <= 75 else 300
+
         context_str = f"""
 【使用者基本資料】
 性別：{profile.get('gender')}
@@ -108,7 +112,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
 【硬體感測器即時數據】
 - 智慧杯墊回報今日實際已飲用量：{today_drink_ml} ml
 - 今日飲品分類明細：{', '.join([f"{d['type_name']} {d['volume_ml']}ml（咖啡因 {d['caffeine_mg']}mg）" for d in drink_breakdown['breakdown']]) or '尚無紀錄'}
-- 今日咖啡因總攝取量：{drink_breakdown['total_caffeine_mg']} mg（建議每日上限 400mg）
+- 今日咖啡因總攝取量：{drink_breakdown['total_caffeine_mg']} mg（建議每日上限 {caff_limit}mg）
 
 【最近十筆硬體飲水紀錄 ( Timeline )】
 {history_text}

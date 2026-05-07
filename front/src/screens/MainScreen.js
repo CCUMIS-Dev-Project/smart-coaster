@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 // import useBLE from '../hooks/useBLE';
 import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
-import { colors, DRINK_TYPES, DRINK_BY_ID } from '../constants/theme';
+import { colors, DRINK_TYPES, DRINK_BY_ID, calcCaffeineLimit } from '../constants/theme';
 import { requestNotificationPermission, scheduleWaterReminder } from '../utils/notifications';
 
 // 解構顏色 token，方便後續 StyleSheet 引用
@@ -65,9 +65,7 @@ const MainScreen = () => {
     const [showConnectedAlert, setShowConnectedAlert] = useState(false);
 
     const age = profile?.age || 25;
-    // ── 咖啡因每日建議上限（純前端醫學準則，不需後端 DB）──────────
-    // 12歲以下: 0mg｜12-17: 100mg｜18-64: 400mg｜65+: 300mg
-    const MAX_CAFFEINE = age < 12 ? 0 : age < 18 ? 100 : age < 65 ? 400 : 300;
+    const MAX_CAFFEINE = calcCaffeineLimit(age);
   
     // ── UI 狀態：飲品選擇 ──────────────────────────────────────────
     const [drinkType, setDrinkType] = useState(1);          // 目前選中的飲品 type_id（預設 1 = 水）

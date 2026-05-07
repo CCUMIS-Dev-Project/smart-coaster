@@ -239,20 +239,23 @@ const ProfileScreen = () => {
       }
       update = { name: tempVal.trim() };
     }
-    // ── 體重：15–150 kg，超出範圍建議就醫 ──────────────────────────
+    // ── 體重：依年齡分層驗證 ─────────────────────────────────────
     if (editField === 'weight') {
       const w = parseFloat(tempVal);
-      if (!w || w < 15 || w > 150) {
-        setFieldError('體重需介於 15–150 kg，若您輸入數值正確請諮詢醫生');
+      const curAge = parseFloat(profile.age) || 25;
+      const minW = curAge < 13 ? 15 : curAge < 19 ? 30 : 25;
+      const maxW = curAge < 13 ? 80 : curAge < 19 ? 120 : 150;
+      if (!w || w < minW || w > maxW) {
+        setFieldError(`體重需介於 ${minW}–${maxW} kg，若數值正確請諮詢醫師`);
         return;
       }
       update = { weight: w };
     }
-    // ── 年齡：10–100 歲，超出範圍建議就醫 ──────────────────────────
+    // ── 年齡：6–100 歲 ──────────────────────────────────────────
     if (editField === 'age') {
       const a = parseFloat(tempVal);
-      if (!a || a < 10 || a > 100) {
-        setFieldError('年齡超出使用建議之 10–100 歲');
+      if (!a || a < 6 || a > 100) {
+        setFieldError('本系統適用年齡為 6–100 歲');
         return;
       }
       update = { age: a };

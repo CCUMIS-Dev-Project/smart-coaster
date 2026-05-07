@@ -45,17 +45,30 @@ export const colors = {
     let base;
 
     if (age < 13) {
-      // 兒童：依衛福部建議體重分段計算
-      if (weight <= 10)       base = weight * 30;
+      // 幼童（1-12歲）：Holiday-Segar 臨床兒童補水標準
+      if (weight <= 10)       base = weight * 100;
       else if (weight <= 20)  base = 1000 + (weight - 10) * 50;
       else                    base = 1500 + (weight - 20) * 20;
-    } else {
-      // 成人（含青少年）：性別係數 + 年齡調整
+    } else if (age <= 18) {
+      // 青少年（13-18歲）：代謝旺盛，性別中立
+      base = Math.round(weight * 40);
+    } else if (age <= 55) {
+      // 一般成人（19-55歲）：NIH/EFSA 性別係數
       base = Math.round(weight * (gender === 'male' ? 35 : 30));
-      if (age > 55) base -= Math.round(base * 0.1);
+    } else {
+      // 中高齡＋老齡（56歲以上）：腎功能與肌肉流失調降 ×0.9
+      base = Math.round(weight * (gender === 'male' ? 35 : 30) * 0.9);
     }
 
     const result = Math.round(base + base * actRate);
     return Math.max(800, Math.min(result, 4000));
+  }
+
+  // 咖啡因每日建議上限（台灣FDA / Harvard 分層）
+  export function calcCaffeineLimit(age) {
+    if (age < 12)  return 0;    // 兒童：禁止
+    if (age < 19)  return 100;  // 青少年：台灣FDA上限
+    if (age <= 75) return 350;  // 成人：台/美折衷中間值
+    return 300;                  // 老齡：保守下調
   }
   

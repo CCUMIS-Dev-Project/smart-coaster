@@ -7,7 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
-import { colors, DRINK_BY_ID } from '../constants/theme';
+import { colors, DRINK_BY_ID, calcCaffeineLimit } from '../constants/theme';
 import apiService from '../services/api';
 import Svg, { Rect, Circle, Path, Ellipse } from 'react-native-svg';
 
@@ -148,7 +148,7 @@ function PieChart({ data }) {
 }
 
 export default function ReportScreen() {
-  const { goalMl, totalMl, token } = useApp();
+  const { goalMl, totalMl, token, profile } = useApp();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -216,7 +216,7 @@ export default function ReportScreen() {
       return sum + (t.volume_ml * per100 / 100);
     }, 0) / pastDaysCount
   );
-  const caffeineLimitMg = 400;
+  const caffeineLimitMg = calcCaffeineLimit(profile?.age || 25);
 
   // 今日進度（優先用 dailyStat，fallback AppContext）
   const todayTotal = dailyStat?.total_ml ?? totalMl;
