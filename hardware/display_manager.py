@@ -8,7 +8,7 @@ from config import * # 匯入腳位與常數設定
 class DisplayManager:
     def __init__(self):
         """初始化 I2C 與 SSD1306 OLED 螢幕"""
-        self.i2c = I2C(0, sda=Pin(OLED_SDA_PIN), scl=Pin(OLED_SCL_PIN))
+        self.i2c = I2C(1, sda=Pin(OLED_SDA_PIN), scl=Pin(OLED_SCL_PIN))
         self.oled = SSD1306_I2C(OLED_WIDTH, OLED_HEIGHT, self.i2c)
         # self.daily_target = DAILY_TARGET
         

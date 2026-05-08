@@ -48,8 +48,8 @@
 import utime
 import math
 import machine
-from machine import Pin
-import dht
+from machine import Pin, SoftI2C
+import ahtx0
 from hx711_pio import HX711
 
 
@@ -69,8 +69,9 @@ storage = StorageManager()
 
 # 初始化尚未模組化的單一感測器
 # button = Pin(BUTTON_PIN, Pin.IN, Pin.PULL_UP)
-dht_sensor = dht.DHT11(Pin(DHT11_PIN))
-hx = HX711(Pin(HX711_SCK_PIN), Pin(HX711_DT_PIN))
+i2c_aht = SoftI2C(sda=Pin(AHT20_SDA_PIN), scl=Pin(AHT20_SCL_PIN))
+aht_sensor = ahtx0.AHT20(i2c_aht)
+hx = HX711(Pin(HX711_SCK_PIN), Pin(HX711_DT_PIN), state_machine=1)
 hx.set_scale(HX711_SCALE)
 
 # --- 2. 狀態變數初始化 ---
@@ -259,11 +260,10 @@ while True:
             # 1. 定期讀取溫溼度
             if utime.ticks_diff(current_ticks, last_sensor_ticks) > SENSOR_INTERVAL_MS:
                 try:
-                    dht_sensor.measure()
-                    current_temp = dht_sensor.temperature()
-                    current_hum = dht_sensor.humidity()
+                    current_temp = aht_sensor.temperature
+                    current_hum = aht_sensor.relative_humidity
                     last_sensor_ticks = current_ticks
-                    print("DHT11 Updated: {:.1f}C, {:.1f}%".format(current_temp, current_hum))
+                    print("AHT20 Updated: {:.1f}C, {:.1f}%".format(current_temp, current_hum))
                     # 透過藍牙發送環境數據
                     ble.send_env_status(current_temp, current_hum, reminder_ms)
                 except OSError as e:

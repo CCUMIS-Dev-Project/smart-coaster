@@ -3,25 +3,25 @@
 # ==========================================
 
 # --- 1. 硬體腳位定義 (Pins) ---
-# OLED 顯示器 (I2C0)
-OLED_SDA_PIN = 4
-OLED_SCL_PIN = 5
+# OLED 顯示器 (I2C1)
+OLED_SDA_PIN = 26
+OLED_SCL_PIN = 27
 OLED_WIDTH = 128
 OLED_HEIGHT = 64
 
 # HX711 重量感測器
-HX711_DT_PIN = 14
-HX711_SCK_PIN = 15
+HX711_DT_PIN = 2
+HX711_SCK_PIN = 3
 HX711_SCALE = 420  # 比例參數
 
-# SK9822 環形 LED (SPI0)
-LED_SCK_PIN = 2
-LED_MOSI_PIN = 3
+# WS2812B 環形 LED
+LED_PIN = 0
 NUM_LEDS = 23      # LED 總顆數
 
 # 其他輸入/感測器
 BUTTON_PIN = 16    # 開關按鈕
-DHT11_PIN = 6      # 溫溼度感測器
+AHT20_SDA_PIN = 20  # 溫溼度感測器 SDA
+AHT20_SCL_PIN = 21  # 溫溼度感測器 SCL
 
 # --- 2. 系統邏輯與目標設定 ---
 DAILY_TARGET = 2000         # 每日喝水目標 (ml)
