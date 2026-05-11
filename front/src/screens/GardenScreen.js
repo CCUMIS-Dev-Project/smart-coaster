@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, Animated, Dimensions
+  Modal, TextInput, Animated, Dimensions, Image
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Circle, Path, Ellipse, G, Line, Polygon } from 'react-native-svg';
@@ -320,8 +320,64 @@ function Flower8({ size = 40, colored }) {
     </Svg>
   );
 }
-
 const FLOWER_COMPONENTS = [Flower1,Flower2,Flower3,Flower4,Flower5,Flower6,Flower7,Flower8];
+
+
+// // ── 花朵圖片資源 ─────────────────────────────────────────
+// // TODO: 請依照實際的圖片擺放路徑與檔名調整
+// // 順序對應 FLOWER_DATA:向日葵 / 玫瑰 / 櫻花 / 鬱金香 / 薰衣草 / 雛菊 / 水仙 / 彩虹花
+// // 建議:透明背景的 PNG、正方形、512x512 以上較清晰
+// const FLOWER_IMAGES = [
+//   require('../assets/flowers/sunflower.png'),  // 向日葵
+//   require('../assets/flowers/rose.png'),       // 玫瑰
+//   require('../assets/flowers/sakura.png'),     // 櫻花
+//   require('../assets/flowers/tulip.png'),      // 鬱金香
+//   // require('../assets/flowers/lavender.png'),   // 薰衣草
+//   // require('../assets/flowers/daisy.png'),      // 雛菊
+//   // require('../assets/flowers/narcissus.png'),  // 水仙
+//   // require('../assets/flowers/rainbow.png'),    // 彩虹花
+// ];
+
+// // ── 通用花朵圖片元件 ─────────────────────────────────────
+// // 取代原本 8 個 SVG 元件,統一以 <Image> 渲染
+// // colored=false 時降低透明度表現「未解鎖」(GardenScene 外層另外還有 opacity 疊加)
+// function FlowerImage({ source, size = 40, colored = true }) {
+//   return (
+//     <Image
+//       source={source}
+//       style={{
+//         width: size,
+//         height: size,
+//         opacity: colored ? 1 : 0.35,
+//       }}
+//       resizeMode="contain"
+//     />
+//   );
+// }
+
+// const FLOWER_COMPONENTS = FLOWER_DATA.map((flower, i) => {
+//   const img = FLOWER_IMAGES[i];
+//   if (img) {
+//     const Comp = ({ size, colored }) => (
+//       <FlowerImage source={img} size={size} colored={colored} />
+//     );
+//     return Comp;
+//   }
+//   const Placeholder = ({ size = 40, colored = true }) => (
+//     <View style={{
+//       width: size, height: size, borderRadius: size / 2,
+//       backgroundColor: colored ? '#d4b8e0' : '#ccc',
+//       justifyContent: 'center', alignItems: 'center',
+//       opacity: colored ? 1 : 0.35,
+//     }}>
+//       <Text style={{ fontSize: size * 0.45, color: colored ? '#7a4fa3' : '#999' }}>
+//         {flower.name[0]}
+//       </Text>
+//     </View>
+//   );
+//   return Placeholder;
+// });
+
 const FLOWERS_INIT = FLOWER_DATA.map(f => ({ ...f, unlocked: false, isNew: false }));
 
 
@@ -472,30 +528,28 @@ export default function GardenScreen() {
   const [selectedFlower, setSelectedFlower] = useState(null);
   const [selectedIndex,  setSelectedIndex]  = useState(0);
 
-  // ── Phase C：每次切換到此頁重新載入 ─────────────────────────
   useFocusEffect(useCallback(() => {
-    // 取得已解鎖花朵
-    apiService.getGarden(token).then(r => {
-      if (!r.success) { console.warn('[Garden] garden:', r.error); return; }
-      const unlockedIds = new Set(r.data.map(f => f.flower_id));
-      // 找最新解鎖的 flower_id（unlocked_at 最大）
-      const newestId = r.data.reduce((latest, f) =>
+    Promise.all([
+      apiService.getGarden(token),
+      apiService.getStreaks(token),
+    ]).then(([gardenRes, streakRes]) => {
+      const currentStreak = streakRes.success ? streakRes.data.current_streak : 0;
+      if (streakRes.success) setStreakCount(currentStreak);
+
+      const gardenData = gardenRes.success ? gardenRes.data : [];
+      const unlockedIds = new Set(gardenData.map(f => f.flower_id));
+      const newestId = gardenData.reduce((latest, f) =>
         !latest || f.unlocked_at > latest.unlocked_at ? f : latest, null
       )?.flower_id;
 
       setFlowers(FLOWER_DATA.map((f, i) => {
-        const fid = i + 1; // flower_id 從 1 開始
+        const fid = i + 1; // flower_id 從 1 開始，每 5 天解鎖一朵
         return {
           ...f,
-          unlocked: unlockedIds.has(fid),
-          isNew:    fid === newestId,
+          unlocked: unlockedIds.has(fid) || currentStreak >= fid * 5,
+          isNew: fid === newestId,
         };
       }));
-    });
-
-    // 取得 streak 數
-    apiService.getStreaks(token).then(r => {
-      if (r.success) setStreakCount(r.data.current_streak);
     });
   }, []));  // ← useCallback 的 [], 再加 ) 關閉 useFocusEffect
 
