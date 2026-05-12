@@ -15,7 +15,7 @@ HX711_SCK_PIN = 3
 HX711_SCALE = 420  # 比例參數
 
 # WS2812B 環形 LED
-LED_PIN = 0
+LED_PIN = 20
 NUM_LEDS = 23      # LED 總顆數
 
 # 其他輸入/感測器
