@@ -75,7 +75,7 @@ hx = HX711(Pin(HX711_SCK_PIN), Pin(HX711_DT_PIN), state_machine=1)
 hx.set_scale(HX711_SCALE)
 
 # --- 2. 狀態變數初始化 ---
-system_active = False
+system_active = True
 is_on_coaster = False
 is_waiting_for_stable = False
 drink_amount = 0
@@ -222,6 +222,7 @@ leds.turn_off()
 utime.sleep_ms(500)   # 等待感測器穩定
 hx.tare(15)           # 歸零，讓重壓偵測有正確的基準線
 print("HX711 歸零完成")
+last_interaction_time = utime.ticks_ms()  # 系統啟動時間基準
 
 # ==========================================
 # --- 5. 主迴圈開始 ---
@@ -232,27 +233,19 @@ while True:
     raw_weight = hx.get_units()
 
     if check_double_press(raw_weight, current_ticks):
-        system_active = not system_active
-
-        if system_active:
-            display.show_booting()
-            # 等待使用者手離開杯墊後再歸零
-            # print("等待鬆開...")
-            while hx.get_units() > PRESS_RELEASE_THRESHOLD:
-                utime.sleep_ms(50)
-            utime.sleep_ms(500)  # 額外等待穩定
-            hx.tare(15) # 重量歸零
-            last_stable_volume = 0
-            drink_amount = 0
-            last_interaction_time = utime.ticks_ms()
-            print("系統已啟動")
-        else:
-            display.show_power_off()
-            leds.turn_off()
-            utime.sleep(1)
-            display.clear()
-            display.show()
-            print("系統進入休眠")
+        # 雙擊重壓：重新校準基準重量 (last_stable_volume)
+        # 下一次放回杯墊的重量不會被計入飲水量，只會更新基準值
+        display.show_replace_cup()
+        # 等待使用者手離開杯墊後再歸零
+        while hx.get_units() > PRESS_RELEASE_THRESHOLD:
+            utime.sleep_ms(50)
+        utime.sleep_ms(500)  # 額外等待穩定
+        hx.tare(15)          # 重量歸零，以當前空杯墊為新基準
+        last_stable_volume = 0  # 下一次放下時 diff 必為負值，不觸發飲水記錄
+        is_on_coaster = False
+        is_waiting_for_stable = False
+        last_interaction_time = utime.ticks_ms()
+        print("基準重量已重置，等待下一次放下水杯以設定新基準")
 
     # [區塊 B] 系統運行中邏輯
     if system_active:
@@ -343,7 +336,7 @@ while True:
 
                 # 顯示水藍色環繞燈
                 current_pos = (current_ticks / 150) % NUM_LEDS
-                leds.set_rotate(0, 191, 255, 0.05, current_pos)
+                leds.set_rotate(114, 187, 233, 0.05, current_pos)
                     
             # --- 3. 數據發送邏輯 ---
             if data_changed:

@@ -19,7 +19,7 @@ class LEDManager:
         """
         for i in range(self.num_leds):
             r, g, b, brightness = led_data[i]
-            self.np[i] = (int(r * brightness), int(g * brightness), int(b * brightness))
+            self.np[i] = (int(g * brightness), int(r * brightness), int(b * brightness))
         self.np.write()
 
     def set_rotate(self, r, g, b, base_brightness, pos):
