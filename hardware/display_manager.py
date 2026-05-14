@@ -25,8 +25,8 @@ class DisplayManager:
     # ==========================================
     def show_init_screen(self):
         self.clear()
-        self.oled.text("Power Off", 30, 25)
-        self.oled.text("Press to Start", 10, 40)
+        self.oled.text("Hi! welcome to", 10, 25)
+        self.oled.text("DayDay Coaster", 10, 40)
         self.show()
 
     def show_booting(self):
