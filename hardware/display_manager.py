@@ -36,10 +36,7 @@ class DisplayManager:
 
     def show_replace_cup(self):
         self.clear()
-        self.oled.text("- Change Cup -", 8, 4)
-        self.oled.text("Remove cup,", 12, 20)
-        self.oled.text("place new cup", 8, 36)
-        self.oled.text("on coaster", 24, 50)
+        self.oled.text("Change Cup...", 25, 25)
         self.show()
 
     def show_power_off(self):
