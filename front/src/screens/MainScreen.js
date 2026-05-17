@@ -14,7 +14,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, Pressable, ImageBackground,
   TouchableOpacity, Alert, Modal, TextInput,
-  Animated, ScrollView, Dimensions, PanResponder, ActivityIndicator, Keyboard
+  Animated, ScrollView, Dimensions, PanResponder, ActivityIndicator, Keyboard,
+  AppState
 } from 'react-native';
 // SafeAreaView from react-native 在 Android 上不處理 status bar。
 // 改用 react-native-safe-area-context（Expo 內建）以正確處理瀏海 / 狀態列
@@ -177,7 +178,22 @@ const MainScreen = () => {
     const handleCancelScan = () => {
       stopScan();
       setIsScanning(false);
+      setIsAutoScanning(false);
     };
+
+    const _appStateRef = useRef(AppState.currentState);
+    useEffect(() => {
+      const sub = AppState.addEventListener('change', next => {
+        const prev = _appStateRef.current;
+        _appStateRef.current = next;
+        if (prev !== 'active' && next === 'active') {
+          stopScan();
+          setIsAutoScanning(false);
+          setIsScanning(false);
+        }
+      });
+      return () => sub.remove();
+    }, [stopScan]);
 
     const handleDisconnect = async () => {
       setShowConnectedAlert(false);
