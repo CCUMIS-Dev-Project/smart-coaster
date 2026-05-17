@@ -257,7 +257,7 @@ const MainScreen = () => {
         addLog(res.data);
         scheduleWaterReminder(profile?.reminderInterval ?? 60).then(ts => setNextReminderAt(ts));
         if (connectedDevice && writeToDevice) {
-          writeToDevice(`S|${totalMl + addedMl}`);  // totalMl 尚未更新，需加上新增量
+          writeToDevice(`S|${totalMl + ml}`);
         }
       } else {
         Alert.alert('新增失敗', res.error);
@@ -283,7 +283,7 @@ const MainScreen = () => {
         setShowAddModal(false);
         setAddMl('250'); // 重置為預設值
         if (connectedDevice && writeToDevice) {
-          writeToDevice(`S|${totalMl + addedMl}`);  // totalMl 尚未更新，需加上新增量
+          writeToDevice(`S|${totalMl + ml}`);
         }
       } else {
         Alert.alert('新增失敗', res.error);
@@ -397,17 +397,25 @@ const MainScreen = () => {
         }));
         // 上傳至後端 Supabase
         apiService.postEnvLog(temp, hum, token);
-      }else if (type === 'O') {
+      } else if (type === 'O') {
         // O | 2024/03/24 15:30:00 | diffAmount
-        const offlineTime = parts[1]; // 取出杯墊記錄的真實時間
+        const offlineTime = parts[1];
         const diffAmount = parseFloat(parts[2]);
-        
         if (diffAmount > 0) {
-          console.log(`[BLE] 接收到離線數據補登: ${diffAmount}ml, 發生時間: ${offlineTime}`);
-          
-          // 如果你的 addLog 支援傳入時間，可以把 offlineTime 傳進去
-          // 目前先維持原本的寫法，加上 🔄 標記
-          addLog(diffAmount, drinkType, '🔄'); 
+          const record_at = new Date(offlineTime.replace(/\//g, '-')).toISOString();
+          apiService.postLog({
+            type_id: drinkType,
+            d_volume: Math.round(diffAmount),
+            record_at,
+            is_auto: true,
+          }, token).then(res => {
+            if (res.success) {
+              addLog(res.data);
+              if (connectedDevice && writeToDevice) {
+                writeToDevice(`S|${totalMl + Math.round(diffAmount)}`);
+              }
+            }
+          });
         }
       }
     // 記得在 Dependency Array 加入 drinkType 和 addLog
