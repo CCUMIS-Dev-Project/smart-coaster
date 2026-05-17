@@ -31,7 +31,7 @@ def generate_chat_response(prompt: str, context: str, model: str = DEFAULT_MODEL
     response = client.chat.completions.create(
         model=model,
         messages=messages,
-        temperature=0.7,
+        temperature=0.5,
         max_tokens=500
     )
 
@@ -64,7 +64,7 @@ def generate_weekly_report(context: str, model: str = DEFAULT_MODEL) -> str:
     response = client.chat.completions.create(
         model=model,
         messages=messages,
-        temperature=0.7,
+        temperature=0.5,
         max_tokens=800
     )
 

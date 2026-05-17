@@ -105,8 +105,8 @@ export function AppProvider({ children }) {
       if (goalRes.success) {
         u.goalMl           = goalRes.data.daily_target;
         u.reminderInterval = goalRes.data.rmd_interval ?? prev.reminderInterval;
-        u.autoStart        = goalRes.data.act_start    ?? prev.autoStart;
-        u.autoEnd          = goalRes.data.act_end      ?? prev.autoEnd;
+        u.autoStart        = (goalRes.data.act_start ?? prev.autoStart)?.slice(0, 5);
+        u.autoEnd          = (goalRes.data.act_end   ?? prev.autoEnd)?.slice(0, 5);
       }
       if (meRes.success) {
         const d = meRes.data;

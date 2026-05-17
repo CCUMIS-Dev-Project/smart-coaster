@@ -192,17 +192,15 @@ const InitialSettingScreen = () => {
       setFieldError('喝水習慣應少量多次！建議提醒間距為 1–120 分鐘');
       return false;
     }
-    if (hasCoaster) {
-      const startMin = toMin(autoStart);
-      const endMin   = toMin(autoEnd);
-      if (startMin === null || endMin === null) {
-        setFieldError('時間格式無效：小時 00–23，分鐘 00–59');
-        return false;
-      }
-      if (startMin >= endMin) {
-        setFieldError('結束時間必須晚於開始時間');
-        return false;
-      }
+    const startMin = toMin(autoStart);
+    const endMin   = toMin(autoEnd);
+    if (startMin === null || endMin === null) {
+      setFieldError('時間格式無效：小時 00–23，分鐘 00–59');
+      return false;
+    }
+    if (startMin >= endMin) {
+      setFieldError('結束時間必須晚於開始時間');
+      return false;
     }
     setFieldError('');
     return true;
@@ -518,43 +516,47 @@ const InitialSettingScreen = () => {
               </View>
             </View>
 
-            {/* 智慧杯墊（合併） */}
+            {/* 每日作息時間 */}
+            <View style={s.section}>
+              <Text style={s.lbl}>作息時間</Text>
+              <Text style={{ fontSize: 12, color: MUTED, marginTop: -6 }}>
+                用於計算飲水進度與補水建議，請填入通常的起床與就寢時間
+              </Text>
+              <View style={s.timeBox}>
+                <View style={s.timeItem}>
+                  <Text style={s.timeLbl}>起床時間</Text>
+                  <TextInput
+                    style={s.timeInp}
+                    value={autoStart}
+                    onChangeText={v => { setAutoStart(v); setFieldError(''); }}
+                    placeholder="08:00"
+                    placeholderTextColor={MUTED}
+                  />
+                </View>
+                <Text style={s.timeSep}>—</Text>
+                <View style={s.timeItem}>
+                  <Text style={s.timeLbl}>就寢時間</Text>
+                  <TextInput
+                    style={s.timeInp}
+                    value={autoEnd}
+                    onChangeText={v => { setAutoEnd(v); setFieldError(''); }}
+                    placeholder="22:00"
+                    placeholderTextColor={MUTED}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* 智慧杯墊 */}
             <View style={s.section}>
               <Text style={s.lbl}>智慧杯墊</Text>
-
               <View style={s.switchCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.switchTitle}>智慧杯墊自動記錄</Text>
-                  <Text style={s.switchDesc}>開啟後由杯墊感測喝水量，並設定記錄時段</Text>
+                  <Text style={s.switchDesc}>開啟後由杯墊感測喝水量</Text>
                 </View>
                 <CustomSwitch value={hasCoaster || isScanning} onValueChange={handleCoasterToggle} disabled={isScanning} />
               </View>
-
-              {hasCoaster && (
-                <View style={s.timeBox}>
-                  <View style={s.timeItem}>
-                    <Text style={s.timeLbl}>開始時間</Text>
-                    <TextInput
-                      style={s.timeInp}
-                      value={autoStart}
-                      onChangeText={v => { setAutoStart(v); setFieldError(''); }}
-                      placeholder="08:00"
-                      placeholderTextColor={MUTED}
-                    />
-                  </View>
-                  <Text style={s.timeSep}>—</Text>
-                  <View style={s.timeItem}>
-                    <Text style={s.timeLbl}>結束時間</Text>
-                    <TextInput
-                      style={s.timeInp}
-                      value={autoEnd}
-                      onChangeText={v => { setAutoEnd(v); setFieldError(''); }}
-                      placeholder="22:00"
-                      placeholderTextColor={MUTED}
-                    />
-                  </View>
-                </View>
-              )}
             </View>
 
             <Text style={s.fieldError}>{fieldError ? `⚠ ${fieldError}` : ''}</Text>

@@ -225,6 +225,8 @@ const ProfileScreen = () => {
     }
     if (field === 'coaster') {
       setTempHasCoaster(profile.hasCoaster);
+    }
+    if (field === 'schedule') {
       setTempAutoStart(profile.autoStart || '08:00');
       setTempAutoEnd(profile.autoEnd || '22:00');
     }
@@ -291,34 +293,36 @@ const ProfileScreen = () => {
       };
     }
     if (editField === 'coaster') {
-      if (tempHasCoaster) {
-        const toMin = t => {
-          const parts = (t || '').split(':');
-          const h = parseInt(parts[0], 10);
-          const m = parseInt(parts[1], 10);
-          if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
-          return h * 60 + m;
-        };
-        const startMin = toMin(tempAutoStart);
-        const endMin   = toMin(tempAutoEnd);
-        if (startMin === null || endMin === null) {
-          setFieldError('時間無效：小時需為 00–23，分鐘需為 00–59');
-          return;
-        }
-        if (startMin >= endMin) {
-          setFieldError('結束時間必須晚於開始時間');
-          return;
-        }
-      }
+      update = {
+        hasCoaster: tempHasCoaster,
+        autoMode: tempHasCoaster,
+      };
+    }
+    if (editField === 'schedule') {
+      const toMin = t => {
+        const parts = (t || '').split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+        return h * 60 + m;
+      };
       const padT = t => {
         const [h, m] = (t || '').split(':');
         return `${(h || '0').padStart(2, '0')}:${(m || '0').padStart(2, '0')}`;
       };
+      const startMin = toMin(tempAutoStart);
+      const endMin   = toMin(tempAutoEnd);
+      if (startMin === null || endMin === null) {
+        setFieldError('時間無效：小時需為 00–23，分鐘需為 00–59');
+        return;
+      }
+      if (startMin >= endMin) {
+        setFieldError('結束時間必須晚於開始時間');
+        return;
+      }
       update = {
-        hasCoaster: tempHasCoaster,
-        autoMode: tempHasCoaster,
-        autoStart: tempHasCoaster ? padT(tempAutoStart) : '08:00',
-        autoEnd:   tempHasCoaster ? padT(tempAutoEnd)   : '22:00',
+        autoStart: padT(tempAutoStart),
+        autoEnd:   padT(tempAutoEnd),
       };
     }
     updateProfile(update);
@@ -356,7 +360,7 @@ const ProfileScreen = () => {
         writeToDevice(`D|${update.goalMl}`);
       }
     }
-    if (editField === 'coaster') {
+    if (editField === 'schedule') {
       apiService.patchGoal({ act_start: update.autoStart, act_end: update.autoEnd }, token);
     }
     if (editField === 'reminder') {
@@ -511,7 +515,7 @@ const ProfileScreen = () => {
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={s.switchTitle}>智慧杯墊自動記錄</Text>
               <Text style={{ fontSize: 11, color: MUTED }}>
-                {isCoasterScanning ? '正在掃描附近的智慧杯墊...' : '開啟後由杯墊感測喝水量，並設定記錄時段'}
+                {isCoasterScanning ? '正在掃描附近的智慧杯墊...' : '開啟後由杯墊感測喝水量'}
               </Text>
             </View>
             {isCoasterScanning
@@ -519,22 +523,29 @@ const ProfileScreen = () => {
               : <CustomSwitch value={tempHasCoaster} onValueChange={handleCoasterSwitchToggle} />
             }
           </View>
-          {tempHasCoaster && (
-            <View style={s.timeBox}>
-              <Text style={s.lbl}>自動記錄時段</Text>
-              <View style={s.timeRow}>
-                <View style={s.timeItem}>
-                  <TimeInput value={tempAutoStart} onChange={setTempAutoStart} style={s.timeInp} />
-                  <Text style={s.timeLbl}>開始</Text>
-                </View>
-                <Text style={s.timeSep}>—</Text>
-                <View style={s.timeItem}>
-                  <TimeInput value={tempAutoEnd} onChange={setTempAutoEnd} style={s.timeInp} />
-                  <Text style={s.timeLbl}>結束</Text>
-                </View>
+        </View>
+      );
+    }
+    if (editField === 'schedule') {
+      title = '作息時間';
+      content = (
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 12, color: MUTED }}>
+            設定每日起床與就寢時間，用於計算飲水進度與補水建議
+          </Text>
+          <View style={s.timeBox}>
+            <View style={s.timeRow}>
+              <View style={s.timeItem}>
+                <TimeInput value={tempAutoStart} onChange={v => { setTempAutoStart(v); setFieldError(''); }} style={s.timeInp} />
+                <Text style={s.timeLbl}>起床</Text>
+              </View>
+              <Text style={s.timeSep}>—</Text>
+              <View style={s.timeItem}>
+                <TimeInput value={tempAutoEnd} onChange={v => { setTempAutoEnd(v); setFieldError(''); }} style={s.timeInp} />
+                <Text style={s.timeLbl}>就寢</Text>
               </View>
             </View>
-          )}
+          </View>
         </View>
       );
     }
@@ -636,6 +647,8 @@ const ProfileScreen = () => {
           <Text style={s.groupTitle}>飲水設定</Text>
           <EditableRow label="智慧杯墊" value={connectedDevice  ? '已連線' : '未連接'}
             onEdit={() => openEdit('coaster')} />
+          <EditableRow label="作息時間" value={`${profile.autoStart || '08:00'} – ${profile.autoEnd || '22:00'}`}
+            onEdit={() => openEdit('schedule')} />
           <EditableRow label="每日目標" value={`${goalMl} ml`}
             onEdit={() => openEdit('goal')} />
           <EditableRow label="提醒間距" value={`${profile.reminderInterval} 分鐘`}
