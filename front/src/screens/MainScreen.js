@@ -431,6 +431,7 @@ const MainScreen = () => {
             writeToDevice(timeCmd);
             writeToDevice(`S|${totalMl}`);
             writeToDevice(`D|${goalMl}`);
+            writeToDevice(`R|${profile?.reminderInterval ?? 60}`);
         } else {
             console.warn("useBLE 中沒有找到寫入函數，無法執行！");
         }
@@ -701,7 +702,15 @@ const MainScreen = () => {
                     Alert.alert('刪除失敗', `${failed.length} 筆刪除失敗，請重試`);
                   }
                   const succeeded = selected.filter((_, i) => results[i].success);
+                  const deletedMl = succeeded.reduce((sum, id) => {
+                    const log = logs.find(l => l.log_id === id);
+                    return sum + (log?.d_volume ?? 0);
+                  }, 0);
+                  const newTotal = Math.max(0, totalMl - deletedMl);
                   deleteLogs(succeeded);
+                  if (connectedDevice && writeToDevice) {
+                    writeToDevice(`S|${newTotal}`);
+                  }
                   setSelected([]); setSelMode(false); setShowDeleteConfirm(false);
                 }}>
                 <Text style={s.modalConfirmTxt}>刪除</Text>
