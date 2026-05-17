@@ -414,6 +414,7 @@ const MainScreen = () => {
         if (writeToDevice) {
             writeToDevice(timeCmd);
             writeToDevice(`S|${totalMl}`);
+            writeToDevice(`D|${goalMl}`);
         } else {
             console.warn("useBLE 中沒有找到寫入函數，無法執行！");
         }

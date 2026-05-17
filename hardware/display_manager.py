@@ -92,7 +92,7 @@ class DisplayManager:
         elif diff > 5:
             self.oled.text("Nice! -{:.1f}ml".format(diff), 5, 50)
         else:
-            percent = int(progress * 100)
+            percent = round(progress * 100)
             self.oled.text("Progress: {:d}%".format(percent), 15, 50)
             
         self.show()
