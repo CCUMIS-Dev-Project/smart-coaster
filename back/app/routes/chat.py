@@ -97,6 +97,9 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         user_age = profile.get("age", 25)
         caff_limit = 0 if user_age < 12 else 100 if user_age < 19 else 350 if user_age <= 75 else 300
 
+        now_tw = datetime.now(pytz.timezone('Asia/Taipei'))
+        current_time_str = now_tw.strftime("%Y-%m-%d %H:%M")
+
         context_str = f"""
 【使用者基本資料】
 性別：{profile.get('gender')}
@@ -104,6 +107,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
 體重：{profile.get('weight')} 公斤
 
 【個人化健康飲水目標】
+- 目前台灣時間：{current_time_str}
 - 今日飲水目標：{daily_goal} ml（使用者依性別、體重、年齡與活動量個人化設定）
 - 目前環境感測：溫度 {temp_str}、濕度 {humidity_str}（可作為動態調整建議依據）
 - 目前此刻應達到的理想黃金進度：{target_now} ml
@@ -121,7 +125,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
 {interval_text}
 
 【回覆準則】
-請在回答時，明確指出「今日已飲用量是以硬體感測到的真實數據」，而「目標水量」是透過個人的身體數據 (體重等) 與環境數據 (溫度、濕度) 計算出的「專屬健康目標」，避免產生 AI 在「猜測」已喝水量的誤會。如果使用者詢問下次什麼時候喝水，請根據【個人化飲水時間預測】的資訊來回答。
+請在回答時，明確指出「今日已飲用量是以硬體感測到的真實數據」，而「目標水量」是透過個人的身體數據（體重等）與環境數據（溫度、濕度）計算出的「專屬健康目標」，避免產生 AI 在「猜測」已喝水量的誤會。提到水量差距時請同時換算為約幾杯水（以 200ml 為一杯），幫助使用者直覺理解。如果使用者詢問下次什麼時候喝水，請根據【個人化飲水時間預測】的資訊來回答。
 """
 
         # 根據使用者提問，動態載入相關知識

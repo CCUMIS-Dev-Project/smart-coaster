@@ -85,13 +85,16 @@ class DailyGoalCalculator:
             progress = (current_minutes - start_minutes) / total_active_minutes
             target_now = int(daily_goal * progress)
 
+        pct_done = int(today_drink_ml / daily_goal * 100) if daily_goal > 0 else 0
+
         if today_drink_ml >= daily_goal:
-            message = "恭喜！您已達到今日建議飲水量！可以適度休息不用刻意喝水了。"
+            message = f"恭喜！您已達到今日建議飲水量（{daily_goal} ml，完成 {pct_done}%）！可以適度休息不用刻意喝水了。"
         elif today_drink_ml >= target_now:
-            message = f"您的飲水進度很棒！目前達標率已超過當下時段的建議值 ({target_now} ml)，請繼續保持。"
+            message = f"您的飲水進度很棒！今日已喝 {int(today_drink_ml)} ml（完成 {pct_done}%），目前超前進度，請繼續保持。"
         else:
             diff = target_now - int(today_drink_ml)
-            message = f"您目前的飲水進度稍微落後，距離目前時段的理想進度 ({target_now} ml) 還差 {diff} ml，建議現在補充水分。"
+            cups = round(diff / 200, 1)
+            message = f"今日已喝 {int(today_drink_ml)} ml（完成 {pct_done}%），建議現在再補充約 {diff} ml（約 {cups} 杯 200ml），讓進度跟上來。"
 
         return {
             "daily_goal": daily_goal,
