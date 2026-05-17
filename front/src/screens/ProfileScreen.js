@@ -204,10 +204,10 @@ const ProfileScreen = () => {
   };
 
   const suggestedGoal = calcWaterGoal({
-    gender: tempGender,
+    gender: profile.gender,
     weight: parseFloat(profile.weight) || 65,
     age: parseFloat(profile.age) || 28,
-    activity: tempActivity,
+    activity: profile.activity,
   });
 
   function openEdit(field) {
