@@ -190,10 +190,15 @@ const MainScreen = () => {
           stopScan();
           setIsAutoScanning(false);
           setIsScanning(false);
+          if (!connectedDevice) {
+            setIsAutoScanning(true);
+            const t = setTimeout(() => { stopScan(); setIsAutoScanning(false); }, 15000);
+            scanAndConnect().catch(() => {}).finally(() => { clearTimeout(t); setIsAutoScanning(false); });
+          }
         }
       });
       return () => sub.remove();
-    }, [stopScan]);
+    }, [stopScan, connectedDevice, scanAndConnect]);
 
     const handleDisconnect = async () => {
       setShowConnectedAlert(false);
