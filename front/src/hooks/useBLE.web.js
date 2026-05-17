@@ -16,6 +16,9 @@ export default function useBLE() {
     // setBleData(prev => ({ ...prev, lastStableWeight: 200, drinkAmount: 50 }));
   };
 
-  // 必須回傳 bleData
-  return { scanAndConnect, connectedDevice, bleData };
+  const stopScan = () => {};
+  const writeToDevice = async () => {};
+  const disconnectDevice = async () => { setConnectedDevice(null); };
+
+  return { scanAndConnect, connectedDevice, bleData, stopScan, writeToDevice, disconnectDevice };
 }
