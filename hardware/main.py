@@ -81,6 +81,7 @@ is_waiting_for_stable = False
 drink_amount = 0
 last_stable_volume = 0
 diff = 0.0
+drink_local_pending = False  # True 代表本機剛計算飲水量，尚未獲 app 確認
 reminder_ms = REMINDER_MS  # 提醒時長由 APP 動態更新
 daily_target = DAILY_TARGET
 
@@ -174,7 +175,7 @@ def check_double_press(current_weight, current_ticks):
 
 # --- 藍牙接收 APP 回呼硬體函數 ---
 def handle_ble_rx(data):
-    global drink_amount
+    global drink_amount, drink_local_pending
     print(f"收到 APP 指令: {data}")
     if data.startswith('T|'):
         try:
@@ -192,8 +193,12 @@ def handle_ble_rx(data):
     elif data.startswith('S|'):
         try:
             synced_amount = float(data.split('|')[1])
-            drink_amount = synced_amount
-            print(f"✅ 飲水同步成功: {synced_amount:.1f} ml")
+            if drink_local_pending and synced_amount < drink_amount:
+                print(f"⚠️ 忽略過期同步: {synced_amount:.1f} ml (本機: {drink_amount:.1f} ml)")
+            else:
+                drink_amount = synced_amount
+                drink_local_pending = False
+                print(f"✅ 飲水同步成功: {synced_amount:.1f} ml")
         except Exception as e:
             print("❌ 飲水同步失敗:", e)
     elif data.startswith('R|'):
@@ -290,6 +295,7 @@ while True:
                 
                 if diff > 5:
                     drink_amount += diff
+                    drink_local_pending = True  # 等待 app 以 S| 確認後才接受更低的同步值
                     last_interaction_time = current_ticks # 喝水了，重設計時器
                     is_overdue = False
                     # 【離線儲存邏輯】
