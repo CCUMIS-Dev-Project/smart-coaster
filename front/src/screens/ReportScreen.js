@@ -199,6 +199,7 @@ export default function ReportScreen() {
   const prevAvg = Math.round(weeklyStat?.avg_last_week ?? 0);
   const diffPct = weeklyStat?.change_pct ?? 0;
   const isUp = diffPct >= 0;
+  const hasLastWeek = weeklyStat?.change_pct != null;
   const maxV = Math.max(...barData.map(d => d.ml ?? 0), dailyStat?.daily_target ?? goalMl, 100);
 
   // 圓餅圖：by_type → label + color（用 DRINK_BY_ID mapping）
@@ -273,10 +274,10 @@ export default function ReportScreen() {
           </View>
         </View>
 
-        {/* 本週成長進度 */}
+        {/* 連續達標進度 */}
         <View style={s.plantCard}>
           <View style={s.plantCardBg} />
-          <Text style={s.plantCardTitle}>本週成長進度</Text>
+          <Text style={s.plantCardTitle}>連續達標進度</Text>
           {/* gardenDays 'done'/'today'/'empty' 決定 colored（彩色/灰色） */}
           <View style={s.stagesRow}>
             {gardenDays.map((status, i) => {
@@ -296,7 +297,9 @@ export default function ReportScreen() {
             <View style={s.daysLeft}>
               {doneCount >= 5
                 ? <Text style={s.daysLeftTxt}>開花了！</Text>
-                : <><Text style={s.daysLeftNum}>{streak?.days_until_next_flower ?? 5}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
+                : streak?.days_until_next_flower === 0
+                  ? <Text style={s.daysLeftTxt}>已收集全部花朵</Text>
+                  : <><Text style={s.daysLeftNum}>{streak?.days_until_next_flower ?? 5}</Text><Text style={s.daysLeftSub}>天後開花</Text></>
               }
             </View>
             <View style={{ flex: 1 }}>
@@ -310,9 +313,13 @@ export default function ReportScreen() {
         <View style={s.histCard}>
           <View style={s.histHeader}>
             <Text style={s.histTitle}>本週每日記錄</Text>
-            <TouchableOpacity style={[s.weekBtn, isUp ? s.weekBtnUp : s.weekBtnDown]} onPress={() => setShowWeekCompare(true)} activeOpacity={0.8}>
-              <Text style={[s.weekBtnTxt, isUp ? { color: '#16a34a' } : { color: '#dc2626' }]}>{isUp ? '↑' : '↓'} {Math.abs(diffPct)}% vs 上週</Text>
-            </TouchableOpacity>
+            {hasLastWeek ? (
+              <TouchableOpacity style={[s.weekBtn, isUp ? s.weekBtnUp : s.weekBtnDown]} onPress={() => setShowWeekCompare(true)} activeOpacity={0.8}>
+                <Text style={[s.weekBtnTxt, isUp ? { color: '#16a34a' } : { color: '#dc2626' }]}>{isUp ? '↑' : '↓'} {Math.abs(diffPct)}% vs 上週</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={s.weekBtnTxt}>首週使用</Text>
+            )}
           </View>
           <View style={s.histRow}>
             {barData.map((d, i) => {
@@ -338,7 +345,11 @@ export default function ReportScreen() {
           <View style={s.statsCard}>
             <Text style={s.statsTitle}>本週飲品比例</Text>
             <View style={{ marginTop: 15, alignItems: 'center' }}>
-              <PieChart data={drinkBreakdown} />
+              {drinkBreakdown.length > 0 ? (
+                <PieChart data={drinkBreakdown} />
+              ) : (
+                <Text style={{ color: '#aaa', fontSize: 13, marginTop: 10 }}>N/A</Text>
+              )}
             </View>
           </View>
 
@@ -365,8 +376,11 @@ export default function ReportScreen() {
             </TouchableOpacity>
           </View>
           <Text style={s.aiText}>
-            {isUp ? `你這週的補水表現進步了！平均 ${thisAvg}ml，比上週提升 ${Math.abs(diffPct)}%。` : `這週補水量比上週減少了 ${Math.abs(diffPct)}%，平均 ${thisAvg}ml。`}
-            {thisAvg < (todayTarget) ? `每天再多補充約 ${todayTarget - thisAvg}ml 就能達標！建議在下午 2 點設個提醒。` : `持續保持，你已經連續 ${gardenStreak} 天達標了！`}
+            {hasLastWeek
+              ? (isUp ? `你這週的補水表現進步了！平均 ${thisAvg}ml，比上週提升 ${Math.abs(diffPct)}%。` : `這週補水量比上週減少了 ${Math.abs(diffPct)}%，平均 ${thisAvg}ml。`)
+              : `開始記錄你的飲水習慣吧！本週目前平均 ${thisAvg}ml。`
+            }
+            {thisAvg < (todayTarget) ? `今天再多補充約 ${todayTarget - thisAvg}ml 就能達標！` : `持續保持，你已經連續 ${gardenStreak} 天達標了！`}
           </Text>
         </View>
 

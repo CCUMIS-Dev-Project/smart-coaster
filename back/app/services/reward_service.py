@@ -6,6 +6,7 @@ from app.services.goal_service import get_goal
 TZ = pytz.timezone("Asia/Taipei")
 STREAKS_TABLE = "streaks"
 FLOWERS_TABLE = "user_flowers"
+MAX_FLOWERS = 8
 
 
 def _today_taipei() -> date:
@@ -28,6 +29,8 @@ def _get_today_total(user_id: int) -> int:
 
 
 def _days_until_next_flower(current_streak: int) -> int:
+    if current_streak >= MAX_FLOWERS * 5:
+        return 0  # 全部花朵已解鎖
     return ((current_streak // 5) + 1) * 5 - current_streak
 
 
@@ -81,10 +84,15 @@ def get_streaks(user_id: int) -> dict:
         }
     row = res.data[0]
     current = row["current_streak"]
+    last = row.get("last_achieved")
+    today = _today_taipei()
+    yesterday = str(today - timedelta(days=1))
+    if last and last < yesterday:
+        current = 0
     return {
         "current_streak": current,
         "longest_streak": row["longest_streak"],
-        "last_achieved": row["last_achieved"],
+        "last_achieved": last,
         "days_until_next_flower": _days_until_next_flower(current),
     }
 
@@ -146,9 +154,9 @@ def check_and_update_streak(user_id: int) -> None:
         on_conflict="user_id",
     ).execute()
 
-    # 每5天解鎖一朵花
+    # 每5天解鎖一朵花（上限 MAX_FLOWERS）
     if current_streak % 5 == 0:
-        flower_id = current_streak // 5
+        flower_id = min(current_streak // 5, MAX_FLOWERS)
         existing = (
             supabase.table(FLOWERS_TABLE)
             .select("id")

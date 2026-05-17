@@ -538,18 +538,24 @@ export default function GardenScreen() {
 
       const gardenData = gardenRes.success ? gardenRes.data : [];
       const unlockedIds = new Set(gardenData.map(f => f.flower_id));
-      const newestId = gardenData.reduce((latest, f) =>
+      const newestFlower = gardenData.reduce((latest, f) =>
         !latest || f.unlocked_at > latest.unlocked_at ? f : latest, null
-      )?.flower_id;
+      );
+      const newestId = newestFlower?.flower_id;
+      const isNewValid = newestFlower
+        ? Date.now() - new Date(newestFlower.unlocked_at).getTime() < 24 * 60 * 60 * 1000
+        : false;
 
       setFlowers(FLOWER_DATA.map((f, i) => {
         const fid = i + 1; // flower_id 從 1 開始，每 5 天解鎖一朵
         return {
           ...f,
           unlocked: unlockedIds.has(fid) || currentStreak >= fid * 5,
-          isNew: fid === newestId,
+          isNew: fid === newestId && isNewValid,
         };
       }));
+    }).catch(err => {
+      console.warn('[Garden] failed to load:', err);
     });
   }, []));  // ← useCallback 的 [], 再加 ) 關閉 useFocusEffect
 
