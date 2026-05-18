@@ -219,7 +219,7 @@ def insert_sensor_log(data: dict) -> dict:
     if data.get('timestamp'):
         new_record['record_at'] = data.get('timestamp')
         
-    if new_record["d_volume"] >= 20:  # 過濾 < 20ml 的噪音（放東西、輕觸等）
+    if new_record["d_volume"] > 5:  # 與硬體門檻一致（main.py > 5ml）
         res = supabase.table("drinking_logs").insert(new_record).execute()
         return res.data[0] if res.data else None
     

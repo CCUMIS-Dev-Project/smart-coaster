@@ -9,7 +9,7 @@ MIN_TRAINING_SAMPLES = 15
 MERGE_WINDOW_MINUTES = 5       # 5 分鐘內的連續飲水合併（防感測器抖動）
 MAX_GAP_MINUTES = 480
 MIN_GAP_MINUTES = 5            # 最短有效間隔（過濾噪音）
-MIN_VOLUME_ML = 20             # 最小有效飲水量（過濾放東西誤判）
+MIN_VOLUME_ML = 5              # 最小有效飲水量，與硬體門檻一致（main.py > 5ml）
 
 
 # ──────────────────────────────────────────────
@@ -156,7 +156,7 @@ class IntervalPredictor:
         today_intake = self._calc_today_intake(logs)
         remaining = max(0, daily_goal - today_intake)
         act_end = _parse_time(act_end_str)
-        hours_left = (datetime.combine(now.date(), act_end) - now.replace(tzinfo=None)).total_seconds() / 3600
+        hours_left = (datetime.combine(now.date(), act_end, tzinfo=TZ) - now).total_seconds() / 3600
         hours_left = max(0, hours_left)
 
         adjusted_gap = adjust_reminder(predicted_gap, remaining, today_intake, hours_left)

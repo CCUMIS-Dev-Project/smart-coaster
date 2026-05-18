@@ -3,7 +3,8 @@ from pydantic import BaseModel
 from typing import Optional
 from app.services import supabase_service
 from app.services.ml_service import DailyGoalCalculator, IntervalPredictor
-from datetime import datetime, timezone
+from datetime import datetime
+import pytz
 
 router = APIRouter(prefix="/api")
 
@@ -35,7 +36,7 @@ async def log_sensor_data_endpoint(request: SensorLogRequest):
         data_to_insert = {
             "user_id": request.user_id,
             "drinkAmount": request.drinkAmount,
-            "timestamp": request.timestamp or datetime.now(timezone.utc).isoformat()
+            "timestamp": request.timestamp or datetime.now(pytz.timezone('Asia/Taipei')).isoformat()
         }
 
         inserted_record = supabase_service.insert_sensor_log(data_to_insert)

@@ -72,6 +72,11 @@ const MainScreen = () => {
     const [drinkType, setDrinkType] = useState(1);          // 目前選中的飲品 type_id（預設 1 = 水）
     const [showDrinkDropdown, setShowDrinkDropdown] = useState(false); // 飲品下拉選單是否展開
 
+    const changeDrinkType = (id) => {
+      setDrinkType(id);
+      AsyncStorage.setItem('drinkType', String(id));
+    };
+
     // ── UI 狀態：新增飲水 Modal ───────────────────────────────────
     const [showAddModal, setShowAddModal] = useState(false); // 新增 Modal 顯示狀態
     const [addMl, setAddMl] = useState('250');               // 新增 Modal 中輸入的毫升數
@@ -91,6 +96,12 @@ const MainScreen = () => {
     const tabBarHeight = useBottomTabBarHeight();
     const [baseH] = useState(() => Dimensions.get('window').height);
     const [kbHeight, setKbHeight] = useState(0); // 鍵盤高度（0 = 收起）
+
+    useEffect(() => {
+      AsyncStorage.getItem('drinkType').then(v => {
+        if (v !== null) setDrinkType(parseInt(v));
+      });
+    }, []);
 
     useEffect(() => {
       const show = Keyboard.addListener('keyboardDidShow', (e) => setKbHeight(e.endCoordinates.height));
@@ -407,7 +418,7 @@ const MainScreen = () => {
         const offlineTime = parts[1];
         const diffAmount = parseFloat(parts[2]);
         if (diffAmount > 0) {
-          const record_at = new Date(offlineTime.replace(/\//g, '-')).toISOString();
+          const record_at = new Date(offlineTime.replace(/\//g, '-').replace(' ', 'T') + '+08:00').toISOString();
           apiService.postLog({
             type_id: drinkType,
             d_volume: Math.round(diffAmount),
@@ -479,7 +490,7 @@ const MainScreen = () => {
               <View style={s.dropdown}>
                 {DRINK_TYPES.map(d => (
                   <TouchableOpacity key={d.type_id} style={s.dropdownItem}
-                    onPress={() => { setDrinkType(d.type_id); setShowDrinkDropdown(false); }}>
+                    onPress={() => { changeDrinkType(d.type_id); setShowDrinkDropdown(false); }}>
                     <View style={[s.drinkDot, { backgroundColor: d.color }]} />
                     <Text style={[s.dropdownTxt, drinkType === d.type_id && s.dropdownTxtSel]}>{d.label}</Text>
                     {drinkType === d.type_id && <Ionicons name="checkmark" size={15} color="#3498db" />}
@@ -750,7 +761,7 @@ const MainScreen = () => {
               <Text style={s.modalLbl}>飲品類型</Text>
               <View style={s.drinkTypeRow}>
                 {DRINK_TYPES.map(d => (
-                  <TouchableOpacity key={d.type_id} style={[s.drinkChip, drinkType === d.type_id && s.drinkChipSel]} onPress={() => setDrinkType(d.type_id)} activeOpacity={0.75}>
+                  <TouchableOpacity key={d.type_id} style={[s.drinkChip, drinkType === d.type_id && s.drinkChipSel]} onPress={() => changeDrinkType(d.type_id)} activeOpacity={0.75}>
                     <View style={[s.chipDot, { backgroundColor: d.color }]} />
                     <Text style={[s.drinkChipTxt, drinkType === d.type_id && { color: '#3498db' }]}>{d.label}</Text>
                   </TouchableOpacity>
