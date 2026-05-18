@@ -168,6 +168,28 @@ npx expo start
 * 使用手機 App 內的 QR 掃描器掃描電腦畫面。
 
 ---
+**Prebuild（產生原生專案，本地端建置前必做）**：
+
+`npx expo prebuild` 會根據 `app.json` 的設定，在 `front/` 下產生 `android/` 與 `ios/` 原生資料夾。修改了原生套件（如新增 BLE、通知等 Native Module）或 `app.json` 的權限設定後，都需重新執行。
+
+```bash
+cd front
+
+# 首次或新增原生套件後執行（會保留現有修改）
+npx expo prebuild
+
+# 若遇到原生設定錯亂，加 --clean 從頭重產生（⚠️ 會清除 android/ ios/ 下手動改的內容）
+npx expo prebuild --clean
+```
+
+> 📝 **產生後可本地執行原生 build（需已安裝 Android Studio / Xcode）：**
+> ```bash
+> npx expo run:android   # 或 npm run android
+> npx expo run:ios       # 或 npm run ios（僅 Mac）
+> ```
+> 若不需要本地 build 只想用 EAS 雲端編譯，可跳過此步驟。
+
+---
 **建立開發版 (EAS Build)**：
 若修改了 `app.json` 權限，需重新編譯：
 ```bash
