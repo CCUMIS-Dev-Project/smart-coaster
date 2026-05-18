@@ -32,12 +32,15 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         today_drink_ml = supabase_service.fetch_today_water_sum(user_id)
         drink_breakdown = supabase_service.fetch_today_drink_breakdown(user_id)
 
-        # 直接使用資料庫個人化目標（依性別、體重、年齡、活動量計算並由使用者確認）
-        daily_goal = profile.get("daily_target", 2000)
+        # 以 DB 個人化目標為基礎，依即時環境修正當日建議飲水量
+        temp = profile.get("temp")
+        humidity = profile.get("humidity")
+        base_goal = profile.get("daily_target") if profile.get("daily_target") is not None else 2000
+        adjusted_goal = DailyGoalCalculator.adjust_for_env(base_goal, temp, humidity)
 
         # 計算當前進度
         progress = DailyGoalCalculator.get_progress_summary(
-            daily_goal=daily_goal,
+            daily_goal=adjusted_goal,
             today_drink_ml=today_drink_ml,
             act_start_str=profile.get("act_start", "08:00:00"),
             act_end_str=profile.get("act_end", "22:00:00"),
@@ -52,7 +55,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         interval_result = _interval_predictor.predict_next_interval(
             user_id=user_id,
             logs=all_logs,
-            daily_goal=daily_goal,
+            daily_goal=adjusted_goal,
             act_start_str=profile.get("act_start", "08:00:00"),
             act_end_str=profile.get("act_end", "22:00:00"),
             rmd_interval=profile.get("rmd_interval", 90),
@@ -63,7 +66,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
             interval_text = (
                 f"根據你過去 7 天的飲水習慣，ML 模型預測你下次最佳喝水時間約在 "
                 f"{interval_result['adjusted_gap_minutes']} 分鐘後 "
-                f"（約 {interval_result['next_reminder_at'][:16]}），"
+                f"（約 {datetime.fromisoformat(interval_result['next_reminder_at']).strftime('%H:%M')}），"
                 f"模型使用了 {interval_result['data_points']} 筆歷史數據訓練。"
             )
         else:
@@ -88,17 +91,20 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
         history_text = "\n".join(history_lines) if history_lines else "目前無歷史紀錄"
 
         # 組裝天氣 / 活動量描述
-        temp = profile.get("temp")
-        humidity = profile.get("humidity")
         temp_str = f"{temp}°C" if temp is not None else "無資料"
         humidity_str = f"{humidity}%" if humidity is not None else "無資料"
+        goal_display = (
+            f"{adjusted_goal} ml（基礎目標 {base_goal} ml，依當前環境上調）"
+            if adjusted_goal != base_goal
+            else f"{adjusted_goal} ml"
+        )
 
         # 依年齡計算咖啡因每日建議上限（台灣FDA / Harvard 分層）
-        user_age = profile.get("age", 25)
+        user_age = profile.get("age") if profile.get("age") is not None else 25
         caff_limit = 0 if user_age < 12 else 100 if user_age < 19 else 350 if user_age <= 75 else 300
 
         now_tw = datetime.now(pytz.timezone('Asia/Taipei'))
-        current_time_str = now_tw.strftime("%Y-%m-%d %H:%M")
+        current_time_str = now_tw.strftime("%H:%M")
 
         context_str = f"""
 【使用者基本資料】
@@ -108,7 +114,7 @@ async def chat_endpoint(request: ChatRequest, user_id: int = Depends(get_current
 
 【個人化健康飲水目標】
 - 目前台灣時間：{current_time_str}
-- 今日飲水目標：{daily_goal} ml（使用者依性別、體重、年齡與活動量個人化設定）
+- 今日飲水目標：{goal_display}（使用者依性別、體重、年齡與活動量個人化設定）
 - 目前環境感測：溫度 {temp_str}、濕度 {humidity_str}（可作為動態調整建議依據）
 - 目前此刻應達到的理想黃金進度：{target_now} ml
 - 進度分析：{ai_message}

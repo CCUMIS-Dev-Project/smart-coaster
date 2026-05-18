@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.services import supabase_service
 from app.services.ml_service import DailyGoalCalculator, IntervalPredictor
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api")
 
@@ -35,7 +35,7 @@ async def log_sensor_data_endpoint(request: SensorLogRequest):
         data_to_insert = {
             "user_id": request.user_id,
             "drinkAmount": request.drinkAmount,
-            "timestamp": request.timestamp or datetime.now().isoformat()
+            "timestamp": request.timestamp or datetime.now(timezone.utc).isoformat()
         }
 
         inserted_record = supabase_service.insert_sensor_log(data_to_insert)
@@ -87,9 +87,9 @@ def _predict_next_reminder(user_id: int) -> dict:
     logs = supabase_service.fetch_all_drinking_logs(user_id)
     env_logs = supabase_service.fetch_env_logs_range(user_id)
 
-    daily_goal = DailyGoalCalculator.calculate(
-        weight_kg=profile["weight"],
-        exercise_addition=profile["exercise_addition"],
+    base_goal = profile.get("daily_target") if profile.get("daily_target") is not None else 2000
+    daily_goal = DailyGoalCalculator.adjust_for_env(
+        base_goal,
         temp=profile.get("temp"),
         humidity=profile.get("humidity"),
     )

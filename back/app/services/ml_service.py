@@ -28,12 +28,12 @@ class DailyGoalCalculator:
         temp: float = None,
         humidity: float = None,
     ) -> int:
-        base_ml = weight_kg * 33
+        base_ml = int(weight_kg * 33 * (1.0 + (exercise_addition or 0.0)))
+        return DailyGoalCalculator.adjust_for_env(base_ml, temp, humidity)
 
-        # 活動量修正（exercise.addition 例如 0.0 / 0.1 / 0.2）
-        activity_modifier = 1.0 + (exercise_addition or 0.0)
-
-        # 溫度修正
+    @staticmethod
+    def adjust_for_env(base_goal: int, temp: float = None, humidity: float = None) -> int:
+        """以 DB 個人化目標為基礎，依即時溫濕度修正當日建議飲水量（NIH/EFSA 係數）。"""
         if temp is not None and temp > 30:
             temp_modifier = 1.10
         elif temp is not None and temp > 25:
@@ -43,14 +43,10 @@ class DailyGoalCalculator:
         else:
             temp_modifier = 1.0
 
-        # 濕度修正（極乾燥環境）
-        if humidity is not None and humidity < 30:
-            humidity_modifier = 1.05
-        else:
-            humidity_modifier = 1.0
+        humidity_modifier = 1.05 if (humidity is not None and humidity < 30) else 1.0
 
-        daily_goal = int(base_ml * activity_modifier * temp_modifier * humidity_modifier)
-        return max(500, min(daily_goal, 8000))  # 合理範圍 500ml ~ 8000ml
+        adjusted = int(base_goal * temp_modifier * humidity_modifier)
+        return max(500, min(adjusted, 8000))
 
     @staticmethod
     def get_progress_summary(
@@ -151,7 +147,7 @@ class IntervalPredictor:
             today_intake = self._calc_today_intake(logs)
             remaining = max(0, daily_goal - today_intake)
             act_end = _parse_time(act_end_str)
-            hours_left = (datetime.combine(now.date(), act_end) - now.replace(tzinfo=None)).total_seconds() / 3600
+            hours_left = (datetime.combine(now.date(), act_end, tzinfo=TZ) - now).total_seconds() / 3600
             hours_left = max(0, hours_left)
             predicted_gap = self._cold_start_interval(remaining, hours_left, rmd_interval)
             confidence = "cold_start"
@@ -268,7 +264,7 @@ class IntervalPredictor:
             model.fit(X, y)
             self._user_models[user_id] = {
                 "model": model,
-                "trained_at": datetime.now(),
+                "trained_at": datetime.now(TZ),
                 "n_samples": len(y),
             }
             print(f"[IntervalPredictor] Trained model for user {user_id} with {len(y)} samples.")
@@ -278,7 +274,7 @@ class IntervalPredictor:
         if user_id not in self._user_models:
             return True
         cache = self._user_models[user_id]
-        age_minutes = (datetime.now() - cache["trained_at"]).total_seconds() / 60
+        age_minutes = (datetime.now(TZ) - cache["trained_at"]).total_seconds() / 60
         return age_minutes > 120  # 每 2 小時重新訓練
 
     # ── 特徵提取（預測時用）──
