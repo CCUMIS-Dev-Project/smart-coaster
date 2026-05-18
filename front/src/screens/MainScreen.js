@@ -71,9 +71,11 @@ const MainScreen = () => {
   
     // ── UI 狀態：飲品選擇 ──────────────────────────────────────────
     const [drinkType, setDrinkType] = useState(1);          // 目前選中的飲品 type_id（預設 1 = 水）
+    const drinkTypeRef = useRef(1);                          // ref 供 bleData effect 讀取，避免 stale closure
     const [showDrinkDropdown, setShowDrinkDropdown] = useState(false); // 飲品下拉選單是否展開
 
     const changeDrinkType = (id) => {
+      drinkTypeRef.current = id;
       setDrinkType(id);
       AsyncStorage.setItem('drinkType', String(id));
     };
@@ -100,7 +102,11 @@ const MainScreen = () => {
 
     useEffect(() => {
       AsyncStorage.getItem('drinkType').then(v => {
-        if (v !== null) setDrinkType(parseInt(v));
+        if (v !== null) {
+          const id = parseInt(v);
+          drinkTypeRef.current = id;
+          setDrinkType(id);
+        }
       });
     }, []);
 
@@ -421,7 +427,7 @@ const MainScreen = () => {
         if (diffAmount > 0) {
           const record_at = new Date(offlineTime.replace(/\//g, '-').replace(' ', 'T') + '+08:00').toISOString();
           apiService.postLog({
-            type_id: drinkType,
+            type_id: drinkTypeRef.current,
             d_volume: Math.round(diffAmount),
             record_at,
             is_auto: true,
@@ -435,7 +441,6 @@ const MainScreen = () => {
           });
         }
       }
-    // 記得在 Dependency Array 加入 drinkType 和 addLog
     }, [bleData]);
 
     // 更新連線狀態並執行 RTC 校時 + 同步當日總飲水量
