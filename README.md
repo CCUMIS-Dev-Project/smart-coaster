@@ -36,198 +36,201 @@
 
 ---
 
-## 📂 專案結構 (Project Structure)(待更新)
+## 📂 專案結構 (Project Structure)
 
 ```text
-smart-coaster/ 
-├── design/                     # 前端figma設計圖
-|
-├── pico/                       # Raspberry Pi Pico W (MicroPython 硬體端)
-│   ├── main.py                 # 主程式邏輯 (BLE、重量偵測、LED 控制)
-│   ├── hx711_pio.py            # 重量感測器 (HX711) 驅動程式
-│   ├── ssd1306.py              # OLED 螢幕驅動程式
-│   ├── ble_advertising.py      # BLE 廣播協定封裝
-│   └── ble_uart_v7rc.py        # BLE 序列通訊服務
+smart-coaster/
+├── hardware/                       # Raspberry Pi Pico W (MicroPython 硬體端)
+│   ├── main.py                     # 主程式邏輯 (重量偵測、BLE、LED 控制)
+│   ├── config.py                   # 硬體腳位與系統參數設定
+│   ├── ble_manager.py              # BLE 通訊協定封裝
+│   ├── display_manager.py          # OLED 螢幕管理
+│   ├── led_manager.py              # WS2812B LED 燈圈控制
+│   ├── storage_manager.py          # 離線數據儲存 (Flash)
+│   ├── offline_data.csv            # 離線飲水紀錄暫存
+│   └── lib/                        # 驅動程式庫 (HX711, BLE, OLED, AHT20)
 │
-├── front/                      # React Native + Expo (手機 APP 端)
-│   ├── App.js                  # 應用程式進入點 (配置 NavigationContainer)
-│   ├── app.json                # Expo 專案配置 (App Icon、Splash、權限設定)
-│   ├── package.json            # 專案依賴管理 (包含 React Navigation, Charts 等)
-│   └── src/                    # 前端主要源碼
-│       ├── assets/             # 靜態資源 (設計圖、Icon、背景圖、杯子圖示)
-│       ├── components/         # 可重用 UI 元件 (進度條、狀態燈、歷史列表)
-│       ├── hooks/              # 自定義 Hook (核心藍牙 BLE 邏輯)
-│       ├── navigation/         # 導覽配置 (TabNavigator - 底部選單切換)
-│       │   └── TabNavigator.js # 定義主頁、報告、個人資料的跳轉邏輯
-│       ├── screens/            # 各功能頁面 (Screens)
-│       │   ├── MainScreen.js   # 儀表板首頁 (喝水量百分比、飲品切換)
-│       │   ├── ReportScreen.js # 統計報告頁 (連續天數、飲水長條圖)
-│       │   ├── ProfileScreen.js# 個人資料頁 (基本資訊管理)
-│       │   ├── SettingScreen.js# 系統設定選單 (Modal 形式)
-│       │   └── ReminderSettingScreen.js # 提醒時間設定 (Modal 形式)
-│       └── services/           # 資料通訊與模擬數據
-│           ├── api.js          # 與 Flask 後端對接的 API 模組
-│           └── mockSensorData.js # 開發測試用的模擬感測器數據
+├── front/                          # React Native + Expo (手機 App 端)
+│   ├── App.js                      # 應用程式進入點 (NavigationContainer + 驗證邏輯)
+│   ├── app.json                    # Expo 專案配置 (Icon、Splash、權限設定)
+│   ├── package.json                # 前端依賴管理
+│   ├── .env.example                # 環境變數範本
+│   └── src/
+│       ├── assets/                 # 靜態資源 (Icon、背景圖、杯子圖示)
+│       ├── components/             # 可重用 UI 元件 (CustomInput, StatusIndicator, VolumeDisplay, VolumeHistory)
+│       ├── config/                 # 前端設定檔 (API 端點)
+│       ├── constants/              # 主題色彩等全域常數
+│       ├── context/                # AppContext 全域狀態管理
+│       ├── hooks/                  # 自定義 Hook
+│       │   ├── useBLE.android.js   # Android 藍牙 BLE 核心邏輯
+│       │   └── useBLE.web.js       # Web 版模擬 BLE
+│       ├── navigation/             # 導覽配置
+│       │   └── TabNavigator.js     # 底部分頁 (主頁、報告、花園、個人資料)
+│       ├── screens/                # 各功能頁面
+│       │   ├── LoginScreen.js      # 登入頁
+│       │   ├── RegisterScreen.js   # 註冊頁
+│       │   ├── InitialSettingScreen.js # 首次使用個人資料設定
+│       │   ├── MainScreen.js       # 儀表板首頁 (飲水量百分比、飲品切換)
+│       │   ├── ReportScreen.js     # 統計報告頁 (連續天數、週飲水長條圖、AI 聊天)
+│       │   ├── GardenScreen.js     # 花園獎勵頁 (飲水連續天數遊戲化)
+│       │   ├── ProfileScreen.js    # 個人資料頁 (基本資訊管理)
+│       │   ├── SettingScreen.js    # 系統設定選單 (Modal)
+│       │   └── ReminderSettingScreen.js # 提醒時間設定 (Modal)
+│       ├── services/               # 資料通訊
+│       │   ├── api.js              # Axios 封裝，與 FastAPI 後端對接
+│       │   └── mockSensorData.js   # 開發測試用模擬感測器數據
+│       └── utils/
+│           └── notifications.js    # 推播通知工具
 │
-└── back/                       # Flask Backend (伺服器端)
-    ├── app.py                  # 資料庫對接與 AI 分析邏輯
-    └── requirements.txt        # Python 依賴環境清單
-
+└── back/                           # FastAPI Backend (伺服器端)
+    ├── main.py                     # FastAPI 伺服器進入點 (CORS、路由掛載)
+    ├── requirements.txt            # Python 依賴環境清單
+    ├── .env.example                # 環境變數範本
+    ├── terminal_chat.py            # AI 聊天 CLI 測試工具
+    ├── README_back.md              # 後端詳細文件
+    ├── knowledge/                  # AI 知識庫文件
+    └── app/
+        ├── config.py               # 環境變數載入與設定
+        ├── middleware/             # JWT 驗證中介層
+        ├── routes/                 # API 路由 (auth, chat, drinking_logs, report, sensor, goals, rewards, stats...)
+        ├── services/               # 業務邏輯 (Groq AI、Supabase、ML 分析...)
+        └── schemas/                # Pydantic 資料驗證模型
 ```
+
 ---
+
+## 🛠️ 技術棧 (Tech Stack)
+
+| 層級 | 技術 |
+| --- | --- |
+| **硬體** | Raspberry Pi Pico W、MicroPython、HX711、WS2812B、SSD1306 OLED、AHT20 |
+| **前端** | React Native 0.81、Expo 54、React Navigation、react-native-ble-plx |
+| **後端** | Python FastAPI、Uvicorn、Supabase (PostgreSQL)、JWT 驗證 |
+| **AI** | Groq API (LLM)、ML 飲水分析 |
+| **推播** | expo-notifications |
+
+---
+
 ## 📝 開發導覽 (Where to Modify)
 
 | 任務 | 檔案路徑 |
 | --- | --- |
-| 修改杯墊重量偵測邏輯 | `pico/main.py` |
-| 修改藍牙連線/權限請求 | `front/src/hooks/useBLE.js` |
-| 調整 App 介面 UI | `front/src/screens/DashboardScreen.js` |
+| 修改杯墊重量偵測邏輯 | `hardware/main.py` |
+| 修改 LED 燈號行為 | `hardware/led_manager.py` |
+| 修改藍牙連線/權限請求 | `front/src/hooks/useBLE.android.js` |
+| 調整 App 首頁 UI | `front/src/screens/MainScreen.js` |
+| 調整報告頁 / AI 聊天 | `front/src/screens/ReportScreen.js` |
 | 串接新的後端 API | `front/src/services/api.js` |
-| 處理 AI 聊天或資料庫邏輯 | `back/app.py` |
+| 處理 AI 聊天邏輯 | `back/app/routes/chat.py` + `back/app/services/groq_service.py` |
+| 處理飲水紀錄資料庫 | `back/app/routes/drinking_logs.py` |
+| 修改使用者驗證 | `back/app/routes/auth.py` + `back/app/middleware/` |
+
 ---
 
-## 🛠️ 測試流程
-
+## 🧪 測試流程
 
 ### 1. 硬體端 (Pico W)
 
 * **環境**：使用 Thonny IDE，並確保 Pico W 已燒錄 MicroPython 韌體。
 * **操作**：
-1. 將 `pico/` 資料夾內所有檔案上傳至 Pico W。
-2. 確保 `main.py` 中的 `gap_name` 設定為 `"SmartCoaster"`。
-3. 執行 `main.py`，OLED 螢幕應顯示「Press to Start」。
+  1. 將 `hardware/` 資料夾內所有檔案上傳至 Pico W。
+  2. 確認 `hardware/ble_manager.py` 的裝置名稱設定為 `"SmartCoaster"`。
+  3. 執行 `main.py`，OLED 螢幕應顯示「Press to Start」。
+
 ---
+
 ### 2. 後端伺服器 (FastAPI) & AI 功能測試
-#### 請見back\README.md
-<!-- ! 後端測試或操作都須在虛擬環境(venv)中執行，避免全域安裝後在其他的專案上遇到python版本相容性問題 !
 
-### venv設定方式 (terminal)
-1. 第一次建立（在 back/ 資料夾裡）: `python -m venv venv`
-2. 啟動 venv: 
-    `source venv/bin/activate  # Mac/Linux` <br>
-    `venv\Scripts\activate  # Windows` 
+#### 請見 `back/README_back.md`
 
-* 做完離開: `deactivate`
-* **venv不要push到github**，確認 `.gitignore` 裡有這行： `venv/`
+```bash
+cd back
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Mac/Linux
 
-* **環境**：Python 3.x
-* **操作**：
-    1. `cd back`
-    2. 啟動虛擬環境 (如果還沒)：
-    ```
-    source venv/bin/activate // (Mac/Linux)
-    venv\Scripts\activate // (Windows)
-    ```
-    3. `python setup_env.py` // 設定環境變數(僅須執行一次)
-    4. 安裝套件 (僅須執行一次)：`pip install -r requirements.txt`
-    5. 啟動伺服器：```uvicorn main:app --host 0.0.0.0 --port 5001 --reload```
+pip install -r requirements.txt
 
-* *註：伺服器預設於 `http://127.0.0.1:5001` 運行。*
-* *可以開啟 `http://localhost:5001/health` 若顯示 `{"status":"healthy"}`則表示後端正在運行。*
-* *可以開啟 `http://localhost:5001/docs` 查看自動生成的 API 文件 (Swagger UI)。*
+# 複製並填寫環境變數（GROQ_API_KEY、SUPABASE_URL、SUPABASE_KEY、JWT_SECRET 等）
+cp .env.example .env
 
-**🤖 測試 AI 聊天與週報產生：**
-在伺服器運行的同時，開啟**另一個新的終端機視窗**，並依序執行：
-1. `cd back`
-2. `source venv/bin/activate`
-3. 測試聊天打字機：`python3 terminal_chat.py`
-4. 測試生成上週週報：`python3 test_weekly_report.py` (若想要看其他user的週報可再去調整test_weekly_report.py裡的user_id) -->
+uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+```
+
+* 伺服器運行於 `http://127.0.0.1:5001`
+* 健康檢查：`http://localhost:5001/health` → 回傳 `{"status":"healthy"}`
+* Swagger API 文件：`http://localhost:5001/docs`
+
+**🤖 測試 AI 聊天（另開終端機）：**
+```bash
+cd back
+venv\Scripts\activate
+python terminal_chat.py
+```
+
 ---
+
 ### 3. 前端 App (Expo)
 
 > **⚠️ 注意**：由於本專案使用藍牙 (BLE) 功能，**不支援 Expo Go**。請務必使用「開發版客戶端 (Development Build)」。
 
-* **環境準備**：安裝必要的原生通訊套件
 ```bash
 cd front
 npm install
 ```
 
-* **設定 API 連線位置（重要）**：
-    1. 複製範本：`cp front/.env.example front/.env`
-    2. 編輯 `front/.env`，將 IP 改為你電腦的區域網路 IP：
-    ```env
-    EXPO_PUBLIC_API_URL=http://192.168.x.x:5001
-    ```
-    > ⚠️ **注意**：`.env` 不支援行內註解，請勿在值的後面加 `//` 註解，否則 URL 會失效導致 Network Error。
-    >
-    > 查詢電腦 IP：Windows 執行 `ipconfig`，找「Wi-Fi」或「乙太網路」的 IPv4 位址。
+**設定 API 連線位置（重要）**：
+1. 複製範本：`cp .env.example .env`
+2. 編輯 `front/.env`，將 IP 改為你電腦的區域網路 IP：
+```env
+EXPO_PUBLIC_API_URL=http://192.168.x.x:5001
+```
+> ⚠️ `.env` 不支援行內註解，請勿在值後面加 `//`，否則 URL 會失效。
+>
+> 查詢電腦 IP：Windows 執行 `ipconfig`，找「Wi-Fi」的 IPv4 位址。
 
-* 若要測試藍牙功能需要執行以下指令：
-```
-# 安裝 BLE 與開發客戶端相關套件
-npx expo install react-native-ble-plx expo-dev-client base-64
-```
-
-* 執行：
-```
+```bash
 npx expo start
+# 按 S 切換為 development build（Expo Go 模式下無法測試藍牙）
 ```
-* **按S切換為 development build** (注意： Expo Go 模式下不能測試藍芽)
 
-* 使用手機 App 內的 QR 掃描器掃描電腦畫面。
-
----
-**Prebuild（產生原生專案，本地端建置前必做）**：
-
-`npx expo prebuild` 會根據 `app.json` 的設定，在 `front/` 下產生 `android/` 與 `ios/` 原生資料夾。修改了原生套件（如新增 BLE、通知等 Native Module）或 `app.json` 的權限設定後，都需重新執行。
-
+**Prebuild（產生原生專案）**：
 ```bash
-cd front
-
-# 首次或新增原生套件後執行（會保留現有修改）
-npx expo prebuild
-
-# 若遇到原生設定錯亂，加 --clean 從頭重產生（⚠️ 會清除 android/ ios/ 下手動改的內容）
-npx expo prebuild --clean
+npx expo prebuild          # 首次或新增原生套件後執行
+npx expo prebuild --clean  # 原生設定錯亂時重產（⚠️ 會清除 android/ios 手動修改）
 ```
 
-> 📝 **產生後可本地執行原生 build（需已安裝 Android Studio / Xcode）：**
-> ```bash
-> npx expo run:android   # 或 npm run android
-> npx expo run:ios       # 或 npm run ios（僅 Mac）
-> ```
-> 若不需要本地 build 只想用 EAS 雲端編譯，可跳過此步驟。
-
----
-**建立開發版 (EAS Build)**：
-若修改了 `app.json` 權限，需重新編譯：
+**本地原生 Build（需 Android Studio / Xcode）：**
 ```bash
-eas build --profile development --platform android
+npx expo run:android
+npx expo run:ios           # 僅 Mac
+```
 
+**EAS 雲端 Build（修改了 app.json 權限後需重編）：**
+```bash
+eas build --profile development --platform android   # 開發版
+eas build --platform android                         # 正式版
 ```
 
 ---
+
 ### 4. 前後端串接
- ps: 由於我先做**主頁面**串接，所以開發時要繞過jwt，可參考front/.env.example 手動填入EXPO_PUBLIC_API_URL </br>
- -> 點render網址，到swaggerUI (先不要直接貼網址上來，忘記的話跟v要)</br> 
- -> login (Try It Out)，把access_token複製下來貼這裡
 
- 1. npx expo start --clear
- 2. 打開畫面可從資料庫還原，增刪修改資料庫會正確更動
- 3. 成功！
+1. `npx expo start --clear`
+2. 登入後畫面資料從 Supabase 資料庫即時同步
+3. 成功！
 
-
----
-
-### 5. APP 打包
-```
-eas build --platform android
-```
 ---
 
 ## 🔍 連線偵錯指引 (Debug)
 
 1. **找不到杯墊？**
-* 確保 **nRF Connect** 等其他藍牙 App 已斷開連線，藍牙具備獨佔性。
-* 檢查 Pico W 終端機是否報錯。
-
+   * 確保 **nRF Connect** 等其他藍牙 App 已斷開連線（藍牙具獨佔性）。
+   * 檢查 Pico W 終端機是否報錯。
 
 2. **收到數據但沒顯示？**
-* 檢查 `useBLE.js` 中的 `SERVICE_UUID` 是否與 Pico W 端的 UUID (小寫) 完全匹配。
-
+   * 檢查 `useBLE.android.js` 中的 `SERVICE_UUID` 是否與 Pico W 端的 UUID（小寫）完全匹配。
 
 3. **API 無法連線？**
-* 前端呼叫後端時，請勿使用 `localhost`，請改用電腦的區域網路 IP (如 `192.168.x.x`)。
-
-
+   * 前端呼叫後端時請使用電腦的區域網路 IP（如 `192.168.x.x`），不可用 `localhost`。
+   * 確認 `.env` 中 `EXPO_PUBLIC_API_URL` 後面無多餘空格或註解。
