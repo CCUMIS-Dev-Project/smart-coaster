@@ -27,6 +27,7 @@ import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
 import { colors, DRINK_TYPES, DRINK_BY_ID, calcCaffeineLimit } from '../constants/theme';
 import { requestNotificationPermission, scheduleWaterReminder } from '../utils/notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 解構顏色 token，方便後續 StyleSheet 引用
 const { blue: BLUE, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
