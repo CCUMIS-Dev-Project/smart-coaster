@@ -28,6 +28,21 @@ def _get_today_total(user_id: int) -> int:
     return sum(row.get("d_volume", 0) for row in (res.data or []))
 
 
+def _get_date_total(user_id: int, target_date: date) -> int:
+    day_start = TZ.localize(datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0))
+    day_end = day_start + timedelta(days=1)
+    res = (
+        supabase.table("drinking_logs")
+        .select("d_volume")
+        .eq("user_id", user_id)
+        .is_("delete_at", "null")
+        .gte("record_at", day_start.isoformat())
+        .lt("record_at", day_end.isoformat())
+        .execute()
+    )
+    return sum(row.get("d_volume", 0) for row in (res.data or []))
+
+
 def _days_until_next_flower(current_streak: int) -> int:
     if current_streak >= MAX_FLOWERS * 5:
         return 0  # 全部花朵已解鎖
@@ -89,6 +104,25 @@ def get_streaks(user_id: int) -> dict:
     yesterday = str(today - timedelta(days=1))
     if last and last < yesterday:
         current = 0
+
+    # 昨日補算：若 streak 為 0 且昨天實際達標，自動補寫
+    if current == 0 and last != yesterday:
+        try:
+            goal = get_goal(user_id)
+            daily_target = goal.get("daily_target", 2000) or 2000
+            yday = today - timedelta(days=1)
+            if _get_date_total(user_id, yday) >= daily_target:
+                current = 1
+                longest = max(row.get("longest_streak", 0), 1)
+                supabase.table(STREAKS_TABLE).upsert(
+                    {"user_id": user_id, "current_streak": 1,
+                     "longest_streak": longest, "last_achieved": yesterday},
+                    on_conflict="user_id",
+                ).execute()
+                row = {**row, "longest_streak": longest}
+        except Exception as e:
+            print(f"[reward] catch-up streak failed for user {user_id}: {e}")
+
     return {
         "current_streak": current,
         "longest_streak": row["longest_streak"],
