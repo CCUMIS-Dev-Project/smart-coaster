@@ -27,7 +27,6 @@ import apiService from '../services/api';
 import { useApp } from '../context/AppContext';
 import { colors, DRINK_TYPES, DRINK_BY_ID, calcCaffeineLimit } from '../constants/theme';
 import { requestNotificationPermission, scheduleWaterReminder } from '../utils/notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 解構顏色 token，方便後續 StyleSheet 引用
 const { blue: BLUE, text: TEXT, muted: MUTED, border: BORDER, card: CARD, bg: BG } = colors;
@@ -54,9 +53,10 @@ const MainScreen = () => {
     const {
       profile, goalMl, totalMl, logs, replaceLogs,
       addLog, updateLog, deleteLog, deleteLogs,
-      sensorData, setSensorData, 
+      sensorData, setSensorData,
       token,scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice,
       nextReminderAt, setNextReminderAt,
+      drinkType, changeDrinkType,
     } = useApp();
 
     // 紀錄杯墊連線狀態
@@ -70,15 +70,9 @@ const MainScreen = () => {
     const MAX_CAFFEINE = calcCaffeineLimit(age);
   
     // ── UI 狀態：飲品選擇 ──────────────────────────────────────────
-    const [drinkType, setDrinkType] = useState(1);          // 目前選中的飲品 type_id（預設 1 = 水）
-    const drinkTypeRef = useRef(1);                          // ref 供 bleData effect 讀取，避免 stale closure
     const [showDrinkDropdown, setShowDrinkDropdown] = useState(false); // 飲品下拉選單是否展開
-
-    const changeDrinkType = (id) => {
-      drinkTypeRef.current = id;
-      setDrinkType(id);
-      AsyncStorage.setItem('drinkType', String(id));
-    };
+    const drinkTypeRef = useRef(drinkType); // ref 供 bleData effect 讀取，避免 stale closure
+    useEffect(() => { drinkTypeRef.current = drinkType; }, [drinkType]);
 
     // ── UI 狀態：新增飲水 Modal ───────────────────────────────────
     const [showAddModal, setShowAddModal] = useState(false); // 新增 Modal 顯示狀態
@@ -99,16 +93,6 @@ const MainScreen = () => {
     const tabBarHeight = useBottomTabBarHeight();
     const [baseH] = useState(() => Dimensions.get('window').height);
     const [kbHeight, setKbHeight] = useState(0); // 鍵盤高度（0 = 收起）
-
-    useEffect(() => {
-      AsyncStorage.getItem('drinkType').then(v => {
-        if (v !== null) {
-          const id = parseInt(v);
-          drinkTypeRef.current = id;
-          setDrinkType(id);
-        }
-      });
-    }, []);
 
     useEffect(() => {
       const show = Keyboard.addListener('keyboardDidShow', (e) => setKbHeight(e.endCoordinates.height));

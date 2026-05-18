@@ -94,7 +94,7 @@ const apiService = {
    */
 
   // 解析並上傳喝水紀錄
-  handleWaterData : async (rawString, userToken) => {
+  handleWaterData : async (rawString, userToken, typeId = 1) => {
     // 1. 解析字串，格式範例: "W|1|0|150.5"
     const parts = rawString.split('|');
 
@@ -106,7 +106,7 @@ const apiService = {
       // 2. 判斷是否有新的喝水量（例如 > 0），且杯子目前是在位狀態或剛拿起
       if (volume > 0) {
         const payload = {
-          type_id: 1, // 1 是「水」的 ID
+          type_id: typeId,
           d_volume: Math.round(volume), // 轉為整數以符合後端 schemas 要求
           record_at: new Date().toISOString(),
           is_auto: true

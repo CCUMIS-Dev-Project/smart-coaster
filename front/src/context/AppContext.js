@@ -33,6 +33,15 @@ export function AppProvider({ children }) {
   const [isRecording, setIsRecording] = useState(false);
   const [nextReminderAt, setNextReminderAt] = useState(0);
 
+  const [drinkType, setDrinkType] = useState(1);
+  const drinkTypeRef = useRef(1);
+
+  const changeDrinkType = useCallback((id) => {
+    drinkTypeRef.current = id;
+    setDrinkType(id);
+    AsyncStorage.setItem('drinkType', String(id));
+  }, []);
+
   const [weekData] = useState([
     { day: '一', ml: 1600 },
     { day: '二', ml: 2100 },
@@ -74,13 +83,19 @@ export function AppProvider({ children }) {
     };
 
     const initAuth = async () => {
-      const [stored, cupName] = await Promise.all([
+      const [stored, cupName, savedDrinkType] = await Promise.all([
         AsyncStorage.getItem('userToken'),
         AsyncStorage.getItem('selectedCupName'),
+        AsyncStorage.getItem('drinkType'),
       ]);
       if (cupName) {
         const cup = CUPS.find(c => c.name === cupName);
         if (cup) setProfile(prev => ({ ...prev, selectedCup: cup }));
+      }
+      if (savedDrinkType !== null) {
+        const id = parseInt(savedDrinkType);
+        drinkTypeRef.current = id;
+        setDrinkType(id);
       }
       if (stored && !isExpired(stored)) {
         setToken(stored);
@@ -162,7 +177,7 @@ export function AppProvider({ children }) {
     const volume = parseFloat(parts[3]);
     if (volume <= 0) return;  
 
-    apiService.handleWaterData(bleData, token).then(result => {
+    apiService.handleWaterData(bleData, token, drinkTypeRef.current).then(result => {
       if (result?.success && result.data) {
         addLog(result.data); // result.data.log_id 是後端真實整數 ID
       }
@@ -300,6 +315,7 @@ export function AppProvider({ children }) {
       token, setToken, isAuthLoading, logout,
       scanAndConnect, stopScan, connectedDevice, bleData, writeToDevice, disconnectDevice,
       nextReminderAt, setNextReminderAt,
+      drinkType, changeDrinkType,
     }}>
       {children}
     </AppContext.Provider>
