@@ -202,11 +202,12 @@ def handle_ble_rx(data):
         except Exception as e:
             print("❌ 飲水同步失敗:", e)
     elif data.startswith('R|'):
-        global reminder_ms
+        global reminder_ms, last_interaction_time
         try:
             minutes = int(data.split('|')[1])
             reminder_ms = minutes * 60 * 1000
-            print(f"✅ 提醒間隔已更新: {minutes} 分鐘")
+            last_interaction_time = utime.ticks_ms()
+            print(f"✅ 提醒間隔已更新: {minutes} 分鐘，計時器重設")
         except Exception as e:
             print("❌ 提醒間隔更新失敗:", e)
     elif data.startswith('D|'):
