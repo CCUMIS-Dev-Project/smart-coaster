@@ -4,6 +4,9 @@
 from machine import Pin, I2C
 from ssd1306 import SSD1306_I2C
 from config import * # 匯入腳位與常數設定
+from ble_manager import BLEManager
+
+ble = BLEManager()
 
 class DisplayManager:
     def __init__(self):
@@ -52,7 +55,7 @@ class DisplayManager:
     # ==========================================
     # 主數據儀表板 (核心畫面)
     # ==========================================
-    def update_main_screen(self, amount, diff, daily_target, reminder=False, syncing=False):
+    def update_main_screen(self, amount, diff, daily_target, reminder=False, syncing=False, is_connected=True):
         """
         繪製喝水進度主畫面
         :param amount: 目前累積喝水量
@@ -60,11 +63,15 @@ class DisplayManager:
         :param reminder: 是否處於提醒喝水狀態
         :param syncing: 是否正在等待重量穩定
         :daily_target:使用者飲水目標
+        :param is_connected: 是否已連上藍牙
         """
         self.clear()
-        
+
         # 1. 標題
-        self.oled.text("Day Day", 12, 0)
+        # if is_connected:
+        #     self.oled.text("Day Day", 12, 0)
+        # else:
+        self.oled.text("Day Day (uncon.)", 0, 0)
         
         # 2. 顯示喝水數據
         self.oled.text("{:.0f}/{:d} ml".format(amount, daily_target), 25, 12)

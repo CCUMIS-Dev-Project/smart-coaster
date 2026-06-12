@@ -255,6 +255,7 @@ while True:
         last_interaction_time = utime.ticks_ms()
         print("基準重量已重置，等待下一次放下水杯以設定新基準")
 
+
     # 系統運行中邏輯
     # 1. 定期讀取溫溼度
     if utime.ticks_diff(current_ticks, last_sensor_ticks) > SENSOR_INTERVAL_MS:
@@ -284,7 +285,7 @@ while True:
                 place_down_ticks = current_ticks
                 leds.turn_off()
                 # display.update_main_screen(drink_amount, 0, syncing=True)
-                print("檢測到放下，啟動 3 秒穩定計時")
+                print("檢測到放下，啟動 5 秒穩定計時")
 
             # 已經等滿了 3 秒，進行水量結算
             elif utime.ticks_diff(current_ticks, place_down_ticks) > STABLE_DELAY_MS:
@@ -302,13 +303,13 @@ while True:
                     # 【離線儲存邏輯】
                     if ble.is_connected:
                         # APP 有連線，標記為需要發送
-                        data_changed = True 
+                        data_changed = True
                     else:
                         # APP 沒連線，存入 Flash 記憶體
                         storage.save_record(diff)
                         print("APP 未連線，已將喝水量存入離線檔案")
                         
-                elif diff <= 15 and diff >= 0:
+                elif diff <= 5 and diff >= 0:
                     data_changed = False
                 else:
                     last_interaction_time = current_ticks # 補水也算互動
